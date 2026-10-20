@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CLUB PRIME - App do Cliente</title>
+  <style>
+    :root {
+      --bg: #070a12;
+      --card: #0f172a;
+      --card-hover: #1e293b;
+      --border: rgba(59, 130, 246, 0.25);
+      --primary: #3b82f6;
+      --primary-glow: rgba(59, 130, 246, 0.5);
+      --secondary: #10b981;
+      --secondary-glow: rgba(16, 185, 129, 0.4);
+      --accent: #f59e0b;
+      --accent-glow: rgba(245, 158, 11, 0.4);
+      --purple: #8b5cf6;
+      --purple-glow: rgba(139, 92, 246, 0.5);
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 480px;
+      background-color: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      box-shadow: 0 0 60px rgba(59, 130, 246, 0.15);
+      padding-bottom: 80px;
+    }
+
+    .screen {
+      display: none;
+      padding: 18px;
+      animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* TOP HEADER */
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 90;
+    }
+
+    .location-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      background: rgba(255,255,255,0.05);
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .status-badge {
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-weight: 800;
+      font-size: 0.7rem;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .status-badge.vip {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.3));
+      color: #34d399;
+      border: 1px solid var(--secondary);
+      box-shadow: 0 0 15px var(--secondary-glow);
+      animation: pulseGlow 2s infinite alternate;
+    }
+
+    .status-badge.free {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid var(--accent);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 8px var(--secondary-glow); }
+      100% { box-shadow: 0 0 20px var(--secondary-glow); }
+    }
+
+    /* HERO BANNER */
+    .hero-banner {
+      background: linear-gradient(135deg, #1e1b4b, #312e81, #2563eb);
+      border-radius: 24px;
+      padding: 22px;
+      margin-bottom: 18px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      box-shadow: 0 12px 30px var(--primary-glow);
+    }
+
+    .hero-banner::after {
+      content: '';
+      position: absolute;
+      top: -40%;
+      right: -25%;
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(255,255,255,0.25) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* CARD VIP / INFINITEPAY */
+    .card-vip-banner {
+      background: linear-gradient(145deg, #0f172a, #1a103c);
+      border: 1px solid var(--purple);
+      padding: 20px;
+      border-radius: 24px;
+      margin-bottom: 18px;
+      box-shadow: 0 8px 25px var(--purple-glow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-vip-banner::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6, #10b981);
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-group label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 14px 18px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.8);
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+
+    /* CATEGORIES BAR */
+    .categories-bar {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 10px;
+      margin-bottom: 18px;
+      scrollbar-width: none;
+    }
+    .categories-bar::-webkit-scrollbar { display: none; }
+
+    .category-pill {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 10px 18px;
+      border-radius: 25px;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      cursor: pointer;
+      color: var(--muted);
+      font-weight: 600;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .category-pill.active {
+      background: linear-gradient(135deg, var(--primary), #2563eb);
+      color: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 4px 15px var(--primary-glow);
+      transform: translateY(-2px);
+    }
+
+    /* COMPANY CARDS */
+    .company-card {
+      background: linear-gradient(145deg, #0f172a, #131d33);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 18px;
+      margin-bottom: 16px;
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .company-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+
+    .company-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .company-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+
+    .company-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 4px;
+      display: flex;
+      gap: 12px;
+    }
+
+    .discount-badge {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1));
+      color: #34d399;
+      border: 1px solid var(--secondary);
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-weight: 900;
+      font-size: 0.9rem;
+      box-shadow: 0 0 10px var(--secondary-glow);
+    }
+
+    /* BUTTONS */
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--primary), #1d4ed8);
+      color: white;
+      font-weight: 800;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 5px 18px var(--primary-glow);
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #10b981, #059669);
+      box-shadow: 0 5px 18px var(--secondary-glow);
+    }
+
+    .btn-purple {
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      box-shadow: 0 5px 18px var(--purple-glow);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      box-shadow: none;
+    }
+
+    .btn-outline:hover {
+      background: rgba(255,255,255,0.05);
+    }
+
+    /* BOTTOM NAV */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      max-width: 480px;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      padding: 12px 0 14px 0;
+      z-index: 100;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 25%;
+      transition: all 0.2s;
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    .nav-item.active .nav-icon {
+      transform: translateY(-2px);
+      filter: drop-shadow(0 0 8px var(--primary-glow));
+    }
+
+    .nav-icon { font-size: 1.3rem; transition: transform 0.2s; }
+
+    /* MODAL */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 8, 15, 0.88);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .modal.active { display: flex; animation: fadeIn 0.25s ease-out; }
+
+    .modal-content {
+      background: linear-gradient(145deg, #0f172a, #1e293b);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 24px;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.8);
+    }
+
+    .qr-box {
+      background: #fff;
+      padding: 16px;
+      border-radius: 20px;
+      width: 190px;
+      height: 190px;
+      margin: 18px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px rgba(255,255,255,0.2);
+    }
+
+    .timer-badge {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--accent);
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid var(--accent);
+      padding: 8px 16px;
+      border-radius: 25px;
+      display: inline-block;
+      margin: 8px 0 16px 0;
+    }
+  </style>
+
+  <!-- FIREBASE DE PRODUÇÃO -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCTVY6ogF-o7pGuDeHPYCkGfrkeLTvpjKU",
+      authDomain: "projeto-01-63111.firebaseapp.com",
+      projectId: "projeto-01-63111",
+      storageBucket: "projeto-01-63111.firebasestorage.app",
+      messagingSenderId: "484791910480",
+      appId: "1:484791910480:web:644bb77a68487c79881155"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    window.firebaseAuth = auth;
+    window.firebaseDb = db;
+    window.dbMethods = { doc, setDoc, getDoc, updateDoc, onSnapshot, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut };
+
+    let unsubscribeUser = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        unsubscribeUser = onSnapshot(doc(db, "usuarios", user.uid), (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            window.currentUserData = data;
+
+            document.getElementById('user-name-display').innerText = data.nome || "Cliente VIP";
+            document.getElementById('profile-name').innerText = data.nome || "Cliente VIP";
+            document.getElementById('profile-email').innerText = data.email || user.email;
+
+            if (data.vip) {
+              window.isVipUser = true;
+              document.querySelectorAll('.status-badge').forEach(b => {
+                b.innerText = "ASSINANTE VIP";
+                b.className = "status-badge vip";
+              });
+              document.getElementById('banner-assinatura').style.display = 'none';
+            } else {
+              window.isVipUser = false;
+              document.querySelectorAll('.status-badge').forEach(b => {
+                b.innerText = "PLANO GRATUITO";
+                b.className = "status-badge free";
+              });
+              document.getElementById('banner-assinatura').style.display = 'block';
+            }
+          }
+        });
+
+        document.getElementById('screen-auth').classList.remove('active');
+        document.getElementById('screen-home').classList.add('active');
+        document.querySelector('.bottom-nav').style.display = 'flex';
+      } else {
+        if (unsubscribeUser) unsubscribeUser();
+        window.isVipUser = false;
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById('screen-auth').classList.add('active');
+        document.querySelector('.bottom-nav').style.display = 'none';
+      }
+    });
+  </script>
+</head>
+<body>
+
+  <div class="app-shell">
+    
+    <!-- HEADER FIXO -->
+    <div class="top-header">
+      <div class="location-badge">📍 <span>Pelotas, RS</span></div>
+      <div id="top-status-badge" class="status-badge free">PLANO GRATUITO</div>
+    </div>
+
+    <!-- TELA 0: LOGIN / CADASTRO -->
+    <div id="screen-auth" class="screen active">
+      <div style="text-align:center; margin-bottom:24px; margin-top:20px;">
+        <div style="font-size:2.8rem; margin-bottom:6px;">⚡</div>
+        <h2 style="font-size:1.8rem; font-weight:900; background:linear-gradient(90deg, #3b82f6, #8b5cf6); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Club Prime</h2>
+        <p style="font-size:0.85rem; color:var(--muted); margin-top:4px;">Acesse descontos exclusivos nas melhores empresas de Pelotas.</p>
+      </div>
+
+      <div class="form-group">
+        <label>NOME COMPLETO</label>
+        <input type="text" id="reg-name" class="form-control" placeholder="Seu nome">
+      </div>
+      <div class="form-group">
+        <label>E-MAIL</label>
+        <input type="email" id="reg-email" class="form-control" placeholder="seuemail@gmail.com">
+      </div>
+      <div class="form-group">
+        <label>SENHA</label>
+        <input type="password" id="reg-pass" class="form-control" placeholder="******">
+      </div>
+
+      <button class="btn btn-purple" style="margin-top:12px;" onclick="fazerCadastro()">Criar Conta & Acessar</button>
+      <button class="btn btn-outline" style="margin-top:10px;" onclick="fazerLogin()">Já tenho uma conta (Entrar)</button>
+      <button class="btn btn-outline" style="margin-top:10px; border-style:dashed;" onclick="entrarSemLogin()">⚡ Testar App Sem Login</button>
+    </div>
+
+    <!-- TELA 1: HOME -->
+    <div id="screen-home" class="screen">
+      <div class="hero-banner">
+        <span style="font-size:0.75rem; text-transform:uppercase; opacity:0.8; font-weight:800; letter-spacing:1px; color:#93c5fd;">Painel do Membro</span>
+        <h2 style="font-size:1.6rem; font-weight:900; margin-top:4px;">Olá, <span id="user-name-display">Alex</span> 👋</h2>
+        <p style="font-size:0.85rem; opacity:0.9; margin-top:6px; color:#e0e7ff;">Aproveite os descontos cadastrados de hoje.</p>
+      </div>
+
+      <!-- CARD DE ASSINATURA INFINITEPAY -->
+      <div id="banner-assinatura" class="card-vip-banner">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <span style="font-size:0.7rem; font-weight:800; color:#c084fc; letter-spacing:1px; text-transform:uppercase;">Plano Mensal</span>
+            <h3 style="font-size:1.15rem; font-weight:800; margin-top:2px;">Seja VIP por R$ 19,90</h3>
+            <p style="font-size:0.78rem; color:var(--muted); margin-top:2px;">Libere cupons ilimitados no caixa.</p>
+          </div>
+          <span style="font-weight:900; color:#34d399; font-size:1.25rem;">R$ 19,90</span>
+        </div>
+        
+        <button class="btn btn-secondary" style="margin-top:14px;" onclick="abrirCheckoutInfinitePay()">⚡ Pagar via PIX (InfinitePay)</button>
+        <button class="btn btn-outline" style="margin-top:8px; font-size:0.82rem;" onclick="confirmarPagamentoManual()">Já paguei? Confirmar VIP Manual</button>
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <input type="text" class="form-control" placeholder="🔍 Buscar restaurante, oficina, lavagem..." onkeyup="filterStores(this.value)">
+      </div>
+
+      <div class="categories-bar">
+        <div class="category-pill active" onclick="filterCat('all', this)">Todos</div>
+        <div class="category-pill" onclick="filterCat('gastronomia', this)">🍔 Gastronomia</div>
+        <div class="category-pill" onclick="filterCat('automotivo', this)">🔧 Automotivo</div>
+        <div class="category-pill" onclick="filterCat('beleza', this)">💇 Saúde & Beleza</div>
+      </div>
+
+      <div id="stores-list">
+        <div class="company-card" data-cat="gastronomia" data-name="churrascaria espetinho do sul">
+          <div class="company-header">
+            <div>
+              <div class="company-title">Churrascaria Espetinho do Sul</div>
+              <div class="company-meta">
+                <span>📍 Centro • 1.8 km</span>
+                <span style="color:#f59e0b;">⭐ 4.9</span>
+              </div>
+            </div>
+            <div class="discount-badge">15% OFF</div>
+          </div>
+          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Válido para rodízios e consumação na mesa.</p>
+          <button class="btn" onclick="resgatarCupom('Churrascaria Espetinho do Sul', '15% OFF no Total')">
+            🎟️ Resgatar Cupom no Caixa
+          </button>
+        </div>
+
+        <div class="company-card" data-cat="automotivo" data-name="auto center oficina mecanica">
+          <div class="company-header">
+            <div>
+              <div class="company-title">Auto Center & Oficina Mecânica</div>
+              <div class="company-meta">
+                <span>📍 Areal • 0.9 km</span>
+                <span style="color:#f59e0b;">⭐ 4.8</span>
+              </div>
+            </div>
+            <div class="discount-badge">20% OFF</div>
+          </div>
+          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Desconto em mão de obra de manutenção e troca de óleo.</p>
+          <button class="btn" onclick="resgatarCupom('Auto Center & Oficina', '20% OFF Mão de Obra')">
+            🎟️ Resgatar Cupom no Caixa
+          </button>
+        </div>
+
+        <div class="company-card" data-cat="gastronomia" data-name="pizzaria bella italia">
+          <div class="company-header">
+            <div>
+              <div class="company-title">Pizzaria Bella Italia</div>
+              <div class="company-meta">
+                <span>📍 Fragata • 3.2 km</span>
+                <span style="color:#f59e0b;">⭐ 4.7</span>
+              </div>
+            </div>
+            <div class="discount-badge">10% OFF</div>
+          </div>
+          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Válido para consumo no local e retirada.</p>
+          <button class="btn" onclick="resgatarCupom('Pizzaria Bella Italia', '10% OFF no Pedido')">
+            🎟️ Resgatar Cupom no Caixa
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TELA 2: PARCEIROS -->
+    <div id="screen-search" class="screen">
+      <h2 style="margin-bottom:12px; font-weight:800;">Todos os Parceiros</h2>
+      <div style="background:var(--card); border:1px solid var(--border); padding:20px; border-radius:20px; text-align:center; margin-bottom:16px;">
+        <span style="font-size:2.5rem;">🗺️</span>
+        <h3 style="font-size:1.1rem; margin-top:8px; font-weight:800;">Pelotas / RS</h3>
+        <p style="font-size:0.8rem; color:var(--muted); margin-top:4px;">18 estabelecimentos aceitando seu cupom hoje.</p>
+      </div>
+    </div>
+
+    <!-- TELA 3: CARTEIRA -->
+    <div id="screen-wallet" class="screen">
+      <h2 style="margin-bottom:4px; font-weight:800;">Sua Carteira</h2>
+      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:18px;">Economia acumulada com o seu clube.</p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px;">
+        <div style="background:var(--card); border:1px solid var(--border); padding:16px; border-radius:18px; text-align:center;">
+          <span style="font-size:0.72rem; color:var(--muted); font-weight:700;">ECONOMIA TOTAL</span>
+          <div style="font-size:1.4rem; font-weight:900; color:var(--secondary); margin-top:4px;">R$ 114,50</div>
+        </div>
+        <div style="background:var(--card); border:1px solid var(--border); padding:16px; border-radius:18px; text-align:center;">
+          <span style="font-size:0.72rem; color:var(--muted); font-weight:700;">CUSTO DO APP</span>
+          <div style="font-size:1.4rem; font-weight:900; color:var(--primary); margin-top:4px;">R$ 19,90</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TELA 4: PERFIL -->
+    <div id="screen-profile" class="screen">
+      <div style="text-align:center; margin-bottom:24px;">
+        <div style="width:75px; height:75px; background:linear-gradient(135deg, var(--primary), var(--purple)); border-radius:50%; margin:0 auto 12px auto; display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:bold; box-shadow:0 0 20px var(--primary-glow);">
+          👤
+        </div>
+        <h2 id="profile-name" style="font-weight:800;">Carregando...</h2>
+        <p id="profile-email" style="font-size:0.82rem; color:var(--muted); margin-top:2px;">-</p>
+      </div>
+
+      <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; padding:18px; margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-weight:700; font-size:0.9rem;">Status Atual</div>
+            <div id="profile-status-badge" class="status-badge free" style="display:inline-block; margin-top:6px;">PLANO GRATUITO</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-outline" style="color:var(--danger); border-color:#ef444455;" onclick="deslogar()">Sair da Conta</button>
+    </div>
+
+    <!-- MENU INFERIOR -->
+    <div class="bottom-nav" style="display:none;">
+      <div class="nav-item active" onclick="navTo('home', this)">
+        <span class="nav-icon">🏠</span>
+        <span>Início</span>
+      </div>
+      <div class="nav-item" onclick="navTo('search', this)">
+        <span class="nav-icon">🔍</span>
+        <span>Parceiros</span>
+      </div>
+      <div class="nav-item" onclick="navTo('wallet', this)">
+        <span class="nav-icon">👛</span>
+        <span>Carteira</span>
+      </div>
+      <div class="nav-item" onclick="navTo('profile', this)">
+        <span class="nav-icon">👤</span>
+        <span>Perfil</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL DE CUPOM -->
+  <div id="modal-coupon" class="modal">
+    <div class="modal-content">
+      <h3 id="modal-title" style="font-size:1.2rem; font-weight:800;">---</h3>
+      <div id="modal-disc" style="color:var(--secondary); font-weight:900; font-size:1.1rem; margin-top:4px;">---</div>
+
+      <div class="qr-box">
+        <svg viewBox="0 0 100 100" style="width:100%; height:100%;">
+          <rect width="100" height="100" fill="#fff"/>
+          <path d="M10,10 h30 v30 h-30 z M15,15 h20 v20 h-20 z M22,22 h6 v6 h-6 z" fill="#000"/>
+          <path d="M60,10 h30 v30 h-30 z M65,15 h20 v20 h-20 z M72,22 h6 v6 h-6 z" fill="#000"/>
+          <path d="M10,60 h30 v30 h-30 z M15,65 h20 v20 h-20 z M22,72 h6 v6 h-6 z" fill="#000"/>
+          <rect x="45" y="15" width="8" height="25" fill="#000"/>
+          <rect x="15" y="45" width="25" height="8" fill="#000"/>
+          <rect x="50" y="50" width="35" height="35" fill="#000"/>
+        </svg>
+      </div>
+
+      <div style="font-size:0.75rem; color:var(--muted); font-weight:700;">CÓDIGO DE VALIDAÇÃO:</div>
+      <div id="modal-code" style="font-size:1.8rem; font-weight:900; letter-spacing:5px; color:var(--primary); margin:6px 0;">---</div>
+
+      <div class="timer-badge">⏱️ Válido por: <span id="modal-timer">15:00</span></div>
+      <p style="font-size:0.78rem; color:var(--muted); margin-bottom:16px;">Apresente no caixa para receber o desconto.</p>
+
+      <button class="btn btn-outline" onclick="fecharModal('modal-coupon')">Fechar Cupom</button>
+    </div>
+  </div>
+
+  <script>
+    const INFINITEPAY_CHECKOUT_URL = "https://checkout.infinitepay.io/alexsander-de-avila/hpN3GOwYvC";
+
+    function navTo(screenId, btn) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('screen-' + screenId).classList.add('active');
+      if (btn) {
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+    }
+
+    function filterCat(cat, btn) {
+      document.querySelectorAll('.category-pill').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+      const cards = document.querySelectorAll('.company-card');
+      cards.forEach(card => {
+        card.style.display = (cat === 'all' || card.dataset.cat === cat) ? 'block' : 'none';
+      });
+    }
+
+    function filterStores(term) {
+      term = term.toLowerCase();
+      const cards = document.querySelectorAll('.company-card');
+      cards.forEach(card => {
+        const name = card.dataset.name || '';
+        card.style.display = name.includes(term) ? 'block' : 'none';
+      });
+    }
+
+    async function fazerCadastro() {
+      const nome = document.getElementById('reg-name').value;
+      const email = document.getElementById('reg-email').value;
+      const pass = document.getElementById('reg-pass').value;
+
+      if (!email || !pass || !nome) return alert("Por favor, preencha todos os campos!");
+
+      try {
+        const { createUserWithEmailAndPassword, doc, setDoc } = window.dbMethods;
+        const res = await createUserWithEmailAndPassword(window.firebaseAuth, email, pass);
+        
+        await setDoc(doc(window.firebaseDb, "usuarios", res.user.uid), {
+          nome: nome,
+          email: email,
+          vip: false,
+          criadoEm: new Date().toISOString()
+        });
+
+        alert("Conta criada com sucesso!");
+      } catch (err) {
+        if (err.message.includes("configuration-not-found")) {
+          alert("Lembre-se de ativar o login por Email/Senha no console do Firebase.\n\nEntrando no modo de teste...");
+          entrarSemLogin();
+        } else {
+          alert("Erro ao criar conta: " + err.message);
+        }
+      }
+    }
+
+    async function fazerLogin() {
+      const email = document.getElementById('reg-email').value;
+      const pass = document.getElementById('reg-pass').value;
+
+      if (!email || !pass) return alert("Preencha o e-mail e a senha para entrar!");
+
+      try {
+        await window.dbMethods.signInWithEmailAndPassword(window.firebaseAuth, email, pass);
+      } catch (err) {
+        if (err.message.includes("configuration-not-found")) {
+          alert("Lembre-se de ativar o login por Email/Senha no console do Firebase.\n\nEntrando no modo de teste...");
+          entrarSemLogin();
+        } else {
+          alert("Erro ao entrar: " + err.message);
+        }
+      }
+    }
+
+    function entrarSemLogin() {
+      document.getElementById('screen-auth').classList.remove('active');
+      document.getElementById('screen-home').classList.add('active');
+      document.querySelector('.bottom-nav').style.display = 'flex';
+    }
+
+    async function deslogar() {
+      if (window.firebaseAuth.currentUser) {
+        await window.dbMethods.signOut(window.firebaseAuth);
+      } else {
+        location.reload();
+      }
+    }
+
+    function abrirCheckoutInfinitePay() {
+      window.open(INFINITEPAY_CHECKOUT_URL, "_blank");
+    }
+
+    async function confirmarPagamentoManual() {
+      const user = window.firebaseAuth.currentUser;
+      if (user) {
+        const { doc, updateDoc } = window.dbMethods;
+        await updateDoc(doc(window.firebaseDb, "usuarios", user.uid), { vip: true });
+        alert("🎉 Assinatura VIP ativada no Firebase!");
+      } else {
+        window.isVipUser = true;
+        document.querySelectorAll('.status-badge').forEach(b => {
+          b.innerText = "ASSINANTE VIP";
+          b.className = "status-badge vip";
+        });
+        document.getElementById('banner-assinatura').style.display = 'none';
+        alert("🎉 Assinatura VIP ativada com sucesso!");
+      }
+    }
+
+    let timerInterval;
+    function resgatarCupom(loja, disc) {
+      if (!window.isVipUser) {
+        alert("⚠️ Você precisa assinar o Plano VIP (R$ 19,90) para liberar este cupom!");
+        return;
+      }
+
+      const code = Math.floor(1000 + Math.random() * 9000);
+      document.getElementById('modal-title').innerText = loja;
+      document.getElementById('modal-disc').innerText = disc;
+      document.getElementById('modal-code').innerText = '#' + code;
+
+      document.getElementById('modal-coupon').classList.add('active');
+
+      let time = 900;
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        time--;
+        let m = Math.floor(time / 60);
+        let s = time % 60;
+        document.getElementById('modal-timer').innerText = 
+          `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        if (time <= 0) clearInterval(timerInterval);
+      }, 1000);
+    }
+
+    function fecharModal(id) {
+      document.getElementById(id).classList.remove('active');
+      if (id === 'modal-coupon') clearInterval(timerInterval);
+    }
+  </script>
+</body>
+</html>
