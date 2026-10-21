@@ -849,26 +849,47 @@
 
     async function verificarStatusVipManual() {
       const user = window.firebaseAuth.currentUser;
-      if (!user || !user.email) return;
+      if (!user || !user.email) {
+        return mostrarAviso("Atenção", "Faz login na tua conta para verificar.", "⚠️");
+      }
 
+      const emailBusca = user.email.trim().toLowerCase();
       const btn = document.getElementById('btn-checar-vip');
       btn.innerHTML = `<span class="spinner"></span> Verificando...`;
 
       try {
-        const { collection, query, where, getDocs } = window.dbMethods;
-        const q = query(collection(window.firebaseDb, "usuarios"), where("email", "==", user.email.toLowerCase()));
-        const querySnapshot = await getDocs(q);
+        const { collection, getDocs, doc, updateDoc } = window.dbMethods;
+        const usersRef = collection(window.firebaseDb, "usuarios");
+        const snapshot = await getDocs(usersRef);
 
         let ativo = false;
-        querySnapshot.forEach(doc => {
-          if (doc.data().vip === true) ativo = true;
+
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          if (data.email && data.email.trim().toLowerCase() === emailBusca) {
+            if (data.vip === true) {
+              ativo = true;
+            }
+          }
         });
 
         if (ativo) {
+          // Atualiza também o documento local direto com o UID do Firebase Auth caso o Webhook tenha atualizado por outro id
+          try {
+            const myUserDoc = doc(window.firebaseDb, "usuarios", user.uid);
+            await updateDoc(myUserDoc, { vip: true });
+          } catch(e){}
+
           fecharModal('modal-pix');
-          mostrarAviso("VIP Ativado!", "O seu pagamento foi confirmado e o seu acesso VIP está liberado!", "🎉");
+          mostrarAviso("VIP Ativado!", "O teu pagamento foi confirmado e o acesso VIP está liberado!", "🎉");
+          
+          document.querySelectorAll('.status-badge').forEach(b => {
+            b.innerText = "ASSINANTE VIP";
+            b.className = "status-badge vip";
+          });
+          document.getElementById('banner-assinatura').style.display = 'none';
         } else {
-          mostrarAviso("Aguardando confirmação", "O pagamento ainda está sendo processado pelo banco. Aguarde alguns segundos e tente novamente.", "⏳");
+          mostrarAviso("Aguardando confirmação", `O pagamento para o e-mail ${emailBusca} ainda está a ser processado. Tente novamente em instantes.`, "⏳");
         }
       } catch (err) {
         mostrarAviso("Erro", err.message, "❌");
