@@ -154,6 +154,34 @@
       background: linear-gradient(90deg, #3b82f6, #8b5cf6, #10b981);
     }
 
+    /* SISTEMA DE ABAS DO LOGIN */
+    .auth-tabs {
+      display: flex;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 4px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--muted);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+
+    .auth-tab.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
     .form-group {
       margin-bottom: 14px;
     }
@@ -290,13 +318,12 @@
     .btn-google {
       background: #ffffff;
       color: #1f2937;
-      box-shadow: 0 4px 15px rgba(255, 255, 255, 0.15);
+      box-shadow: 0 4px 15px rgba(255, 255, 255, 0.12);
       font-weight: 700;
+      font-size: 0.92rem;
     }
 
-    .btn-google:hover {
-      background: #f3f4f6;
-    }
+    .btn-google:hover { background: #f3f4f6; }
 
     .btn-outline {
       background: transparent;
@@ -305,9 +332,34 @@
       box-shadow: none;
     }
 
-    .btn-outline:hover {
-      background: rgba(255,255,255,0.05);
+    .btn-outline:hover { background: rgba(255,255,255,0.05); }
+
+    .profile-avatar-container {
+      position: relative;
+      width: 86px;
+      height: 86px;
+      margin: 0 auto 12px auto;
     }
+
+    .profile-avatar-img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--primary);
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+
+    .profile-info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.85rem;
+    }
+
+    .profile-info-row:last-child { border-bottom: none; }
 
     @keyframes spin {
       0% { transform: rotate(0deg); }
@@ -442,6 +494,7 @@
             data = {
               nome: user.displayName || "Cliente Club Prime",
               email: user.email.toLowerCase(),
+              fotoUrl: user.photoURL || null,
               vip: false,
               criadoEm: new Date().toISOString()
             };
@@ -457,9 +510,21 @@
           }
 
           window.currentUserData = data;
-          document.getElementById('user-name-display').innerText = data.nome || "Cliente";
-          document.getElementById('profile-name').innerText = data.nome || "Cliente";
+          document.getElementById('user-name-display').innerText = data.nome || user.displayName || "Cliente";
+          document.getElementById('profile-name').innerText = data.nome || user.displayName || "Cliente";
           document.getElementById('profile-email').innerText = data.email || user.email;
+          
+          // Foto do Perfil
+          const avatarImg = document.getElementById('profile-avatar');
+          if (user.photoURL || data.fotoUrl) {
+            avatarImg.src = user.photoURL || data.fotoUrl;
+          } else {
+            avatarImg.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(data.nome || 'User') + "&background=3b82f6&color=fff";
+          }
+
+          // Data de Entrada e Expiração VIP
+          const dataCriado = data.criadoEm ? new Date(data.criadoEm).toLocaleDateString('pt-BR') : 'Hoje';
+          document.getElementById('profile-joined-date').innerText = dataCriado;
 
           if (data.vip) {
             window.isVipUser = true;
@@ -468,6 +533,12 @@
               b.className = "status-badge vip";
             });
             document.getElementById('banner-assinatura').style.display = 'none';
+            document.getElementById('profile-vip-card').style.display = 'block';
+            
+            if (data.vipExpiraEm) {
+              const expiraStr = new Date(data.vipExpiraEm).toLocaleDateString('pt-BR');
+              document.getElementById('profile-vip-expira').innerText = expiraStr;
+            }
             fecharModal('modal-pix');
           } else {
             window.isVipUser = false;
@@ -476,6 +547,7 @@
               b.className = "status-badge free";
             });
             document.getElementById('banner-assinatura').style.display = 'block';
+            document.getElementById('profile-vip-card').style.display = 'none';
           }
         });
 
@@ -503,15 +575,15 @@
 
     <!-- TELA LOGIN/CADASTRO -->
     <div id="screen-auth" class="screen active">
-      <div style="text-align:center; margin-bottom:24px; margin-top:20px;">
-        <div style="font-size:2.8rem; margin-bottom:6px;">⚡</div>
+      <div style="text-align:center; margin-bottom:20px; margin-top:10px;">
+        <div style="font-size:2.8rem; margin-bottom:4px;">⚡</div>
         <h2 style="font-size:1.8rem; font-weight:900; background:linear-gradient(90deg, #3b82f6, #8b5cf6); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Club Prime</h2>
-        <p style="font-size:0.85rem; color:var(--muted); margin-top:4px;">Acesse descontos exclusivos nas melhores empresas de Pelotas.</p>
+        <p style="font-size:0.82rem; color:var(--muted); margin-top:2px;">Descontos exclusivos nas melhores empresas de Pelotas.</p>
       </div>
 
-      <!-- BOTÃO DE LOGIN COM O GOOGLE -->
-      <button class="btn btn-google" style="margin-bottom:16px;" onclick="fazerLoginGoogle()">
-        <svg width="18" height="18" viewBox="0 0 24 24" style="margin-right:8px;">
+      <!-- BOTAO GOOGLE EM DESTAQUE -->
+      <button class="btn btn-google" style="margin-bottom:18px;" onclick="fazerLoginGoogle()">
+        <svg width="18" height="18" viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
           <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
@@ -520,33 +592,42 @@
         Entrar com o Google
       </button>
 
-      <div style="display:flex; align-items:center; margin-bottom:16px;">
+      <div style="display:flex; align-items:center; margin-bottom:18px;">
         <div style="flex:1; height:1px; background:var(--border);"></div>
-        <span style="font-size:0.75rem; color:var(--muted); padding:0 10px;">OU USE SEU E-MAIL</span>
+        <span style="font-size:0.72rem; color:var(--muted); padding:0 10px; font-weight:700;">OU ENTRE COM E-MAIL</span>
         <div style="flex:1; height:1px; background:var(--border);"></div>
       </div>
 
-      <div class="form-group">
+      <!-- ABAS ALTERNADORAS -->
+      <div class="auth-tabs">
+        <div id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">Entrar</div>
+        <div id="tab-signup" class="auth-tab" onclick="switchAuthTab('signup')">Criar Conta</div>
+      </div>
+
+      <div id="group-name" class="form-group" style="display:none;">
         <label>NOME COMPLETO</label>
         <input type="text" id="reg-name" class="form-control" placeholder="Seu nome">
       </div>
+
       <div class="form-group">
         <label>E-MAIL</label>
         <input type="email" id="reg-email" class="form-control" placeholder="seuemail@gmail.com">
       </div>
+
       <div class="form-group">
         <label>SENHA</label>
         <input type="password" id="reg-pass" class="form-control" placeholder="******">
       </div>
 
-      <button class="btn btn-purple" style="margin-top:12px;" onclick="fazerCadastro()">Criar Conta & Acessar</button>
-      <button class="btn btn-outline" style="margin-top:10px;" onclick="fazerLogin()">Já tenho uma conta (Entrar)</button>
+      <button id="btn-auth-submit" class="btn btn-purple" style="margin-top:10px;" onclick="executarAuth()">Entrar na Conta</button>
       
-      <div style="text-align:center; margin-top:12px;">
+      <div id="box-esqueci" style="text-align:center; margin-top:14px;">
         <a href="#" onclick="recuperarSenha()" style="font-size:0.8rem; color:var(--primary); text-decoration:none; font-weight:600;">🔑 Esqueci minha senha</a>
       </div>
 
-      <button class="btn btn-outline" style="margin-top:16px; border-style:dashed;" onclick="entrarSemLogin()">⚡ Testar App Sem Login</button>
+      <div style="margin-top:20px; border-top:1px dashed var(--border); padding-top:14px;">
+        <button class="btn btn-outline" onclick="entrarSemLogin()">⚡ Testar App Sem Login</button>
+      </div>
     </div>
 
     <!-- TELA HOME -->
@@ -646,22 +727,40 @@
       </div>
     </div>
 
-    <!-- TELA PERFIL -->
+    <!-- TELA PERFIL REFORMULADA -->
     <div id="screen-profile" class="screen">
-      <div style="text-align:center; margin-bottom:24px;">
-        <div style="width:75px; height:75px; background:linear-gradient(135deg, var(--primary), var(--purple)); border-radius:50%; margin:0 auto 12px auto; display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:bold; box-shadow:0 0 20px var(--primary-glow);">
-          👤
+      <div style="text-align:center; margin-bottom:20px; margin-top:10px;">
+        <div class="profile-avatar-container">
+          <img id="profile-avatar" class="profile-avatar-img" src="" alt="Foto de Perfil">
         </div>
-        <h2 id="profile-name" style="font-weight:800;">Carregando...</h2>
+        <h2 id="profile-name" style="font-weight:900; font-size:1.3rem;">Carregando...</h2>
         <p id="profile-email" style="font-size:0.82rem; color:var(--muted); margin-top:2px;">-</p>
       </div>
 
-      <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; padding:18px; margin-bottom:20px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
+      <!-- CARD VIP NO PERFIL -->
+      <div id="profile-vip-card" style="display:none; background:linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.2)); border:1px solid var(--secondary); padding:16px; border-radius:18px; margin-bottom:18px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.8rem;">👑</span>
           <div>
-            <div style="font-weight:700; font-size:0.9rem;">Status Atual</div>
-            <div class="status-badge free" style="display:inline-block; margin-top:6px;">PLANO GRATUITO</div>
+            <div style="font-weight:800; color:#34d399; font-size:0.95rem;">Assinatura VIP Ativa</div>
+            <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">Válido até: <span id="profile-vip-expira" style="color:#fff; font-weight:700;">-</span></div>
           </div>
+        </div>
+      </div>
+
+      <!-- PAINEL DE INFORMAÇÕES -->
+      <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; padding:18px; margin-bottom:20px;">
+        <div class="profile-info-row">
+          <span style="color:var(--muted); font-weight:600;">Status do Plano</span>
+          <div class="status-badge free">PLANO GRATUITO</div>
+        </div>
+        <div class="profile-info-row">
+          <span style="color:var(--muted); font-weight:600;">Membro Desde</span>
+          <span id="profile-joined-date" style="font-weight:700;">-</span>
+        </div>
+        <div class="profile-info-row">
+          <span style="color:var(--muted); font-weight:600;">Cidade</span>
+          <span style="font-weight:700;">Pelotas / RS</span>
         </div>
       </div>
 
@@ -730,6 +829,7 @@
 
   <script>
     let pixCopiaColaAtual = "";
+    let currentAuthTab = "login";
 
     function mostrarAviso(titulo, mensagem, icone = "⚡") {
       document.getElementById('alert-icon').innerText = icone;
@@ -740,6 +840,15 @@
 
     function fecharModal(modalId) {
       document.getElementById(modalId).classList.remove('active');
+    }
+
+    function switchAuthTab(type) {
+      currentAuthTab = type;
+      document.getElementById('tab-login').classList.toggle('active', type === 'login');
+      document.getElementById('tab-signup').classList.toggle('active', type === 'signup');
+      document.getElementById('group-name').style.display = type === 'signup' ? 'block' : 'none';
+      document.getElementById('box-esqueci').style.display = type === 'login' ? 'block' : 'none';
+      document.getElementById('btn-auth-submit').innerText = type === 'login' ? 'Entrar na Conta' : 'Criar Conta';
     }
 
     function navTo(screenId, btn) {
@@ -778,40 +887,40 @@
       }
     }
 
-    async function fazerCadastro() {
-      const nome = document.getElementById('reg-name').value;
-      const email = document.getElementById('reg-email').value;
-      const pass = document.getElementById('reg-pass').value;
+    async function executarAuth() {
+      if (currentAuthTab === 'signup') {
+        const nome = document.getElementById('reg-name').value;
+        const email = document.getElementById('reg-email').value;
+        const pass = document.getElementById('reg-pass').value;
 
-      if (!email || !pass || !nome) return mostrarAviso("Campos Incompletos", "Por favor, preencha todos os campos para se cadastrar.", "⚠️");
+        if (!email || !pass || !nome) return mostrarAviso("Campos Incompletos", "Preencha todos os campos para se cadastrar.", "⚠️");
 
-      try {
-        const { createUserWithEmailAndPassword, doc, setDoc } = window.dbMethods;
-        const res = await createUserWithEmailAndPassword(window.firebaseAuth, email.trim().toLowerCase(), pass);
-        
-        await setDoc(doc(window.firebaseDb, "usuarios", res.user.uid), {
-          nome: nome,
-          email: email.trim().toLowerCase(),
-          vip: false,
-          criadoEm: new Date().toISOString()
-        });
+        try {
+          const { createUserWithEmailAndPassword, doc, setDoc } = window.dbMethods;
+          const res = await createUserWithEmailAndPassword(window.firebaseAuth, email.trim().toLowerCase(), pass);
+          
+          await setDoc(doc(window.firebaseDb, "usuarios", res.user.uid), {
+            nome: nome,
+            email: email.trim().toLowerCase(),
+            vip: false,
+            criadoEm: new Date().toISOString()
+          });
 
-        mostrarAviso("Sucesso", "Sua conta foi criada com sucesso!", "🎉");
-      } catch (err) {
-        mostrarAviso("Erro no Cadastro", err.message, "❌");
-      }
-    }
+          mostrarAviso("Sucesso", "Sua conta foi criada com sucesso!", "🎉");
+        } catch (err) {
+          mostrarAviso("Erro no Cadastro", err.message, "❌");
+        }
+      } else {
+        const email = document.getElementById('reg-email').value;
+        const pass = document.getElementById('reg-pass').value;
 
-    async function fazerLogin() {
-      const email = document.getElementById('reg-email').value;
-      const pass = document.getElementById('reg-pass').value;
+        if (!email || !pass) return mostrarAviso("Atenção", "Preencha o e-mail e a senha para entrar!", "⚠️");
 
-      if (!email || !pass) return mostrarAviso("Atenção", "Preencha o e-mail e a senha para entrar!", "⚠️");
-
-      try {
-        await window.dbMethods.signInWithEmailAndPassword(window.firebaseAuth, email, pass);
-      } catch (err) {
-        mostrarAviso("Erro ao Entrar", err.message, "❌");
+        try {
+          await window.dbMethods.signInWithEmailAndPassword(window.firebaseAuth, email, pass);
+        } catch (err) {
+          mostrarAviso("Erro ao Entrar", err.message, "❌");
+        }
       }
     }
 
