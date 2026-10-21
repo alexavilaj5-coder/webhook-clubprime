@@ -678,7 +678,8 @@
         <img id="pix-qr-img" src="" alt="QR Code Pix">
       </div>
 
-      <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="copiarPixCode()">📋 Copiar Código Pix</button>
+      <button class="btn btn-secondary" style="margin-bottom:8px;" onclick="copiarPixCode()">📋 Copiar Código Pix</button>
+      <button id="btn-checar-vip" class="btn btn-purple" style="margin-bottom:8px;" onclick="verificarStatusVipManual()">🔄 Já Paguei / Verificar Agora</button>
       <button class="btn btn-outline" onclick="fecharModal('modal-pix')">Fechar</button>
     </div>
   </div>
@@ -844,6 +845,36 @@
       if (!pixCopiaColaAtual) return;
       navigator.clipboard.writeText(pixCopiaColaAtual);
       mostrarAviso("Copiado!", "Código Pix Copia e Cola copiado para a área de transferência.", "📋");
+    }
+
+    async function verificarStatusVipManual() {
+      const user = window.firebaseAuth.currentUser;
+      if (!user || !user.email) return;
+
+      const btn = document.getElementById('btn-checar-vip');
+      btn.innerHTML = `<span class="spinner"></span> Verificando...`;
+
+      try {
+        const { collection, query, where, getDocs } = window.dbMethods;
+        const q = query(collection(window.firebaseDb, "usuarios"), where("email", "==", user.email.toLowerCase()));
+        const querySnapshot = await getDocs(q);
+
+        let ativo = false;
+        querySnapshot.forEach(doc => {
+          if (doc.data().vip === true) ativo = true;
+        });
+
+        if (ativo) {
+          fecharModal('modal-pix');
+          mostrarAviso("VIP Ativado!", "O seu pagamento foi confirmado e o seu acesso VIP está liberado!", "🎉");
+        } else {
+          mostrarAviso("Aguardando confirmação", "O pagamento ainda está sendo processado pelo banco. Aguarde alguns segundos e tente novamente.", "⏳");
+        }
+      } catch (err) {
+        mostrarAviso("Erro", err.message, "❌");
+      } finally {
+        btn.innerHTML = `🔄 Já Paguei / Verificar Agora`;
+      }
     }
 
     function resgatarCupom(titulo, desconto) {
