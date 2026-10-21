@@ -1,7 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// Inicializa o Firebase Admin apenas uma vez
 if (!getApps().length) {
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
   initializeApp({
@@ -12,7 +11,6 @@ if (!getApps().length) {
 const db = getFirestore();
 
 export default async function handler(req, res) {
-  // Configuração de CORS para aceitar conexões externas
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -33,7 +31,6 @@ export default async function handler(req, res) {
     const payload = req.body;
     console.log("Recebido Webhook InfinitePay:", JSON.stringify(payload));
 
-    // Captura o e-mail do comprador em múltiplos formatos possíveis da InfinitePay
     const customerEmail = 
       payload?.data?.buyer?.email ||
       payload?.buyer?.email ||
@@ -48,33 +45,38 @@ export default async function handler(req, res) {
 
     const cleanEmail = customerEmail.trim().toLowerCase();
 
-    // Procura o usuário na coleção 'usuarios' pelo e-mail
+    // Calcula 30 dias a partir de HOJE
+    const agora = new Date();
+    const dataExpiracao = new Date(agora.setDate(agora.getDate() + 30)).toISOString();
+
     const usersRef = db.collection('usuarios');
     const snapshot = await usersRef.where('email', '==', cleanEmail).get();
 
     if (snapshot.empty) {
-      // Se o usuário ainda não existia, cria o registro diretamente com status VIP ativado!
+      // Cria o registro novo com VIP ativo por 30 dias
       await usersRef.add({
         email: cleanEmail,
         vip: true,
+        vipExpiraEm: dataExpiracao,
         criadoEm: new Date().toISOString(),
         origem: 'infinitepay_webhook'
       });
-      console.log(`Novo usuário criado e ativado VIP: ${cleanEmail}`);
+      console.log(`Novo usuário VIP por 30 dias criado: ${cleanEmail}`);
     } else {
-      // Se o usuário já existe, atualiza todos os documentos correspondentes para vip: true
+      // Atualiza o registro existente renovando mais 30 dias
       const batch = db.batch();
       snapshot.forEach(doc => {
         batch.update(doc.ref, { 
           vip: true,
+          vipExpiraEm: dataExpiracao,
           atualizadoEm: new Date().toISOString()
         });
       });
       await batch.commit();
-      console.log(`VIP ativado com sucesso para: ${cleanEmail}`);
+      console.log(`VIP renovado por 30 dias para: ${cleanEmail}`);
     }
 
-    return res.status(200).json({ success: true, email: cleanEmail });
+    return res.status(200).json({ success: true, email: cleanEmail, expiraEm: dataExpiracao });
 
   } catch (error) {
     console.error("Erro no processamento do Webhook:", error);
