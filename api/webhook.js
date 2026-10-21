@@ -48,14 +48,13 @@ export default async function handler(req, res) {
             const usersRef = db.collection('usuarios');
             const snapshot = await usersRef.get();
 
-            let atualizou = false;
+            let encontrou = false;
             const batch = db.batch();
 
             snapshot.forEach(docSnap => {
               const uData = docSnap.data();
-              // Verifica se o campo email bate com o comprador
               if (uData.email && uData.email.trim().toLowerCase() === cleanEmail) {
-                atualizou = true;
+                encontrou = true;
                 batch.update(docSnap.ref, {
                   vip: true,
                   vipExpiraEm: dataExpiracao,
@@ -64,11 +63,10 @@ export default async function handler(req, res) {
               }
             });
 
-            if (atualizou) {
+            if (encontrou) {
               await batch.commit();
               console.log("SUCESSO: VIP ativado para:", cleanEmail);
             } else {
-              // Se não encontrou nenhum documento com esse email, cria um novo
               await usersRef.add({
                 email: cleanEmail,
                 vip: true,
