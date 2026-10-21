@@ -17,7 +17,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'E-mail não informado' });
     }
 
-    // Gera um identificador único aleatório para cumprir a exigência do Mercado Pago
     const idempotencyKey = 'idemp_' + Math.random().toString(36).substring(2) + Date.now();
 
     const bodyPayment = {
