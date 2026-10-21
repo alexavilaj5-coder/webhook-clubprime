@@ -69,7 +69,6 @@
       to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
-    /* TOP HEADER */
     .top-header {
       display: flex;
       justify-content: space-between;
@@ -126,7 +125,6 @@
       100% { box-shadow: 0 0 20px var(--secondary-glow); }
     }
 
-    /* HERO BANNER */
     .hero-banner {
       background: linear-gradient(135deg, #1e1b4b, #312e81, #2563eb);
       border-radius: 24px;
@@ -138,7 +136,6 @@
       box-shadow: 0 12px 30px var(--primary-glow);
     }
 
-    /* CARD VIP / INFINITEPAY */
     .card-vip-banner {
       background: linear-gradient(145deg, #0f172a, #1a103c);
       border: 1px solid var(--purple);
@@ -187,7 +184,6 @@
       box-shadow: 0 0 12px var(--primary-glow);
     }
 
-    /* CATEGORIES BAR */
     .categories-bar {
       display: flex;
       gap: 10px;
@@ -219,7 +215,6 @@
       transform: translateY(-2px);
     }
 
-    /* COMPANY CARDS */
     .company-card {
       background: linear-gradient(145deg, #0f172a, #131d33);
       border: 1px solid var(--border);
@@ -262,7 +257,6 @@
       box-shadow: 0 0 10px var(--secondary-glow);
     }
 
-    /* BUTTONS */
     .btn {
       width: 100%;
       padding: 14px;
@@ -304,7 +298,6 @@
       background: rgba(255,255,255,0.05);
     }
 
-    /* SPINNER DE CARREGAMENTO */
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -319,7 +312,6 @@
       animation: spin 0.8s linear infinite;
     }
 
-    /* BOTTOM NAV */
     .bottom-nav {
       position: fixed;
       bottom: 0;
@@ -354,7 +346,6 @@
 
     .nav-icon { font-size: 1.3rem; }
 
-    /* MODAIS ESTILIZADOS */
     .modal {
       display: none;
       position: fixed;
@@ -405,10 +396,9 @@
     }
   </style>
 
-  <!-- FIREBASE & WEBHOOK LISTENER -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -426,7 +416,7 @@
 
     window.firebaseAuth = auth;
     window.firebaseDb = db;
-    window.dbMethods = { doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, where, getDocs, addDoc, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut };
+    window.dbMethods = { doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, where, getDocs, addDoc, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut };
 
     let unsubscribeUser = null;
 
@@ -446,6 +436,15 @@
               criadoEm: new Date().toISOString()
             };
             await setDoc(userDocRef, data);
+          }
+
+          // VERIFICA SE OS 30 DIAS EXPIRARAM
+          if (data.vip && data.vipExpiraEm) {
+            const expiraData = new Date(data.vipExpiraEm);
+            if (new Date() > expiraData) {
+              data.vip = false;
+              await updateDoc(userDocRef, { vip: false });
+            }
           }
 
           window.currentUserData = data;
@@ -487,13 +486,12 @@
 
   <div class="app-shell">
     
-    <!-- HEADER FIXO -->
     <div class="top-header">
       <div class="location-badge">📍 <span>Pelotas, RS</span></div>
       <div class="status-badge free">PLANO GRATUITO</div>
     </div>
 
-    <!-- TELA 0: LOGIN / CADASTRO -->
+    <!-- TELA LOGIN/CADASTRO COM ESQUECI MINHA SENHA -->
     <div id="screen-auth" class="screen active">
       <div style="text-align:center; margin-bottom:24px; margin-top:20px;">
         <div style="font-size:2.8rem; margin-bottom:6px;">⚡</div>
@@ -516,10 +514,15 @@
 
       <button class="btn btn-purple" style="margin-top:12px;" onclick="fazerCadastro()">Criar Conta & Acessar</button>
       <button class="btn btn-outline" style="margin-top:10px;" onclick="fazerLogin()">Já tenho uma conta (Entrar)</button>
-      <button class="btn btn-outline" style="margin-top:10px; border-style:dashed;" onclick="entrarSemLogin()">⚡ Testar App Sem Login</button>
+      
+      <div style="text-align:center; margin-top:12px;">
+        <a href="#" onclick="recuperarSenha()" style="font-size:0.8rem; color:var(--primary); text-decoration:none; font-weight:600;">🔑 Esqueci minha senha</a>
+      </div>
+
+      <button class="btn btn-outline" style="margin-top:16px; border-style:dashed;" onclick="entrarSemLogin()">⚡ Testar App Sem Login</button>
     </div>
 
-    <!-- TELA 1: HOME -->
+    <!-- TELA HOME -->
     <div id="screen-home" class="screen">
       <div class="hero-banner">
         <span style="font-size:0.75rem; text-transform:uppercase; opacity:0.8; font-weight:800; letter-spacing:1px; color:#93c5fd;">Painel do Membro</span>
@@ -527,15 +530,15 @@
         <p style="font-size:0.85rem; opacity:0.9; margin-top:6px; color:#e0e7ff;">Aproveite os descontos cadastrados de hoje.</p>
       </div>
 
-      <!-- CARD DE ASSINATURA INFINITEPAY -->
+      <!-- LINK NOVO DO CHECKOUT INFINITEPAY -->
       <div id="banner-assinatura" class="card-vip-banner">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
             <span style="font-size:0.7rem; font-weight:800; color:#c084fc; letter-spacing:1px; text-transform:uppercase;">Plano Membro Prime</span>
-            <h3 style="font-size:1.15rem; font-weight:800; margin-top:2px;">Seja VIP por R$ 1,10</h3>
-            <p style="font-size:0.78rem; color:var(--muted); margin-top:2px;">Ativação automática via Pix.</p>
+            <h3 style="font-size:1.15rem; font-weight:800; margin-top:2px;">Seja VIP por R$ 1,20</h3>
+            <p style="font-size:0.78rem; color:var(--muted); margin-top:2px;">Ativação mensal via Pix (30 dias).</p>
           </div>
-          <span style="font-weight:900; color:#34d399; font-size:1.25rem;">R$ 1,10</span>
+          <span style="font-weight:900; color:#34d399; font-size:1.25rem;">R$ 1,20</span>
         </div>
         
         <button class="btn btn-secondary" style="margin-top:14px;" onclick="abrirCheckoutInfinitePay()">⚡ Pagar via PIX (InfinitePay)</button>
@@ -593,7 +596,7 @@
       </div>
     </div>
 
-    <!-- TELA 2: PARCEIROS -->
+    <!-- TELA PARCEIROS -->
     <div id="screen-search" class="screen">
       <h2 style="margin-bottom:12px; font-weight:800;">Todos os Parceiros</h2>
       <div style="background:var(--card); border:1px solid var(--border); padding:20px; border-radius:20px; text-align:center; margin-bottom:16px;">
@@ -603,7 +606,7 @@
       </div>
     </div>
 
-    <!-- TELA 3: CARTEIRA -->
+    <!-- TELA CARTEIRA -->
     <div id="screen-wallet" class="screen">
       <h2 style="margin-bottom:4px; font-weight:800;">Sua Carteira</h2>
       <p style="font-size:0.82rem; color:var(--muted); margin-bottom:18px;">Economia acumulada com o seu clube.</p>
@@ -615,12 +618,12 @@
         </div>
         <div style="background:var(--card); border:1px solid var(--border); padding:16px; border-radius:18px; text-align:center;">
           <span style="font-size:0.72rem; color:var(--muted); font-weight:700;">CUSTO DO APP</span>
-          <div style="font-size:1.4rem; font-weight:900; color:var(--primary); margin-top:4px;">R$ 1,10</div>
+          <div style="font-size:1.4rem; font-weight:900; color:var(--primary); margin-top:4px;">R$ 1,20</div>
         </div>
       </div>
     </div>
 
-    <!-- TELA 4: PERFIL -->
+    <!-- TELA PERFIL -->
     <div id="screen-profile" class="screen">
       <div style="text-align:center; margin-bottom:24px;">
         <div style="width:75px; height:75px; background:linear-gradient(135deg, var(--primary), var(--purple)); border-radius:50%; margin:0 auto 12px auto; display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:bold; box-shadow:0 0 20px var(--primary-glow);">
@@ -642,7 +645,7 @@
       <button class="btn btn-outline" style="color:var(--danger); border-color:#ef444455;" onclick="deslogar()">Sair da Conta</button>
     </div>
 
-    <!-- MENU INFERIOR -->
+    <!-- NAV INFERIOR -->
     <div class="bottom-nav" style="display:none;">
       <div class="nav-item active" onclick="navTo('home', this)">
         <span class="nav-icon">🏠</span>
@@ -664,7 +667,6 @@
 
   </div>
 
-  <!-- MODAL DE MENSAGEM / AVISO ESTILIZADO -->
   <div id="modal-alert" class="modal">
     <div class="modal-content">
       <div id="alert-icon" style="font-size:2.5rem; margin-bottom:10px;">⚡</div>
@@ -674,7 +676,6 @@
     </div>
   </div>
 
-  <!-- MODAL DE VERIFICAÇÃO DE E-MAIL (SISTEMA DARK NEON) -->
   <div id="modal-email-verify" class="modal">
     <div class="modal-content">
       <div style="font-size:2.5rem; margin-bottom:10px;">✉️</div>
@@ -688,7 +689,6 @@
     </div>
   </div>
 
-  <!-- MODAL DE CUPOM -->
   <div id="modal-coupon" class="modal">
     <div class="modal-content">
       <h3 id="modal-title" style="font-size:1.2rem; font-weight:800;">---</h3>
@@ -717,7 +717,8 @@
   </div>
 
   <script>
-    const INFINITEPAY_CHECKOUT_URL = "https://checkout.infinitepay.io/alexsander-de-avila/TlGfqDKlfo";
+    // NOVO LINK DO CHECKOUT INFINITEPAY
+    const INFINITEPAY_CHECKOUT_URL = "https://checkout.infinitepay.io/alexsander-de-avila/C72NfafQ30";
 
     function mostrarAviso(titulo, mensagem, icone = "⚡") {
       document.getElementById('alert-icon').innerText = icone;
@@ -753,7 +754,6 @@
       });
     }
 
-    // CADASTRO RESILIENTE - SALVA NO FIRESTORE MESMO SE O AUTH NÃO ESTIVER ATIVADO
     async function fazerCadastro() {
       const nome = document.getElementById('reg-name').value;
       const email = document.getElementById('reg-email').value;
@@ -776,31 +776,7 @@
 
         mostrarAviso("Sucesso", "Sua conta foi criada com sucesso!", "🎉");
       } catch (err) {
-        console.warn("Erro no Auth, salvando diretamente no Firestore:", err);
-        
-        // Modo de segurança: salva direto na coleção 'usuarios' do Firestore
-        try {
-          const { collection, addDoc } = window.dbMethods;
-          await addDoc(collection(window.firebaseDb, "usuarios"), {
-            nome: nome,
-            email: cleanEmail,
-            vip: false,
-            criadoEm: new Date().toISOString()
-          });
-
-          // Entra no app e define o e-mail ativo na sessão
-          localStorage.setItem('user_email', cleanEmail);
-          localStorage.setItem('user_name', nome);
-          
-          document.getElementById('user-name-display').innerText = nome;
-          document.getElementById('profile-name').innerText = nome;
-          document.getElementById('profile-email').innerText = cleanEmail;
-
-          entrarSemLogin();
-          mostrarAviso("Conta Registrada!", "Seu e-mail foi registrado para vinculação automática do Pix!", "⚡");
-        } catch (fsErr) {
-          mostrarAviso("Erro no Cadastro", fsErr.message, "❌");
-        }
+        mostrarAviso("Erro no Cadastro", err.message, "❌");
       }
     }
 
@@ -813,10 +789,22 @@
       try {
         await window.dbMethods.signInWithEmailAndPassword(window.firebaseAuth, email, pass);
       } catch (err) {
-        // Se der erro de config no auth, permite testar diretamente com o e-mail preenchido
-        localStorage.setItem('user_email', email.trim().toLowerCase());
-        document.getElementById('profile-email').innerText = email.trim().toLowerCase();
-        entrarSemLogin();
+        mostrarAviso("Erro ao Entrar", err.message, "❌");
+      }
+    }
+
+    // FUNÇÃO RECUPERAR SENHA
+    async function recuperarSenha() {
+      const email = document.getElementById('reg-email').value;
+      if (!email || !email.includes('@')) {
+        return mostrarAviso("E-mail Necessário", "Digite seu e-mail no campo acima para enviarmos o link de redefinição de senha.", "✉️");
+      }
+
+      try {
+        await window.dbMethods.sendPasswordResetEmail(window.firebaseAuth, email.trim().toLowerCase());
+        mostrarAviso("E-mail Enviado!", "Enviamos um link para redefinição de senha para o seu e-mail.", "📧");
+      } catch (err) {
+        mostrarAviso("Erro", err.message, "❌");
       }
     }
 
@@ -841,12 +829,9 @@
 
     async function confirmarPagamentoReal() {
       const user = window.firebaseAuth.currentUser;
-      const savedEmail = localStorage.getItem('user_email');
 
       if (user && user.email) {
         consultarFirestoreVip(user.email.toLowerCase());
-      } else if (savedEmail) {
-        consultarFirestoreVip(savedEmail);
       } else {
         document.getElementById('modal-email-verify').classList.add('active');
       }
@@ -875,7 +860,13 @@
 
         let vipAtivo = false;
         querySnapshot.forEach((doc) => {
-          if (doc.data().vip === true) vipAtivo = true;
+          const data = doc.data();
+          if (data.vip === true) {
+            // Verifica se ainda está dentro dos 30 dias
+            if (!data.vipExpiraEm || new Date() <= new Date(data.vipExpiraEm)) {
+              vipAtivo = true;
+            }
+          }
         });
 
         if (vipAtivo) {
@@ -885,7 +876,7 @@
             b.className = "status-badge vip";
           });
           document.getElementById('banner-assinatura').style.display = 'none';
-          mostrarAviso("Pagamento Confirmado!", "Seu status VIP foi ativado com sucesso. Aproveite os cupons!", "🎉");
+          mostrarAviso("Pagamento Confirmado!", "Sua assinatura mensal VIP está ativa por 30 dias!", "🎉");
         } else {
           mostrarAviso("Aguardando Aprovação", "O pagamento ainda não foi identificado no servidor. Se acabou de pagar via Pix, aguarde 10 segundos e tente novamente.", "⏳");
         }
@@ -905,7 +896,7 @@
     let timerInterval;
     function resgatarCupom(loja, disc) {
       if (!window.isVipUser) {
-        mostrarAviso("Acesso Restrito", "Você precisa assinar o Plano VIP (R$ 1,10) para liberar este cupom!", "🔒");
+        mostrarAviso("Acesso Restrito", "Você precisa assinar o Plano VIP para liberar este cupom!", "🔒");
         return;
       }
 
