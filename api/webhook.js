@@ -23,7 +23,6 @@ try {
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // O Mercado Pago envia notificações por POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido' });
   }
@@ -31,11 +30,9 @@ export default async function handler(req, res) {
   try {
     const { type, data } = req.body;
 
-    // Queremos apenas os eventos do tipo "payment"
-    if (type === 'payment' && data && data.id) {
+    if ((type === 'payment' || req.body.action === 'payment.created') && data && data.id) {
       const paymentId = data.id;
 
-      // Consulta o status real da transação diretamente na API do Mercado Pago
       const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
         headers: {
           'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`
@@ -48,7 +45,6 @@ export default async function handler(req, res) {
 
       const paymentData = await mpResponse.json();
 
-      // Verifica se o pagamento foi aprovado
       if (paymentData.status === 'approved') {
         const payerEmail = paymentData.payer?.email || paymentData.external_reference;
 
@@ -60,15 +56,7 @@ export default async function handler(req, res) {
           const usersRef = db.collection('usuarios');
           const snapshot = await usersRef.where('email', '==', cleanEmail).get();
 
-          if (snapshot.empty) {
-            await usersRef.add({
-              email: cleanEmail,
-              vip: true,
-              vipExpiraEm: dataExpiracao,
-              criadoEm: new Date().toISOString(),
-              origem: 'mercadopago'
-            });
-          } else {
+          if (!snapshot.empty) {
             const batch = db.batch();
             snapshot.forEach(doc => {
               batch.update(doc.ref, {
@@ -78,12 +66,21 @@ export default async function handler(req, res) {
               });
             });
             await batch.commit();
+            console.log("VIP Ativado com sucesso para:", cleanEmail);
+          } else {
+            // Se não achou documento prévio, cria um novo
+            await usersRef.add({
+              email: cleanEmail,
+              vip: true,
+              vipExpiraEm: dataExpiracao,
+              criadoEm: new Date().toISOString(),
+              origem: 'mercadopago'
+            });
           }
         }
       }
     }
 
-    // Retorna 200 pro Mercado Pago não ficar reenviando
     return res.status(200).send("OK");
 
   } catch (error) {
