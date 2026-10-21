@@ -17,7 +17,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'E-mail não informado' });
     }
 
-    // Cria a cobrança no Mercado Pago
+    // Gera um identificador único aleatório para cumprir a exigência do Mercado Pago
+    const idempotencyKey = 'idemp_' + Math.random().toString(36).substring(2) + Date.now();
+
     const bodyPayment = {
       transaction_amount: 1.20,
       description: 'Assinatura VIP Club Prime (30 dias)',
@@ -34,7 +36,8 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`
+        'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+        'X-Idempotency-Key': idempotencyKey
       },
       body: JSON.stringify(bodyPayment)
     });
@@ -45,7 +48,6 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: data.message || 'Erro ao gerar Pix no Mercado Pago' });
     }
 
-    // Retorna o QR Code e o código Pix Copia e Cola
     const qrCodeBase64 = data.point_of_interaction?.transaction_data?.qr_code_base64;
     const qrCodeCopiaCola = data.point_of_interaction?.transaction_data?.qr_code;
 
