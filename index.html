@@ -630,19 +630,22 @@
       </div>
 
       <div style="margin-bottom:18px;">
-        <input type="text" class="form-control" placeholder="🔍 Buscar restaurante, oficina, iFood..." onkeyup="filterStores(this.value)">
+        <input type="text" class="form-control" placeholder="🔍 Buscar restaurante, oficina, iFood, Shopee..." onkeyup="filterStores(this.value)">
       </div>
 
       <div class="categories-bar">
-        <div class="category-pill active" onclick="filterCat('all', this)">Todos</div>
-        <div class="category-pill" onclick="filterCat('gastronomia', this)">🍔 Gastronomia</div>
+        <div class="category-pill active" onclick="filterCat('all', this)">Todos Os Cupons</div>
+        <div class="category-pill" onclick="filterCat('gastronomia', this)">🍔 Gastronomia & Delivery</div>
+        <div class="category-pill" onclick="filterCat('compras', this)">🛍️ Lojas & Compras</div>
         <div class="category-pill" onclick="filterCat('automotivo', this)">🔧 Automotivo</div>
         <div class="category-pill" onclick="filterCat('beleza', this)">💇 Saúde & Beleza</div>
       </div>
 
+      <!-- LISTA COMPLETA DE CUPONS REAIS -->
       <div id="stores-list">
-        <!-- GASTRONOMIA / DELIVERY -->
-        <div class="company-card" data-cat="gastronomia" data-name="ifood delivery alimentacao cupom">
+
+        <!-- IFOOD -->
+        <div class="company-card" data-cat="gastronomia" data-name="ifood delivery alimentacao cupom pelotas">
           <div class="company-header">
             <div>
               <div class="company-title">iFood Delivery</div>
@@ -659,6 +662,43 @@
           </button>
         </div>
 
+        <!-- SHOPEE -->
+        <div class="company-card" data-cat="compras" data-name="shopee compras frete gratis cupom entrega pelotas">
+          <div class="company-header">
+            <div>
+              <div class="company-title">Shopee Brasil</div>
+              <div class="company-meta">
+                <span>📦 Entrega Pelotas / RS</span>
+                <span style="color:var(--amber);">⭐ 4.9</span>
+              </div>
+            </div>
+            <div class="discount-badge">FRETE GRÁTIS</div>
+          </div>
+          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Cupom oficial de Frete Grátis + R$ 10 OFF em compras pelo app.</p>
+          <button class="btn" onclick="resgatarCupomReal('Shopee Brasil', 'Frete Grátis + R$ 10 OFF', 'SHOPEE10OFF')">
+            🎟️ Copiar Código Shopee
+          </button>
+        </div>
+
+        <!-- MERCADO LIVRE -->
+        <div class="company-card" data-cat="compras" data-name="mercado livre pecas compras entrega pelotas">
+          <div class="company-header">
+            <div>
+              <div class="company-title">Mercado Livre (Peças & Compras)</div>
+              <div class="company-meta">
+                <span>📦 Entrega Rápida / Pelotas</span>
+                <span style="color:var(--amber);">⭐ 4.9</span>
+              </div>
+            </div>
+            <div class="discount-badge">R$ 20 OFF</div>
+          </div>
+          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Cupom de R$ 20 OFF para compras acima de R$ 99 com entrega em Pelotas.</p>
+          <button class="btn" onclick="resgatarCupomReal('Mercado Livre', 'R$ 20 OFF em compras > R$99', 'MELI20OFF')">
+            🎟️ Copiar Código Mercado Livre
+          </button>
+        </div>
+
+        <!-- MCDONALDS -->
         <div class="company-card" data-cat="gastronomia" data-name="mcdonalds mc oferta lanche centro pelotas">
           <div class="company-header">
             <div>
@@ -676,6 +716,7 @@
           </button>
         </div>
 
+        <!-- TOUR PELOTAS EM DOBRO -->
         <div class="company-card" data-cat="gastronomia" data-name="pelotas em dobro tour gastronomico restaurante">
           <div class="company-header">
             <div>
@@ -693,6 +734,7 @@
           </button>
         </div>
 
+        <!-- ESPETINHO DO SUL -->
         <div class="company-card" data-cat="gastronomia" data-name="churrascaria espetinho do sul centro pelotas">
           <div class="company-header">
             <div>
@@ -710,7 +752,25 @@
           </button>
         </div>
 
-        <!-- AUTOMOTIVO -->
+        <!-- BEROLA -->
+        <div class="company-card" data-cat="gastronomia" data-name="confeitaria berola doces tradicionais centro pelotas">
+          <div class="company-header">
+            <div>
+              <div class="company-title">Confeitaria Berola</div>
+              <div class="company-meta">
+                <span>📍 Centro • Pelotas</span>
+                <span style="color:var(--amber);">⭐ 4.8</span>
+              </div>
+            </div>
+            <div class="discount-badge">10% OFF</div>
+          </div>
+          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Desconto em caixas de doces tradicionais de Pelotas.</p>
+          <button class="btn" onclick="resgatarCupomReal('Confeitaria Berola', '10% OFF em Doces', 'BEROLA10')">
+            🎟️ Resgatar Cupom no Caixa
+          </button>
+        </div>
+
+        <!-- AUTO CENTER FRAGATA -->
         <div class="company-card" data-cat="automotivo" data-name="auto center oficina mecanica fragata pelotas">
           <div class="company-header">
             <div>
@@ -728,22 +788,42 @@
           </button>
         </div>
 
-        <div class="company-card" data-cat="automotivo" data-name="mercado livre pecas compras entrega pelotas">
+        <!-- LAVAGEM LESTE AREAL -->
+        <div class="company-card" data-cat="automotivo" data-name="lavagem leste express cera lavagem detalhada areal pelotas">
           <div class="company-header">
             <div>
-              <div class="company-title">Mercado Livre (Peças & Compras)</div>
+              <div class="company-title">Lavagem Leste Express</div>
               <div class="company-meta">
-                <span>📦 Entrega Rápida / Pelotas</span>
+                <span>📍 Bairro Areal • Pelotas</span>
+                <span style="color:var(--amber);">⭐ 4.7</span>
+              </div>
+            </div>
+            <div class="discount-badge">15% OFF</div>
+          </div>
+          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Válido para lavagem completa com aplicação de cera cristalizadora.</p>
+          <button class="btn" onclick="resgatarCupomReal('Lavagem Leste Express', '15% OFF Ducha + Cera', 'LAVAGEM15')">
+            🎟️ Resgatar Cupom na Lavagem
+          </button>
+        </div>
+
+        <!-- BARBEARIA DO PORTO -->
+        <div class="company-card" data-cat="beleza" data-name="barbearia do porto corte barba porto pelotas">
+          <div class="company-header">
+            <div>
+              <div class="company-title">Barbearia do Porto</div>
+              <div class="company-meta">
+                <span>📍 Bairro Porto • Pelotas</span>
                 <span style="color:var(--amber);">⭐ 4.9</span>
               </div>
             </div>
-            <div class="discount-badge">R$ 20 OFF</div>
+            <div class="discount-badge">15% OFF</div>
           </div>
-          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Cupom de R$ 20 OFF para compras acima de R$ 99 com entrega em Pelotas.</p>
-          <button class="btn" onclick="resgatarCupomReal('Mercado Livre', 'R$ 20 OFF em compras > R$99', 'MELI20OFF')">
-            🎟️ Copiar Código Cupom
+          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Desconto em combos de Corte de Cabelo + Barba.</p>
+          <button class="btn" onclick="resgatarCupomReal('Barbearia do Porto', '15% OFF Combo Corte+Barba', 'PORTO15')">
+            🎟️ Resgatar Cupom na Barbearia
           </button>
         </div>
+
       </div>
     </div>
 
