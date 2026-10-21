@@ -25,10 +25,12 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    const paymentId = req.body?.data?.id || req.query?.['data.id'] || req.query?.id;
+    // Apanha o ID de pagamento venha de onde vier (Query, Body ou Search Params)
+    const paymentId = req.query?.id || req.body?.data?.id || req.body?.id || req.query?.['data.id'];
+
+    console.log("Webhook acionado. Payment ID capturado:", paymentId);
 
     if (paymentId && db) {
-      // Consulta o status real no Mercado Pago
       const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
         headers: {
           'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`
@@ -37,9 +39,9 @@ export default async function handler(req, res) {
 
       if (mpResponse.ok) {
         const paymentData = await mpResponse.json();
+        console.log("Status do pagamento no Mercado Pago:", paymentData.status);
 
         if (paymentData.status === 'approved') {
-          // Pega o e-mail do comprador retornado pelo Mercado Pago
           const rawEmail = paymentData.external_reference || paymentData.payer?.email;
 
           if (rawEmail) {
@@ -53,7 +55,6 @@ export default async function handler(req, res) {
             let encontrou = false;
             const batch = db.batch();
 
-            // Percorre os documentos para garantir a correspondência do e-mail
             snapshot.forEach(doc => {
               const uData = doc.data();
               if (uData.email && uData.email.trim().toLowerCase() === cleanEmail) {
@@ -68,9 +69,8 @@ export default async function handler(req, res) {
 
             if (encontrou) {
               await batch.commit();
-              console.log("VIP ATIVADO COM SUCESSO PARA:", cleanEmail);
+              console.log("SUCESSO: VIP ativado para o email:", cleanEmail);
             } else {
-              // Se o utilizador não existia no Firestore, cria o documento
               await usersRef.add({
                 email: cleanEmail,
                 vip: true,
@@ -78,17 +78,19 @@ export default async function handler(req, res) {
                 criadoEm: new Date().toISOString(),
                 origem: 'mercadopago'
               });
-              console.log("NOVO UTILIZADOR VIP CRIADO PARA:", cleanEmail);
+              console.log("SUCESSO: Novo utilizador VIP criado para:", cleanEmail);
             }
           }
         }
+      } else {
+        console.error("Erro ao consultar API do Mercado Pago:", await mpResponse.text());
       }
     }
 
     return res.status(200).send("OK");
 
   } catch (error) {
-    console.error("Erro interno no Webhook:", error);
+    console.error("Erro crítico no Webhook:", error);
     return res.status(200).send("OK");
   }
 }
