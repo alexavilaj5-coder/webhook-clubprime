@@ -2,13 +2,25 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
 if (!getApps().length) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-  initializeApp({
-    credential: cert(serviceAccount)
-  });
+  const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (rawServiceAccount) {
+    try {
+      const serviceAccount = JSON.parse(rawServiceAccount);
+      initializeApp({
+        credential: cert(serviceAccount)
+      });
+    } catch (err) {
+      console.error("Erro no JSON da chave do Firebase:", err.message);
+    }
+  }
 }
 
-const db = getFirestore();
+let db = null;
+try {
+  db = getFirestore();
+} catch (e) {
+  console.error("Erro ao conectar no Firestore Admin:", e.message);
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -27,25 +39,32 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Método não permitido' });
   }
 
+  if (!db) {
+    return res.status(500).json({ error: "Firebase Admin não inicializado corretamente." });
+  }
+
   try {
     const payload = req.body;
-    console.log("Recebido Webhook InfinitePay:", JSON.stringify(payload));
+    console.log("Webhook InfinitePay recebido:", JSON.stringify(payload));
 
+    // Procura o e-mail em todas as estruturas possíveis que a InfinitePay envia
     const customerEmail = 
       payload?.data?.buyer?.email ||
       payload?.buyer?.email ||
       payload?.customer?.email ||
       payload?.data?.customer?.email ||
+      payload?.data?.client?.email ||
+      payload?.client?.email ||
       payload?.email;
 
     if (!customerEmail) {
-      console.log("Nenhum e-mail localizado no payload do Webhook.");
-      return res.status(200).json({ message: "Notificação recebida sem e-mail." });
+      console.log("Aviso: Webhook recebido sem e-mail no payload.");
+      return res.status(200).json({ message: "Notificação recebida, mas nenhum e-mail foi localizado." });
     }
 
     const cleanEmail = customerEmail.trim().toLowerCase();
 
-    // Calcula 30 dias a partir de HOJE
+    // Calcula exatamente 30 dias de VIP a partir de agora
     const agora = new Date();
     const dataExpiracao = new Date(agora.setDate(agora.getDate() + 30)).toISOString();
 
@@ -53,7 +72,6 @@ export default async function handler(req, res) {
     const snapshot = await usersRef.where('email', '==', cleanEmail).get();
 
     if (snapshot.empty) {
-      // Cria o registro novo com VIP ativo por 30 dias
       await usersRef.add({
         email: cleanEmail,
         vip: true,
@@ -61,9 +79,8 @@ export default async function handler(req, res) {
         criadoEm: new Date().toISOString(),
         origem: 'infinitepay_webhook'
       });
-      console.log(`Novo usuário VIP por 30 dias criado: ${cleanEmail}`);
+      console.log(`Novo usuário VIP criado por 30 dias: ${cleanEmail}`);
     } else {
-      // Atualiza o registro existente renovando mais 30 dias
       const batch = db.batch();
       snapshot.forEach(doc => {
         batch.update(doc.ref, { 
@@ -73,13 +90,13 @@ export default async function handler(req, res) {
         });
       });
       await batch.commit();
-      console.log(`VIP renovado por 30 dias para: ${cleanEmail}`);
+      console.log(`VIP renovado com sucesso por mais 30 dias para: ${cleanEmail}`);
     }
 
     return res.status(200).json({ success: true, email: cleanEmail, expiraEm: dataExpiracao });
 
   } catch (error) {
-    console.error("Erro no processamento do Webhook:", error);
+    console.error("Erro interno no processamento do Webhook:", error);
     return res.status(500).json({ error: error.message });
   }
 }
