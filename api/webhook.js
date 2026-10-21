@@ -6,9 +6,7 @@ if (!getApps().length) {
   if (rawServiceAccount) {
     try {
       const serviceAccount = JSON.parse(rawServiceAccount);
-      initializeApp({
-        credential: cert(serviceAccount)
-      });
+      initializeApp({ credential: cert(serviceAccount) });
     } catch (err) {
       console.error("Erro no JSON do Firebase:", err.message);
     }
@@ -19,70 +17,77 @@ let db = null;
 try {
   db = getFirestore();
 } catch (e) {
-  console.error("Erro ao conectar no Firestore:", e.message);
+  console.error("Erro no Firestore:", e.message);
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
+  // O Mercado Pago envia notificações por POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido' });
   }
 
-  if (!db) {
-    return res.status(500).json({ error: "Banco de dados não conectado." });
-  }
-
   try {
-    const { email } = req.body;
+    const { type, data } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ success: false, error: "E-mail não fornecido." });
+    // Queremos apenas os eventos do tipo "payment"
+    if (type === 'payment' && data && data.id) {
+      const paymentId = data.id;
+
+      // Consulta o status real da transação diretamente na API do Mercado Pago
+      const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`
+        }
+      });
+
+      if (!mpResponse.ok) {
+        return res.status(200).send("OK (Erro ao consultar MP)");
+      }
+
+      const paymentData = await mpResponse.json();
+
+      // Verifica se o pagamento foi aprovado
+      if (paymentData.status === 'approved') {
+        const payerEmail = paymentData.payer?.email || paymentData.external_reference;
+
+        if (payerEmail && db) {
+          const cleanEmail = payerEmail.trim().toLowerCase();
+          const agora = new Date();
+          const dataExpiracao = new Date(agora.setDate(agora.getDate() + 30)).toISOString();
+
+          const usersRef = db.collection('usuarios');
+          const snapshot = await usersRef.where('email', '==', cleanEmail).get();
+
+          if (snapshot.empty) {
+            await usersRef.add({
+              email: cleanEmail,
+              vip: true,
+              vipExpiraEm: dataExpiracao,
+              criadoEm: new Date().toISOString(),
+              origem: 'mercadopago'
+            });
+          } else {
+            const batch = db.batch();
+            snapshot.forEach(doc => {
+              batch.update(doc.ref, {
+                vip: true,
+                vipExpiraEm: dataExpiracao,
+                atualizadoEm: new Date().toISOString()
+              });
+            });
+            await batch.commit();
+          }
+        }
+      }
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-    console.log("Ativando VIP via retorno de checkout para:", cleanEmail);
-
-    const agora = new Date();
-    const dataExpiracao = new Date(agora.setDate(agora.getDate() + 30)).toISOString();
-
-    const usersRef = db.collection('usuarios');
-    const snapshot = await usersRef.where('email', '==', cleanEmail).get();
-
-    if (snapshot.empty) {
-      await usersRef.add({
-        email: cleanEmail,
-        vip: true,
-        vipExpiraEm: dataExpiracao,
-        criadoEm: new Date().toISOString(),
-        origem: 'checkout_retorno'
-      });
-    } else {
-      const batch = db.batch();
-      snapshot.forEach(doc => {
-        batch.update(doc.ref, { 
-          vip: true,
-          vipExpiraEm: dataExpiracao,
-          atualizadoEm: new Date().toISOString()
-        });
-      });
-      await batch.commit();
-    }
-
-    return res.status(200).json({ success: true, email: cleanEmail, expiraEm: dataExpiracao });
+    // Retorna 200 pro Mercado Pago não ficar reenviando
+    return res.status(200).send("OK");
 
   } catch (error) {
-    console.error("Erro no processamento:", error);
-    return res.status(500).json({ error: error.message });
+    console.error("Erro no Webhook:", error);
+    return res.status(200).send("OK (Tratado)");
   }
 }
