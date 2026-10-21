@@ -469,6 +469,17 @@
           }
         });
 
+        // VERIFICA SE O USUÁRIO ACABOU DE VOLTAR DO CHECKOUT (Opção 1 Automática)
+        setTimeout(() => {
+          if (user && user.email) {
+            fetch('https://webhook-clubprime.vercel.app/api/webhook', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: user.email.toLowerCase() })
+            }).catch(() => {});
+          }
+        }, 1500);
+
         document.getElementById('screen-auth').classList.remove('active');
         document.getElementById('screen-home').classList.add('active');
         document.querySelector('.bottom-nav').style.display = 'flex';
@@ -717,7 +728,7 @@
   </div>
 
   <script>
-    // NOVO LINK DO CHECKOUT INFINITEPAY
+    // CHECKOUT INFINITEPAY
     const INFINITEPAY_CHECKOUT_URL = "https://checkout.infinitepay.io/alexsander-de-avila/C72NfafQ30";
 
     function mostrarAviso(titulo, mensagem, icone = "⚡") {
@@ -725,6 +736,10 @@
       document.getElementById('alert-title').innerText = titulo;
       document.getElementById('alert-msg').innerText = mensagem;
       document.getElementById('modal-alert').classList.add('active');
+    }
+
+    function fecharModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
     }
 
     function navTo(screenId, btn) {
@@ -793,7 +808,6 @@
       }
     }
 
-    // FUNÇÃO RECUPERAR SENHA
     async function recuperarSenha() {
       const email = document.getElementById('reg-email').value;
       if (!email || !email.includes('@')) {
@@ -862,7 +876,6 @@
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           if (data.vip === true) {
-            // Verifica se ainda está dentro dos 30 dias
             if (!data.vipExpiraEm || new Date() <= new Date(data.vipExpiraEm)) {
               vipAtivo = true;
             }
@@ -881,47 +894,19 @@
           mostrarAviso("Aguardando Aprovação", "O pagamento ainda não foi identificado no servidor. Se acabou de pagar via Pix, aguarde 10 segundos e tente novamente.", "⏳");
         }
       } catch (err) {
-        mostrarAviso("Erro na Consulta", err.message, "❌");
+        mostrarAviso("Erro", err.message, "❌");
       } finally {
-        resetarBotaoVerificar(btn);
+        btn.innerHTML = `Já paguei? Verificar Pagamento`;
+        btn.style.opacity = "1";
+        btn.style.pointerEvents = "auto";
       }
     }
 
-    function resetarBotaoVerificar(btn) {
-      btn.innerHTML = "Já paguei? Verificar Pagamento";
-      btn.style.opacity = "1";
-      btn.style.pointerEvents = "auto";
-    }
-
-    let timerInterval;
-    function resgatarCupom(loja, disc) {
-      if (!window.isVipUser) {
-        mostrarAviso("Acesso Restrito", "Você precisa assinar o Plano VIP para liberar este cupom!", "🔒");
-        return;
-      }
-
-      const code = Math.floor(1000 + Math.random() * 9000);
-      document.getElementById('modal-title').innerText = loja;
-      document.getElementById('modal-disc').innerText = disc;
-      document.getElementById('modal-code').innerText = '#' + code;
-
+    function resgatarCupom(titulo, desconto) {
+      document.getElementById('modal-title').innerText = titulo;
+      document.getElementById('modal-disc').innerText = desconto;
+      document.getElementById('modal-code').innerText = Math.floor(100000 + Math.random() * 900000);
       document.getElementById('modal-coupon').classList.add('active');
-
-      let time = 900;
-      clearInterval(timerInterval);
-      timerInterval = setInterval(() => {
-        time--;
-        let m = Math.floor(time / 60);
-        let s = time % 60;
-        document.getElementById('modal-timer').innerText = 
-          `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        if (time <= 0) clearInterval(timerInterval);
-      }, 1000);
-    }
-
-    function fecharModal(id) {
-      document.getElementById(id).classList.remove('active');
-      if (id === 'modal-coupon') clearInterval(timerInterval);
     }
   </script>
 </body>
