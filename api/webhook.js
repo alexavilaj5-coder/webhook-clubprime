@@ -45,9 +45,9 @@ export default async function handler(req, res) {
 
   try {
     const payload = req.body;
-    console.log("Payload Completo recebido:", JSON.stringify(payload));
+    // Imprime o JSON inteiro no console da Vercel para sabermos a estrutura exata
+    console.log("=== PAYLOAD COMPLETO DA INFINITEPAY ===", JSON.stringify(payload, null, 2));
 
-    // Procura e-mail nos locais tradicionais
     let customerEmail = 
       payload?.data?.buyer?.email ||
       payload?.buyer?.email ||
@@ -55,9 +55,10 @@ export default async function handler(req, res) {
       payload?.data?.customer?.email ||
       payload?.data?.client?.email ||
       payload?.client?.email ||
+      payload?.data?.metadata?.email ||
+      payload?.metadata?.email ||
       payload?.email;
 
-    // Se não achou, faz uma varredura completa por qualquer e-mail dentro do JSON recebido
     if (!customerEmail) {
       const payloadString = JSON.stringify(payload);
       const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
@@ -68,14 +69,13 @@ export default async function handler(req, res) {
     }
 
     if (!customerEmail) {
-      console.log("Nenhum e-mail localizado no payload.");
-      return res.status(200).json({ message: "Notificação recebida sem e-mail." });
+      console.log("ALERTA: Nenhum e-mail encontrado no payload da InfinitePay.");
+      return res.status(200).json({ message: "Recebido, mas sem e-mail." });
     }
 
     const cleanEmail = customerEmail.trim().toLowerCase();
-    console.log("E-mail identificado com sucesso:", cleanEmail);
+    console.log("E-MAIL EXTRAÍDO COM SUCESSO:", cleanEmail);
 
-    // Calcula 30 dias de VIP a partir de hoje
     const agora = new Date();
     const dataExpiracao = new Date(agora.setDate(agora.getDate() + 30)).toISOString();
 
@@ -90,7 +90,7 @@ export default async function handler(req, res) {
         criadoEm: new Date().toISOString(),
         origem: 'infinitepay_webhook'
       });
-      console.log(`Novo usuário VIP criado (30 dias): ${cleanEmail}`);
+      console.log(`Novo usuário VIP criado: ${cleanEmail}`);
     } else {
       const batch = db.batch();
       snapshot.forEach(doc => {
@@ -101,13 +101,13 @@ export default async function handler(req, res) {
         });
       });
       await batch.commit();
-      console.log(`VIP renovado com sucesso (30 dias): ${cleanEmail}`);
+      console.log(`VIP renovado para: ${cleanEmail}`);
     }
 
     return res.status(200).json({ success: true, email: cleanEmail, expiraEm: dataExpiracao });
 
   } catch (error) {
-    console.error("Erro no Webhook:", error);
+    console.error("Erro fatal no webhook:", error);
     return res.status(500).json({ error: error.message });
   }
 }
