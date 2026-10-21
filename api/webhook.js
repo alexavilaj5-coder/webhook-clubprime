@@ -25,7 +25,23 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    const paymentId = req.query?.id || req.body?.data?.id || req.body?.id || req.query?.['data.id'];
+    // Apanha o ID de todas as formas possíveis que o Mercado Pago envia
+    let paymentId = 
+      req.query?.['data.id'] || 
+      req.query?.id || 
+      req.body?.data?.id || 
+      req.body?.id;
+
+    // Se vier em formato de objeto req.query com 'data[id]'
+    if (!paymentId && req.query && req.query.data) {
+      if (typeof req.query.data === 'object') {
+        paymentId = req.query.data.id;
+      } else {
+        paymentId = req.query.data;
+      }
+    }
+
+    console.log("LOG - Payment ID Capturado:", paymentId);
 
     if (paymentId && db) {
       const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
@@ -36,6 +52,7 @@ export default async function handler(req, res) {
 
       if (mpResponse.ok) {
         const paymentData = await mpResponse.json();
+        console.log("LOG - Status no MP:", paymentData.status);
 
         if (paymentData.status === 'approved') {
           const rawEmail = paymentData.external_reference || paymentData.payer?.email;
@@ -65,7 +82,7 @@ export default async function handler(req, res) {
 
             if (encontrou) {
               await batch.commit();
-              console.log("SUCESSO: VIP ativado para:", cleanEmail);
+              console.log("LOG - VIP ATIVADO COM SUCESSO PARA:", cleanEmail);
             } else {
               await usersRef.add({
                 email: cleanEmail,
@@ -74,17 +91,19 @@ export default async function handler(req, res) {
                 criadoEm: new Date().toISOString(),
                 origem: 'mercadopago'
               });
-              console.log("SUCESSO: Novo documento VIP criado para:", cleanEmail);
+              console.log("LOG - NOVO USUARIO VIP CRIADO PARA:", cleanEmail);
             }
           }
         }
+      } else {
+        console.error("LOG - Erro ao consultar MP:", await mpResponse.text());
       }
     }
 
     return res.status(200).send("OK");
 
   } catch (error) {
-    console.error("Erro no Webhook:", error);
+    console.error("LOG - Erro no Webhook:", error);
     return res.status(200).send("OK");
   }
 }
