@@ -44,28 +44,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    const payload = req.body;
-    console.log("Payload recebido:", JSON.stringify(payload));
+    const { email } = req.body;
 
-    // Permite que o app envie diretamente o e-mail ao clicar em "Verificar Pagamento"
-    let customerEmail = payload?.email || payload?.data?.buyer?.email || payload?.buyer?.email || payload?.customer?.email;
-
-    if (!customerEmail) {
-      const payloadString = JSON.stringify(payload);
-      const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-      const matches = payloadString.match(emailRegex);
-      if (matches && matches.length > 0) {
-        customerEmail = matches[0];
-      }
+    if (!email) {
+      return res.status(400).json({ success: false, error: "E-mail não fornecido." });
     }
 
-    if (!customerEmail) {
-      console.log("Nenhum e-mail identificado na requisição.");
-      return res.status(400).json({ success: false, error: "E-mail não identificado. Informe o e-mail." });
-    }
-
-    const cleanEmail = customerEmail.trim().toLowerCase();
-    console.log("Processando liberação VIP para:", cleanEmail);
+    const cleanEmail = email.trim().toLowerCase();
+    console.log("Ativando VIP via retorno de checkout para:", cleanEmail);
 
     const agora = new Date();
     const dataExpiracao = new Date(agora.setDate(agora.getDate() + 30)).toISOString();
@@ -79,9 +65,8 @@ export default async function handler(req, res) {
         vip: true,
         vipExpiraEm: dataExpiracao,
         criadoEm: new Date().toISOString(),
-        origem: 'checkout_verificado'
+        origem: 'checkout_retorno'
       });
-      console.log(`Novo VIP criado para: ${cleanEmail}`);
     } else {
       const batch = db.batch();
       snapshot.forEach(doc => {
@@ -92,7 +77,6 @@ export default async function handler(req, res) {
         });
       });
       await batch.commit();
-      console.log(`VIP renovado para: ${cleanEmail}`);
     }
 
     return res.status(200).json({ success: true, email: cleanEmail, expiraEm: dataExpiracao });
