@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     const payload = req.body;
     console.log("Payload Completo recebido:", JSON.stringify(payload));
 
-    // Procura por e-mail de forma direta no payload
+    // Procura e-mail nos locais tradicionais
     let customerEmail = 
       payload?.data?.buyer?.email ||
       payload?.buyer?.email ||
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
       payload?.client?.email ||
       payload?.email;
 
-    // Se não achou nos locais tradicionais, busca qualquer padrão de e-mail dentro do JSON inteiro!
+    // Se não achou, faz uma varredura completa por qualquer e-mail dentro do JSON recebido
     if (!customerEmail) {
       const payloadString = JSON.stringify(payload);
       const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
@@ -68,14 +68,14 @@ export default async function handler(req, res) {
     }
 
     if (!customerEmail) {
-      console.log("Nenhum e-mail localizado na requisição.");
+      console.log("Nenhum e-mail localizado no payload.");
       return res.status(200).json({ message: "Notificação recebida sem e-mail." });
     }
 
     const cleanEmail = customerEmail.trim().toLowerCase();
-    console.log("E-mail identificado:", cleanEmail);
+    console.log("E-mail identificado com sucesso:", cleanEmail);
 
-    // Calcula 30 dias de VIP a partir do pagamento
+    // Calcula 30 dias de VIP a partir de hoje
     const agora = new Date();
     const dataExpiracao = new Date(agora.setDate(agora.getDate() + 30)).toISOString();
 
