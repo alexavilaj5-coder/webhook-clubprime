@@ -45,19 +45,10 @@ export default async function handler(req, res) {
 
   try {
     const payload = req.body;
-    // Imprime o JSON inteiro no console da Vercel para sabermos a estrutura exata
-    console.log("=== PAYLOAD COMPLETO DA INFINITEPAY ===", JSON.stringify(payload, null, 2));
+    console.log("Payload recebido:", JSON.stringify(payload));
 
-    let customerEmail = 
-      payload?.data?.buyer?.email ||
-      payload?.buyer?.email ||
-      payload?.customer?.email ||
-      payload?.data?.customer?.email ||
-      payload?.data?.client?.email ||
-      payload?.client?.email ||
-      payload?.data?.metadata?.email ||
-      payload?.metadata?.email ||
-      payload?.email;
+    // Permite que o app envie diretamente o e-mail ao clicar em "Verificar Pagamento"
+    let customerEmail = payload?.email || payload?.data?.buyer?.email || payload?.buyer?.email || payload?.customer?.email;
 
     if (!customerEmail) {
       const payloadString = JSON.stringify(payload);
@@ -69,12 +60,12 @@ export default async function handler(req, res) {
     }
 
     if (!customerEmail) {
-      console.log("ALERTA: Nenhum e-mail encontrado no payload da InfinitePay.");
-      return res.status(200).json({ message: "Recebido, mas sem e-mail." });
+      console.log("Nenhum e-mail identificado na requisição.");
+      return res.status(400).json({ success: false, error: "E-mail não identificado. Informe o e-mail." });
     }
 
     const cleanEmail = customerEmail.trim().toLowerCase();
-    console.log("E-MAIL EXTRAÍDO COM SUCESSO:", cleanEmail);
+    console.log("Processando liberação VIP para:", cleanEmail);
 
     const agora = new Date();
     const dataExpiracao = new Date(agora.setDate(agora.getDate() + 30)).toISOString();
@@ -88,9 +79,9 @@ export default async function handler(req, res) {
         vip: true,
         vipExpiraEm: dataExpiracao,
         criadoEm: new Date().toISOString(),
-        origem: 'infinitepay_webhook'
+        origem: 'checkout_verificado'
       });
-      console.log(`Novo usuário VIP criado: ${cleanEmail}`);
+      console.log(`Novo VIP criado para: ${cleanEmail}`);
     } else {
       const batch = db.batch();
       snapshot.forEach(doc => {
@@ -107,7 +98,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, email: cleanEmail, expiraEm: dataExpiracao });
 
   } catch (error) {
-    console.error("Erro fatal no webhook:", error);
+    console.error("Erro no processamento:", error);
     return res.status(500).json({ error: error.message });
   }
 }
