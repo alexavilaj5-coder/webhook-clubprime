@@ -1,4 +1,19 @@
-export default async function handler(req, res) {
+const admin = require('firebase-admin');
+
+// Inicializa o Firebase Admin na Vercel via Variável de Ambiente
+if (!admin.apps.length) {
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT))
+    });
+  } catch (error) {
+    console.error("Erro ao inicializar Firebase Admin:", error);
+  }
+}
+
+const db = admin.firestore();
+
+module.exports = async function handler(req, res) {
   // Configuração dos cabeçalhos CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -60,11 +75,31 @@ export default async function handler(req, res) {
     });
 
     if (pagamentoValido) {
+      // 🚀 CALCULA EXATAMENTE 30 DIAS DE VIP A PARTIR DE HOJE
+      const dataExpiracao = new Date();
+      dataExpiracao.setDate(dataExpiracao.getDate() + 30);
+
+      const dadosVip = {
+        vip: true,
+        vipExpiraEm: dataExpiracao.toISOString(),
+        atualizadoEm: new Date().toISOString()
+      };
+
+      // SALVA DE FORMA DEFINITIVA NO FIRESTORE
+      if (userId) {
+        await db.collection('usuarios').doc(userId).set(dadosVip, { merge: true });
+      } else if (emailUsuario) {
+        const snapshot = await db.collection('usuarios').where('email', '==', emailUsuario).get();
+        if (!snapshot.empty) {
+          await snapshot.docs[0].ref.set(dadosVip, { merge: true });
+        }
+      }
+
       return res.status(200).json({ 
         success: true, 
         vip: true, 
         paymentId: pagamentoValido.id,
-        message: "Pagamento confirmado com sucesso! Acesso VIP liberado." 
+        message: "Pagamento confirmado com sucesso! Acesso VIP liberado por 30 dias." 
       });
     }
 
@@ -78,4 +113,4 @@ export default async function handler(req, res) {
     console.error("Erro interno ao checar Pix:", err);
     return res.status(500).json({ success: false, error: err.message });
   }
-}
+};
