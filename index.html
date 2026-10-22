@@ -6,25 +6,27 @@
   <title>CLUBE PRIME - Pelotas / RS</title>
   <style>
     :root {
-      --bg: #090514;
-      --card: rgba(23, 15, 38, 0.85);
-      --card-border: rgba(168, 85, 247, 0.25);
-      --primary: #a855f7;
-      --primary-glow: rgba(168, 85, 247, 0.4);
-      --emerald: #10b981;
-      --emerald-glow: rgba(16, 185, 129, 0.4);
+      --bg: #050814;
+      --card: rgba(13, 20, 38, 0.75);
+      --card-border: rgba(16, 185, 129, 0.2);
+      --card-glow: rgba(16, 185, 129, 0.08);
+      --primary: #10b981;
+      --primary-glow: rgba(16, 185, 129, 0.35);
       --cyan: #06b6d4;
+      --cyan-glow: rgba(6, 182, 212, 0.3);
+      --purple: #8b5cf6;
       --amber: #f59e0b;
       --danger: #ef4444;
       --text: #f8fafc;
-      --muted: #a78bfa;
+      --muted: #64748b;
+      --muted-light: #94a3b8;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
       -webkit-tap-highlight-color: transparent;
     }
 
@@ -36,47 +38,61 @@
       min-height: 100vh;
       overflow-x: hidden;
       background-image: 
-        radial-gradient(circle at 10% 20%, rgba(168, 85, 247, 0.15) 0%, transparent 40%),
-        radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.12) 0%, transparent 40%);
+        radial-gradient(circle at 15% 15%, rgba(6, 182, 212, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 85% 85%, rgba(16, 185, 129, 0.12) 0%, transparent 45%);
       background-attachment: fixed;
     }
 
     .app-shell {
       width: 100%;
       max-width: 480px;
-      background-color: rgba(9, 5, 20, 0.88);
-      backdrop-filter: blur(20px);
+      background-color: rgba(5, 8, 20, 0.94);
+      backdrop-filter: blur(25px);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       position: relative;
-      border-left: 1px solid var(--card-border);
-      border-right: 1px solid var(--card-border);
-      padding-bottom: 85px;
+      border-left: 1px solid rgba(255, 255, 255, 0.06);
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 90px;
+      box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
     }
 
+    /* HEADER FIXO */
     .top-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 16px 20px;
-      background: rgba(23, 15, 38, 0.8);
+      background: rgba(13, 20, 38, 0.85);
       backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--card-border);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       position: sticky;
       top: 0;
       z-index: 90;
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 900;
+      font-size: 1.15rem;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff 30%, var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
     .location-badge {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 0.82rem;
-      font-weight: 800;
+      font-size: 0.76rem;
+      font-weight: 700;
       color: var(--cyan);
-      background: rgba(6, 182, 212, 0.08);
-      padding: 6px 14px;
+      background: rgba(6, 182, 212, 0.1);
+      padding: 5px 12px;
       border-radius: 20px;
       border: 1px solid rgba(6, 182, 212, 0.25);
     }
@@ -88,14 +104,14 @@
       font-size: 0.68rem;
       letter-spacing: 0.8px;
       text-transform: uppercase;
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 0.3s;
     }
 
     .status-badge.vip {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.3));
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(6, 182, 212, 0.2));
       color: #34d399;
-      border: 1px solid var(--emerald);
-      box-shadow: 0 0 18px var(--emerald-glow);
+      border: 1px solid var(--primary);
+      box-shadow: 0 0 15px var(--primary-glow);
     }
 
     .status-badge.free {
@@ -113,92 +129,106 @@
     .screen.active { display: block; }
 
     @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(14px) scale(0.98); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    .hero-banner {
-      background: linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(126, 34, 206, 0.6), rgba(168, 85, 247, 0.7));
+    /* HERO CARD INICIAL */
+    .hero-card {
+      background: linear-gradient(145deg, rgba(13, 20, 38, 0.9), rgba(20, 32, 60, 0.7));
       border-radius: 24px;
       padding: 22px;
       margin-bottom: 20px;
       position: relative;
       overflow: hidden;
-      border: 1px solid rgba(168, 85, 247, 0.35);
-      box-shadow: 0 12px 30px var(--primary-glow);
+      border: 1px solid rgba(6, 182, 212, 0.25);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
 
+    .hero-card::after {
+      content: '';
+      position: absolute;
+      top: -40%; right: -20%;
+      width: 160px; height: 160px;
+      background: radial-gradient(circle, var(--cyan-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-welcome {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--cyan);
+    }
+
+    .hero-name {
+      font-size: 1.6rem;
+      font-weight: 900;
+      margin-top: 2px;
+      color: #fff;
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 16px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .stat-item {
+      flex: 1;
+    }
+
+    .stat-val {
+      font-size: 1.1rem;
+      font-weight: 900;
+      color: var(--primary);
+    }
+
+    .stat-lbl {
+      font-size: 0.7rem;
+      color: var(--muted-light);
+      margin-top: 2px;
+    }
+
+    /* CARD VIP PROMO */
     .card-vip-banner {
-      background: linear-gradient(145deg, rgba(23, 15, 38, 0.95), rgba(45, 20, 80, 0.95));
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.15));
       border: 1px solid var(--primary);
       padding: 20px;
       border-radius: 24px;
       margin-bottom: 20px;
-      box-shadow: 0 10px 30px var(--primary-glow);
+      box-shadow: 0 8px 25px var(--primary-glow);
       position: relative;
-      overflow: hidden;
     }
 
-    .card-vip-banner::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; height: 3px;
-      background: linear-gradient(90deg, var(--cyan), var(--primary), var(--emerald));
-    }
-
-    .benefits-box {
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid var(--card-border);
-      border-radius: 20px;
-      padding: 16px;
-      margin-bottom: 20px;
-    }
-
-    .benefits-title {
-      font-size: 0.85rem;
-      font-weight: 800;
-      color: var(--emerald);
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .benefit-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.78rem;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-
-    .benefit-item:last-child { margin-bottom: 0; }
-
+    /* ABAS DE AUTH */
     .auth-tabs {
       display: flex;
-      background: rgba(23, 15, 38, 0.8);
-      padding: 5px;
+      background: rgba(13, 20, 38, 0.9);
+      padding: 4px;
       border-radius: 16px;
-      border: 1px solid var(--card-border);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       margin-bottom: 20px;
     }
 
     .auth-tab {
       flex: 1;
-      padding: 11px;
+      padding: 12px;
       text-align: center;
       font-size: 0.85rem;
-      font-weight: 700;
-      color: var(--muted);
+      font-weight: 800;
+      color: var(--muted-light);
       border-radius: 12px;
       cursor: pointer;
       transition: all 0.25s;
     }
 
     .auth-tab.active {
-      background: linear-gradient(135deg, var(--primary), #7e22ce);
-      color: #fff;
+      background: linear-gradient(135deg, var(--primary), #059669);
+      color: #050814;
       box-shadow: 0 4px 15px var(--primary-glow);
     }
 
@@ -206,10 +236,10 @@
 
     .form-group label {
       font-size: 0.72rem;
-      color: var(--muted);
+      color: var(--muted-light);
       display: block;
       margin-bottom: 6px;
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: 0.5px;
     }
 
@@ -217,8 +247,8 @@
       width: 100%;
       padding: 14px 18px;
       border-radius: 14px;
-      border: 1px solid var(--card-border);
-      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(13, 20, 38, 0.85);
       color: var(--text);
       font-size: 0.92rem;
       outline: none;
@@ -242,31 +272,37 @@
 
     .category-pill {
       background: var(--card);
-      border: 1px solid var(--card-border);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       padding: 10px 18px;
       border-radius: 25px;
       font-size: 0.82rem;
       white-space: nowrap;
       cursor: pointer;
-      color: var(--muted);
+      color: var(--muted-light);
       font-weight: 700;
       transition: all 0.25s;
     }
 
     .category-pill.active {
-      background: linear-gradient(135deg, var(--primary), var(--emerald));
-      color: #090514;
-      border-color: var(--emerald);
-      box-shadow: 0 4px 15px var(--emerald-glow);
+      background: linear-gradient(135deg, var(--cyan), var(--primary));
+      color: #050814;
+      border-color: var(--cyan);
+      box-shadow: 0 4px 15px var(--cyan-glow);
     }
 
+    /* CARD DAS LOJAS */
     .company-card {
       background: var(--card);
-      border: 1px solid var(--card-border);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 22px;
       padding: 20px;
       margin-bottom: 18px;
-      transition: all 0.3s;
+      transition: all 0.25s;
+    }
+
+    .company-card:hover {
+      border-color: rgba(6, 182, 212, 0.3);
+      transform: translateY(-2px);
     }
 
     .company-header {
@@ -284,7 +320,7 @@
 
     .company-meta {
       font-size: 0.78rem;
-      color: var(--muted);
+      color: var(--muted-light);
       margin-top: 4px;
       display: flex;
       gap: 12px;
@@ -293,22 +329,23 @@
     .discount-badge {
       background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.15));
       color: #34d399;
-      border: 1px solid var(--emerald);
+      border: 1px solid var(--primary);
       padding: 6px 14px;
       border-radius: 14px;
       font-weight: 900;
       font-size: 0.88rem;
-      box-shadow: 0 0 12px var(--emerald-glow);
+      box-shadow: 0 0 12px var(--primary-glow);
     }
 
+    /* BOTÕES */
     .btn {
       width: 100%;
       padding: 14px;
       border: none;
       border-radius: 14px;
-      background: linear-gradient(135deg, var(--primary), #7e22ce);
-      color: white;
-      font-weight: 800;
+      background: linear-gradient(135deg, var(--primary), #059669);
+      color: #050814;
+      font-weight: 900;
       font-size: 0.92rem;
       cursor: pointer;
       display: flex;
@@ -321,21 +358,23 @@
 
     .btn:active { transform: scale(0.97); }
 
-    .btn-secondary {
-      background: linear-gradient(135deg, var(--emerald), #059669);
-      box-shadow: 0 6px 20px var(--emerald-glow);
+    .btn-cyan {
+      background: linear-gradient(135deg, var(--cyan), #0284c7);
+      color: #050814;
+      box-shadow: 0 6px 20px var(--cyan-glow);
     }
 
     .btn-google {
-      background: #ffffff;
-      color: #0f172a;
-      box-shadow: 0 4px 15px rgba(255, 255, 255, 0.15);
-      font-weight: 800;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: none;
+      font-weight: 700;
     }
 
     .btn-outline {
       background: transparent;
-      border: 1px solid var(--card-border);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       color: var(--text);
       box-shadow: none;
     }
@@ -359,8 +398,8 @@
       height: 100%;
       border-radius: 50%;
       object-fit: cover;
-      border: 2px solid var(--primary);
-      box-shadow: 0 0 20px var(--primary-glow);
+      border: 2px solid var(--cyan);
+      box-shadow: 0 0 20px var(--cyan-glow);
     }
 
     .profile-info-row {
@@ -377,22 +416,23 @@
     .dev-credits {
       margin-top: 24px;
       padding: 14px;
-      background: rgba(15, 23, 42, 0.5);
-      border: 1px dashed var(--card-border);
+      background: rgba(13, 20, 38, 0.5);
+      border: 1px dashed rgba(255, 255, 255, 0.1);
       border-radius: 16px;
       text-align: center;
       font-size: 0.72rem;
-      color: var(--muted);
+      color: var(--muted-light);
     }
 
+    /* BARRA NAVEGAÇÃO INFERIOR */
     .bottom-nav {
       position: fixed;
       bottom: 0;
       width: 100%;
       max-width: 480px;
-      background: rgba(23, 15, 38, 0.92);
+      background: rgba(13, 20, 38, 0.95);
       backdrop-filter: blur(20px);
-      border-top: 1px solid var(--card-border);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
       justify-content: space-around;
       padding: 12px 0 14px 0;
@@ -404,26 +444,28 @@
       flex-direction: column;
       align-items: center;
       gap: 5px;
-      color: var(--muted);
+      color: var(--muted-light);
       font-size: 0.72rem;
       font-weight: 600;
       cursor: pointer;
       width: 25%;
+      transition: color 0.2s;
     }
 
     .nav-item.active {
-      color: var(--emerald);
+      color: var(--cyan);
       font-weight: 800;
     }
 
     .nav-icon { font-size: 1.3rem; }
 
+    /* MODAL */
     .modal {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(5, 3, 12, 0.92);
-      backdrop-filter: blur(12px);
+      background: rgba(5, 8, 20, 0.92);
+      backdrop-filter: blur(16px);
       z-index: 1000;
       justify-content: center;
       align-items: center;
@@ -439,8 +481,8 @@
     }
 
     .modal-content {
-      background: linear-gradient(145deg, #170f26, #2d1450);
-      border: 1px solid var(--card-border);
+      background: linear-gradient(145deg, #0d1426, #14203c);
+      border: 1px solid rgba(6, 182, 212, 0.3);
       border-radius: 24px;
       padding: 24px;
       width: 100%;
@@ -471,9 +513,9 @@
       display: inline-block;
       width: 16px;
       height: 16px;
-      border: 2px solid rgba(255,255,255,0.3);
+      border: 2px solid rgba(5, 8, 20, 0.3);
       border-radius: 50%;
-      border-top-color: #fff;
+      border-top-color: #050814;
       animation: spin 0.8s linear infinite;
     }
   </style>
@@ -543,7 +585,7 @@
           if (user.photoURL || data.fotoUrl) {
             avatarImg.src = user.photoURL || data.fotoUrl;
           } else {
-            avatarImg.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(data.nome || 'User') + "&background=a855f7&color=fff";
+            avatarImg.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(data.nome || 'User') + "&background=06b6d4&color=fff";
           }
 
           const dataCriado = data.criadoEm ? new Date(data.criadoEm).toLocaleDateString('pt-BR') : 'Hoje';
@@ -592,32 +634,17 @@
   <div class="app-shell">
     
     <div class="top-header">
-      <div class="location-badge">📍 <span>Pelotas, RS</span></div>
-      <div class="status-badge free">PLANO GRATUITO</div>
+      <div class="brand-title">
+        <span>⚡ CLUBE PRIME</span>
+      </div>
+      <div class="location-badge">📍 Pelotas, RS</div>
     </div>
 
     <!-- TELA LOGIN/CADASTRO -->
     <div id="screen-auth" class="screen active">
-      <div style="text-align:center; margin-bottom:20px; margin-top:10px;">
-        <div style="font-size:3rem; margin-bottom:4px;">⚡</div>
-        <h2 style="font-size:1.8rem; font-weight:900; background:linear-gradient(90deg, #a855f7, #10b981); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Clube PRIME</h2>
-        <p style="font-size:0.82rem; color:var(--muted); margin-top:2px;">Descontos reais nas melhores empresas de Pelotas.</p>
-      </div>
-
-      <button class="btn btn-google" style="margin-bottom:18px;" onclick="fazerLoginGoogle()">
-        <svg width="18" height="18" viewBox="0 0 24 24">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-        </svg>
-        Entrar com o Google
-      </button>
-
-      <div style="display:flex; align-items:center; margin-bottom:18px;">
-        <div style="flex:1; height:1px; background:var(--card-border);"></div>
-        <span style="font-size:0.72rem; color:var(--muted); padding:0 10px; font-weight:700;">OU USE E-MAIL</span>
-        <div style="flex:1; height:1px; background:var(--card-border);"></div>
+      <div style="text-align:center; margin-bottom:24px; margin-top:10px;">
+        <h2 style="font-size:1.9rem; font-weight:900; background:linear-gradient(135deg, #fff, var(--cyan)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Acesse o Clube</h2>
+        <p style="font-size:0.82rem; color:var(--muted-light); margin-top:4px;">Economize diariamente com cupons exclusivos.</p>
       </div>
 
       <div class="auth-tabs">
@@ -640,62 +667,89 @@
         <input type="password" id="reg-pass" class="form-control" placeholder="******">
       </div>
 
-      <button id="btn-auth-submit" class="btn" style="margin-top:10px;" onclick="executarAuth()">Entrar na Conta</button>
+      <button id="btn-auth-submit" class="btn" style="margin-top:12px;" onclick="executarAuth()">Entrar na Conta</button>
       
       <div id="box-esqueci" style="text-align:center; margin-top:14px;">
-        <a href="#" onclick="recuperarSenha()" style="font-size:0.8rem; color:var(--muted); text-decoration:none; font-weight:600;">🔑 Esqueci minha senha</a>
+        <a href="#" onclick="recuperarSenha()" style="font-size:0.8rem; color:var(--muted-light); text-decoration:none; font-weight:600;">🔑 Esqueci minha senha</a>
       </div>
 
-      <div style="margin-top:20px; border-top:1px dashed var(--card-border); padding-top:14px; text-align:center;">
-        <p style="font-size:0.7rem; color:var(--muted); font-weight:700; margin-bottom:8px;">TESTAR MODO SEM CADASTRO:</p>
+      <!-- OPÇÃO GOOGLE REPOSICIONADA PARA O FINAL -->
+      <div style="display:flex; align-items:center; margin:22px 0 16px 0;">
+        <div style="flex:1; height:1px; background:rgba(255, 255, 255, 0.08);"></div>
+        <span style="font-size:0.7rem; color:var(--muted-light); padding:0 12px; font-weight:800;">OU ENTRE COM</span>
+        <div style="flex:1; height:1px; background:rgba(255, 255, 255, 0.08);"></div>
+      </div>
+
+      <button class="btn btn-google" style="margin-bottom:20px;" onclick="fazerLoginGoogle()">
+        <svg width="18" height="18" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        Entrar com o Google
+      </button>
+
+      <div style="border-top:1px dashed rgba(255, 255, 255, 0.1); padding-top:16px; text-align:center;">
+        <p style="font-size:0.7rem; color:var(--muted-light); font-weight:800; margin-bottom:10px;">TESTAR MODO DEMO:</p>
         
         <div style="display:flex; gap:8px;">
-          <button class="btn btn-secondary btn-small-test" style="flex:1;" onclick="entrarComoVipTeste()">👑 Testar Pago</button>
+          <button class="btn btn-cyan btn-small-test" style="flex:1;" onclick="entrarComoVipTeste()">👑 Testar VIP</button>
           <button class="btn btn-outline btn-small-test" style="flex:1;" onclick="entrarComoGratuitoTeste()">👀 Testar Grátis</button>
         </div>
 
         <div class="dev-credits">
           🛠️ Devs: <strong>Alex Ávila</strong> & <strong>Tiago Nunes</strong><br>
-          📌 <em>Versão de Testes v1.0.4-dev</em>
+          📌 <em>Versão Pro v1.0.5</em>
         </div>
       </div>
     </div>
 
-    <!-- TELA HOME -->
+    <!-- TELA HOME REDESENHADA -->
     <div id="screen-home" class="screen">
-      <div class="hero-banner">
-        <span style="font-size:0.75rem; text-transform:uppercase; font-weight:800; letter-spacing:1px; color:#f0abfc;">Painel do Membro</span>
-        <h2 style="font-size:1.6rem; font-weight:900; margin-top:4px;">Olá, <span id="user-name-display">Alex</span> 👋</h2>
-        <p style="font-size:0.85rem; opacity:0.9; margin-top:6px; color:#e0e7ff;">Economize nas melhores empresas de Pelotas.</p>
+      
+      <!-- HERO CARD TOP -->
+      <div class="hero-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div>
+            <span class="hero-welcome">Painel do Membro</span>
+            <h2 class="hero-name">Olá, <span id="user-name-display">Alex</span> 👋</h2>
+          </div>
+          <div class="status-badge free">PLANO GRATUITO</div>
+        </div>
+
+        <div class="hero-stats">
+          <div class="stat-item">
+            <div class="stat-val">R$ 150,00</div>
+            <div class="stat-lbl">Economia Média/mês</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-val">10+</div>
+            <div class="stat-lbl">Ofertas Ativas</div>
+          </div>
+        </div>
       </div>
 
       <!-- BANNER ASSINATURA -->
       <div id="banner-assinatura" class="card-vip-banner">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <span style="font-size:0.7rem; font-weight:800; color:#f0abfc; letter-spacing:1px; text-transform:uppercase;">Plano Membro PRIME</span>
-            <h3 style="font-size:1.15rem; font-weight:800; margin-top:2px;">Seja VIP por R$ 1,20</h3>
-            <p style="font-size:0.78rem; color:var(--muted); margin-top:2px;">Ativação instantânea via Pix (30 dias).</p>
+            <span style="font-size:0.7rem; font-weight:900; color:var(--cyan); letter-spacing:1px; text-transform:uppercase;">Plano Membro PRIME</span>
+            <h3 style="font-size:1.15rem; font-weight:900; margin-top:2px;">Seja VIP por R$ 19,90</h3>
+            <p style="font-size:0.78rem; color:var(--muted-light); margin-top:2px;">Ativação instantânea via Pix (30 dias).</p>
           </div>
-          <span style="font-weight:900; color:#34d399; font-size:1.25rem;">R$ 1,20</span>
+          <span style="font-weight:900; color:#34d399; font-size:1.25rem;">ASSINE JA!</span>
         </div>
         
-        <button id="btn-gerar-pix" class="btn btn-secondary" style="margin-top:14px;" onclick="gerarPixMercadoPago()">⚡ Pagar R$ 1,20 via PIX</button>
+        <button id="btn-gerar-pix" class="btn" style="margin-top:14px;" onclick="gerarPixMercadoPago()">⚡ Ativar VIP por R$ 19,90 via PIX</button>
       </div>
 
-      <!-- VANTAGENS DO CLUBE PRIME -->
-      <div class="benefits-box">
-        <div class="benefits-title">⚡ VANTAGENS EXCLUSIVAS DO CLUBE PRIME:</div>
-        <div class="benefit-item">✅ Acesso ilimitado a todos os cupons da cidade</div>
-        <div class="benefit-item">✅ Descontos reais em restaurantes, oficinas e apps</div>
-        <div class="benefit-item">✅ Economia média estimada de R$ 150,00/mês</div>
-        <div class="benefit-item">✅ Renovação simples sem fidelidade</div>
-      </div>
-
+      <!-- BUSCA -->
       <div style="margin-bottom:18px;">
         <input type="text" class="form-control" placeholder="🔍 Buscar restaurante, oficina, iFood, Shopee..." onkeyup="filterStores(this.value)">
       </div>
 
+      <!-- CATEGORIAS -->
       <div class="categories-bar">
         <div class="category-pill active" onclick="filterCat('all', this)">Todos Os Cupons</div>
         <div class="category-pill" onclick="filterCat('gastronomia', this)">🍔 Gastronomia & Delivery</div>
@@ -704,7 +758,7 @@
         <div class="category-pill" onclick="filterCat('beleza', this)">💇 Saúde & Beleza</div>
       </div>
 
-      <!-- LISTA COMPLETA DE CUPONS REAIS -->
+      <!-- LISTA DE CUPONS -->
       <div id="stores-list">
 
         <!-- IFOOD -->
@@ -719,8 +773,8 @@
             </div>
             <div class="discount-badge">R$ 15 OFF</div>
           </div>
-          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Cupom de R$ 15 em pedidos elegíveis de delivery em Pelotas.</p>
-          <button class="btn" onclick="resgatarCupomReal('iFood Delivery', 'R$ 15 OFF no Pedido', 'NOVOS15')">
+          <p style="font-size:0.8rem; color:var(--muted-light); margin-bottom:14px;">Cupom de R$ 15 em pedidos elegíveis de delivery em Pelotas.</p>
+          <button class="btn btn-cyan" onclick="resgatarCupomReal('iFood Delivery', 'R$ 15 OFF no Pedido', 'NOVOS15')">
             🎟️ Resgatar Cupom
           </button>
         </div>
@@ -737,8 +791,8 @@
             </div>
             <div class="discount-badge">FRETE GRÁTIS</div>
           </div>
-          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Cupom oficial de Frete Grátis + R$ 10 OFF em compras pelo app.</p>
-          <button class="btn" onclick="resgatarCupomReal('Shopee Brasil', 'Frete Grátis + R$ 10 OFF', 'SHOPEE10OFF')">
+          <p style="font-size:0.8rem; color:var(--muted-light); margin-bottom:14px;">Cupom oficial de Frete Grátis + R$ 10 OFF em compras pelo app.</p>
+          <button class="btn btn-cyan" onclick="resgatarCupomReal('Shopee Brasil', 'Frete Grátis + R$ 10 OFF', 'SHOPEE10OFF')">
             🎟️ Resgatar Cupom
           </button>
         </div>
@@ -755,8 +809,8 @@
             </div>
             <div class="discount-badge">R$ 20 OFF</div>
           </div>
-          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Cupom de R$ 20 OFF para compras acima de R$ 99 com entrega em Pelotas.</p>
-          <button class="btn" onclick="resgatarCupomReal('Mercado Livre', 'R$ 20 OFF em compras > R$99', 'MELI20OFF')">
+          <p style="font-size:0.8rem; color:var(--muted-light); margin-bottom:14px;">Cupom de R$ 20 OFF para compras acima de R$ 99 com entrega em Pelotas.</p>
+          <button class="btn btn-cyan" onclick="resgatarCupomReal('Mercado Livre', 'R$ 20 OFF em compras > R$99', 'MELI20OFF')">
             🎟️ Resgatar Cupom
           </button>
         </div>
@@ -773,8 +827,8 @@
             </div>
             <div class="discount-badge">45% OFF</div>
           </div>
-          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Combo Clássico com até 45% de desconto no balcão/Drive.</p>
-          <button class="btn" onclick="resgatarCupomReal('McDonald\'s Pelotas', 'Até 45% OFF no Combo', 'MCD45PEL')">
+          <p style="font-size:0.8rem; color:var(--muted-light); margin-bottom:14px;">Combo Clássico com até 45% de desconto no balcão/Drive.</p>
+          <button class="btn btn-cyan" onclick="resgatarCupomReal('McDonald\'s Pelotas', 'Até 45% OFF no Combo', 'MCD45PEL')">
             🎟️ Resgatar Cupom
           </button>
         </div>
@@ -791,8 +845,8 @@
             </div>
             <div class="discount-badge">2 POR 1</div>
           </div>
-          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Peça 1 prato principal e ganhe o 2º grátis nos restaurantes parceiros.</p>
-          <button class="btn" onclick="resgatarCupomReal('Pelotas em Dobro', 'Peça 1 Prato e Ganhe Outro', 'PEL2POR1')">
+          <p style="font-size:0.8rem; color:var(--muted-light); margin-bottom:14px;">Peça 1 prato principal e ganhe o 2º grátis nos restaurantes parceiros.</p>
+          <button class="btn btn-cyan" onclick="resgatarCupomReal('Pelotas em Dobro', 'Peça 1 Prato e Ganhe Outro', 'PEL2POR1')">
             🎟️ Resgatar Cupom
           </button>
         </div>
@@ -809,80 +863,8 @@
             </div>
             <div class="discount-badge">15% OFF</div>
           </div>
-          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Desconto no valor total do consumo presencial.</p>
-          <button class="btn" onclick="resgatarCupomReal('Churrascaria Espetinho do Sul', '15% OFF no Total', 'ESPETO15')">
-            🎟️ Resgatar Cupom
-          </button>
-        </div>
-
-        <!-- BEROLA -->
-        <div class="company-card" data-cat="gastronomia" data-name="confeitaria berola doces tradicionais centro pelotas">
-          <div class="company-header">
-            <div>
-              <div class="company-title">Confeitaria Berola</div>
-              <div class="company-meta">
-                <span>📍 Centro • Pelotas</span>
-                <span style="color:var(--amber);">⭐ 4.8</span>
-              </div>
-            </div>
-            <div class="discount-badge">10% OFF</div>
-          </div>
-          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Desconto em caixas de doces tradicionais de Pelotas.</p>
-          <button class="btn" onclick="resgatarCupomReal('Confeitaria Berola', '10% OFF em Doces', 'BEROLA10')">
-            🎟️ Resgatar Cupom
-          </button>
-        </div>
-
-        <!-- AUTO CENTER FRAGATA -->
-        <div class="company-card" data-cat="automotivo" data-name="auto center oficina mecanica fragata pelotas">
-          <div class="company-header">
-            <div>
-              <div class="company-title">Auto Center & Oficina Fragata</div>
-              <div class="company-meta">
-                <span>📍 Bairro Fragata • Pelotas</span>
-                <span style="color:var(--amber);">⭐ 4.8</span>
-              </div>
-            </div>
-            <div class="discount-badge">20% OFF</div>
-          </div>
-          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Desconto em mão de obra de suspensão, freios e troca de óleo.</p>
-          <button class="btn" onclick="resgatarCupomReal('Auto Center Fragata', '20% OFF Mão de Obra', 'FRAGATA20')">
-            🎟️ Resgatar Cupom
-          </button>
-        </div>
-
-        <!-- LAVAGEM LESTE AREAL -->
-        <div class="company-card" data-cat="automotivo" data-name="lavagem leste express cera lavagem detalhada areal pelotas">
-          <div class="company-header">
-            <div>
-              <div class="company-title">Lavagem Leste Express</div>
-              <div class="company-meta">
-                <span>📍 Bairro Areal • Pelotas</span>
-                <span style="color:var(--amber);">⭐ 4.7</span>
-              </div>
-            </div>
-            <div class="discount-badge">15% OFF</div>
-          </div>
-          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Válido para lavagem completa com aplicação de cera cristalizadora.</p>
-          <button class="btn" onclick="resgatarCupomReal('Lavagem Leste Express', '15% OFF Ducha + Cera', 'LAVAGEM15')">
-            🎟️ Resgatar Cupom
-          </button>
-        </div>
-
-        <!-- BARBEARIA DO PORTO -->
-        <div class="company-card" data-cat="beleza" data-name="barbearia do porto corte barba porto pelotas">
-          <div class="company-header">
-            <div>
-              <div class="company-title">Barbearia do Porto</div>
-              <div class="company-meta">
-                <span>📍 Bairro Porto • Pelotas</span>
-                <span style="color:var(--amber);">⭐ 4.9</span>
-              </div>
-            </div>
-            <div class="discount-badge">15% OFF</div>
-          </div>
-          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Desconto em combos de Corte de Cabelo + Barba.</p>
-          <button class="btn" onclick="resgatarCupomReal('Barbearia do Porto', '15% OFF Combo Corte+Barba', 'PORTO15')">
+          <p style="font-size:0.8rem; color:var(--muted-light); margin-bottom:14px;">Desconto no valor total do consumo presencial.</p>
+          <button class="btn btn-cyan" onclick="resgatarCupomReal('Churrascaria Espetinho do Sul', '15% OFF no Total', 'ESPETO15')">
             🎟️ Resgatar Cupom
           </button>
         </div>
@@ -892,27 +874,27 @@
 
     <!-- TELA PARCEIROS -->
     <div id="screen-search" class="screen">
-      <h2 style="margin-bottom:12px; font-weight:800;">Todos os Parceiros</h2>
-      <div style="background:var(--card); border:1px solid var(--card-border); padding:20px; border-radius:20px; text-align:center; margin-bottom:16px;">
+      <h2 style="margin-bottom:12px; font-weight:900;">Parceiros Locais</h2>
+      <div style="background:var(--card); border:1px solid rgba(255, 255, 255, 0.08); padding:20px; border-radius:20px; text-align:center; margin-bottom:16px;">
         <span style="font-size:2.5rem;">🗺️</span>
         <h3 style="font-size:1.1rem; margin-top:8px; font-weight:800;">Pelotas / RS</h3>
-        <p style="font-size:0.8rem; color:var(--muted); margin-top:4px;">Estabelecimentos parceiros aceitando cupons hoje.</p>
+        <p style="font-size:0.8rem; color:var(--muted-light); margin-top:4px;">Estabelecimentos parceiros aceitando cupons hoje.</p>
       </div>
     </div>
 
     <!-- TELA CARTEIRA -->
     <div id="screen-wallet" class="screen">
-      <h2 style="margin-bottom:4px; font-weight:800;">Sua Carteira</h2>
-      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:18px;">Economia acumulada com o seu clube.</p>
+      <h2 style="margin-bottom:4px; font-weight:900;">Sua Carteira</h2>
+      <p style="font-size:0.82rem; color:var(--muted-light); margin-bottom:18px;">Economia acumulada com o seu clube.</p>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px;">
-        <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; text-align:center;">
-          <span style="font-size:0.72rem; color:var(--muted); font-weight:700;">ECONOMIA TOTAL</span>
-          <div style="font-size:1.4rem; font-weight:900; color:var(--emerald); margin-top:4px;">R$ 114,50</div>
+        <div style="background:var(--card); border:1px solid rgba(255, 255, 255, 0.08); padding:16px; border-radius:18px; text-align:center;">
+          <span style="font-size:0.72rem; color:var(--muted-light); font-weight:700;">ECONOMIA TOTAL</span>
+          <div style="font-size:1.4rem; font-weight:900; color:var(--primary); margin-top:4px;">R$ 114,50</div>
         </div>
-        <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; text-align:center;">
-          <span style="font-size:0.72rem; color:var(--muted); font-weight:700;">CUSTO DO APP</span>
-          <div style="font-size:1.4rem; font-weight:900; color:var(--primary); margin-top:4px;">R$ 1,20</div>
+        <div style="background:var(--card); border:1px solid rgba(255, 255, 255, 0.08); padding:16px; border-radius:18px; text-align:center;">
+          <span style="font-size:0.72rem; color:var(--muted-light); font-weight:700;">CUSTO DO APP</span>
+          <div style="font-size:1.4rem; font-weight:900; color:var(--cyan); margin-top:4px;">R$ 1,20</div>
         </div>
       </div>
     </div>
@@ -924,30 +906,30 @@
           <img id="profile-avatar" class="profile-avatar-img" src="" alt="Foto de Perfil">
         </div>
         <h2 id="profile-name" style="font-weight:900; font-size:1.3rem;">Carregando...</h2>
-        <p id="profile-email" style="font-size:0.82rem; color:var(--muted); margin-top:2px;">-</p>
+        <p id="profile-email" style="font-size:0.82rem; color:var(--muted-light); margin-top:2px;">-</p>
       </div>
 
-      <div id="profile-vip-card" style="display:none; background:linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.2)); border:1px solid var(--emerald); padding:16px; border-radius:18px; margin-bottom:18px;">
+      <div id="profile-vip-card" style="display:none; background:linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.15)); border:1px solid var(--primary); padding:16px; border-radius:18px; margin-bottom:18px;">
         <div style="display:flex; align-items:center; gap:10px;">
           <span style="font-size:1.8rem;">👑</span>
           <div>
             <div style="font-weight:800; color:#34d399; font-size:0.95rem;">Assinatura VIP Ativa</div>
-            <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">Válido até: <span id="profile-vip-expira" style="color:#fff; font-weight:700;">-</span></div>
+            <div style="font-size:0.75rem; color:var(--muted-light); margin-top:2px;">Válido até: <span id="profile-vip-expira" style="color:#fff; font-weight:700;">-</span></div>
           </div>
         </div>
       </div>
 
-      <div style="background:var(--card); border:1px solid var(--card-border); border-radius:20px; padding:18px; margin-bottom:20px;">
+      <div style="background:var(--card); border:1px solid rgba(255, 255, 255, 0.08); border-radius:20px; padding:18px; margin-bottom:20px;">
         <div class="profile-info-row">
-          <span style="color:var(--muted); font-weight:600;">Status do Plano</span>
+          <span style="color:var(--muted-light); font-weight:600;">Status do Plano</span>
           <div class="status-badge free">PLANO GRATUITO</div>
         </div>
         <div class="profile-info-row">
-          <span style="color:var(--muted); font-weight:600;">Membro Desde</span>
+          <span style="color:var(--muted-light); font-weight:600;">Membro Desde</span>
           <span id="profile-joined-date" style="font-weight:700;">-</span>
         </div>
         <div class="profile-info-row">
-          <span style="color:var(--muted); font-weight:600;">Cidade</span>
+          <span style="color:var(--muted-light); font-weight:600;">Cidade</span>
           <span style="font-weight:700;">Pelotas / RS</span>
         </div>
       </div>
@@ -956,11 +938,11 @@
 
       <div class="dev-credits">
         🛠️ Desenvolvido por: <strong>Alex Ávila</strong> & <strong>Tiago Nunes</strong><br>
-        📌 <em>Versão de Desenvolvimento v1.0.4-dev</em>
+        📌 <em>Versão Pro v1.0.5</em>
       </div>
     </div>
 
-    <!-- NAV INFERIOR -->
+    <!-- NAVEGAÇÃO INFERIOR -->
     <div class="bottom-nav" style="display:none;">
       <div class="nav-item active" onclick="navTo('home', this)">
         <span class="nav-icon">🏠</span>
@@ -982,52 +964,56 @@
 
   </div>
 
-  <!-- MODAL DE NOTIFICAÇÕES (NO TOPO POR CIMA DE TUDO) -->
+  <!-- MODAL DE NOTIFICAÇÕES -->
   <div id="modal-alert" class="modal modal-top">
-    <div class="modal-content" style="border-color: var(--primary);">
+    <div class="modal-content">
       <div id="alert-icon" style="font-size:2rem; margin-bottom:6px;">⚡</div>
       <h3 id="alert-title" style="font-size:1.1rem; font-weight:800; margin-bottom:6px;">Aviso</h3>
-      <p id="alert-msg" style="font-size:0.85rem; color:var(--muted); margin-bottom:14px; line-height:1.4;">---</p>
-      <button class="btn btn-secondary" style="padding:10px;" onclick="fecharModal('modal-alert')">OK</button>
+      <p id="alert-msg" style="font-size:0.85rem; color:var(--muted-light); margin-bottom:14px; line-height:1.4;">---</p>
+      <button class="btn" style="padding:10px;" onclick="fecharModal('modal-alert')">OK</button>
     </div>
   </div>
 
-  <!-- MODAL PIX -->
+  <!-- MODAL PIX COM POLLING 5S -->
   <div id="modal-pix" class="modal">
     <div class="modal-content">
       <div style="font-size:2.2rem; margin-bottom:4px;">⚡</div>
       <h3 style="font-size:1.2rem; font-weight:800;">Pagamento via PIX</h3>
-      <p style="font-size:0.8rem; color:var(--muted); margin-top:2px;">Escaneie o QR Code ou copie a chave abaixo:</p>
+      <p style="font-size:0.8rem; color:var(--muted-light); margin-top:2px;">Escaneie o QR Code ou copie a chave abaixo:</p>
 
       <div class="qr-box">
         <img id="pix-qr-img" src="" alt="QR Code Pix">
       </div>
 
-      <button class="btn btn-secondary" style="margin-bottom:8px;" onclick="copiarPixCode()">📋 Copiar Código Pix</button>
-      <button id="btn-checar-vip" class="btn" style="margin-bottom:8px;" onclick="verificarStatusVipManual()">🔄 Já Paguei / Verificar Agora</button>
+      <!-- STATUS DA CHECAGEM AUTOMÁTICA -->
+      <div style="display:flex; align-items:center; justify-content:center; gap:8px; font-size:0.75rem; color:var(--primary); margin-bottom:12px; font-weight:800;">
+        <span class="spinner" style="width:12px; height:12px; border-width:2px; border-top-color:var(--primary);"></span>
+        Verificando pagamento a cada 5s...
+      </div>
+
+      <button class="btn" style="margin-bottom:8px;" onclick="copiarPixCode()">📋 Copiar Código Pix</button>
+      <button id="btn-checar-vip" class="btn btn-cyan" style="margin-bottom:8px;" onclick="verificarStatusVipManual()">🔄 Já Paguei / Checar Agora</button>
       <button class="btn btn-outline" onclick="fecharModal('modal-pix')">Fechar</button>
     </div>
   </div>
 
-  <!-- MODAL CUPOM / BLOQUEIO SE NÃO FOR VIP -->
+  <!-- MODAL CUPOM -->
   <div id="modal-coupon" class="modal">
     <div class="modal-content">
       <h3 id="modal-title" style="font-size:1.2rem; font-weight:800;">---</h3>
-      <div id="modal-disc" style="color:var(--emerald); font-weight:900; font-size:1.1rem; margin-top:4px;">---</div>
+      <div id="modal-disc" style="color:var(--primary); font-weight:900; font-size:1.1rem; margin-top:4px;">---</div>
 
-      <!-- VISÃO PARA USUÁRIO GRATUITO -->
       <div id="box-blocked" style="display:none; margin-top:16px; background:rgba(239, 68, 68, 0.1); border:1px solid var(--danger); padding:16px; border-radius:18px;">
         <span style="font-size:2rem;">🔒</span>
         <h4 style="font-size:0.92rem; font-weight:800; color:#f87171; margin-top:4px;">Código VIP Bloqueado!</h4>
-        <p style="font-size:0.78rem; color:var(--muted); margin-top:4px; line-height:1.3;">Seja membro VIP por apenas R$ 1,20 para desbloquear este e todos os cupons de Pelotas.</p>
-        <button class="btn btn-secondary" style="margin-top:12px;" onclick="gerarPixMercadoPago()">⚡ Desbloquear Cupons (R$ 1,20)</button>
+        <p style="font-size:0.78rem; color:var(--muted-light); margin-top:4px; line-height:1.3;">Seja membro VIP por apenas R$ 1,20 para desbloquear este e todos os cupons de Pelotas.</p>
+        <button class="btn" style="margin-top:12px;" onclick="gerarPixMercadoPago()">⚡ Desbloquear Cupons (R$ 1,20)</button>
       </div>
 
-      <!-- VISÃO PARA USUÁRIO VIP -->
       <div id="box-unlocked" style="display:none; margin-top:16px;">
-        <div style="font-size:0.75rem; color:var(--muted); font-weight:700;">CÓDIGO DE VALIDAÇÃO:</div>
-        <div id="modal-code" style="font-size:1.8rem; font-weight:900; letter-spacing:5px; color:var(--primary); margin:8px 0;">---</div>
-        <button class="btn btn-secondary" onclick="copiarCodigoCupom()">📋 Copiar Código</button>
+        <div style="font-size:0.75rem; color:var(--muted-light); font-weight:700;">CÓDIGO DE VALIDAÇÃO:</div>
+        <div id="modal-code" style="font-size:1.8rem; font-weight:900; letter-spacing:5px; color:var(--cyan); margin:8px 0;">---</div>
+        <button class="btn" onclick="copiarCodigoCupom()">📋 Copiar Código</button>
       </div>
 
       <button class="btn btn-outline" style="margin-top:14px;" onclick="fecharModal('modal-coupon')">Fechar</button>
@@ -1038,6 +1024,7 @@
     let pixCopiaColaAtual = "";
     let codigoCupomAtual = "";
     let currentAuthTab = "login";
+    let intervalPixCheck = null;
 
     function mostrarAviso(titulo, mensagem, icone = "⚡") {
       document.getElementById('alert-icon').innerText = icone;
@@ -1048,6 +1035,50 @@
 
     function fecharModal(modalId) {
       document.getElementById(modalId).classList.remove('active');
+      if (modalId === 'modal-pix') {
+        pararChecagemAutomatica();
+      }
+    }
+
+    // POLLING A CADA 5 SEGUNDOS
+    function iniciarChecagemAutomatica() {
+      pararChecagemAutomatica();
+      intervalPixCheck = setInterval(() => {
+        checarPixSilencioso();
+      }, 5000);
+    }
+
+    function pararChecagemAutomatica() {
+      if (intervalPixCheck) {
+        clearInterval(intervalPixCheck);
+        intervalPixCheck = null;
+      }
+    }
+
+    async function checarPixSilencioso() {
+      const user = window.firebaseAuth.currentUser;
+      if (!user || !user.email) return;
+
+      try {
+        const response = await fetch(`https://webhook-clubprime.vercel.app/api/checar-pix?email=${encodeURIComponent(user.email)}&userId=${user.uid}`);
+        const data = await response.json();
+
+        if (data.success && data.vip) {
+          pararChecagemAutomatica();
+          fecharModal('modal-pix');
+          mostrarAviso("VIP Ativado! 🎉", data.message, "👑");
+          
+          window.isVipUser = true;
+          document.querySelectorAll('.status-badge').forEach(b => {
+            b.innerText = "ASSINANTE VIP";
+            b.className = "status-badge vip";
+          });
+          document.getElementById('banner-assinatura').style.display = 'none';
+          document.getElementById('profile-vip-card').style.display = 'block';
+        }
+      } catch (err) {
+        console.log("Verificação em segundo plano em andamento...");
+      }
     }
 
     function switchAuthTab(type) {
@@ -1177,6 +1208,7 @@
     }
 
     async function deslogar() {
+      pararChecagemAutomatica();
       if (window.firebaseAuth.currentUser) {
         await window.dbMethods.signOut(window.firebaseAuth);
       } else {
@@ -1213,6 +1245,9 @@
           pixCopiaColaAtual = data.qrCodeCopiaCola;
           fecharModal('modal-coupon');
           document.getElementById('modal-pix').classList.add('active');
+
+          // Dispara checagem em 2o plano
+          iniciarChecagemAutomatica();
         } else {
           mostrarAviso("Erro", data.error || "Não foi possível gerar o Pix. Tente novamente.", "❌");
         }
@@ -1220,7 +1255,7 @@
         mostrarAviso("Erro de Conexão", err.message, "❌");
       } finally {
         if (btn) {
-          btn.innerHTML = `⚡ Pagar R$ 1,20 via PIX`;
+          btn.innerHTML = `⚡ Ativar VIP por R$ 1,20 via PIX`;
           btn.style.opacity = "1";
           btn.style.pointerEvents = "auto";
         }
@@ -1236,7 +1271,7 @@
     async function verificarStatusVipManual() {
       const user = window.firebaseAuth.currentUser;
       if (!user || !user.email) {
-        return mostrarAviso("Atenção", "Faz login na tua conta para verificar o pagamento.", "⚠️");
+        return mostrarAviso("Atenção", "Faça login na sua conta para verificar o pagamento.", "⚠️");
       }
 
       const btn = document.getElementById('btn-checar-vip');
@@ -1247,6 +1282,7 @@
         const data = await response.json();
 
         if (data.success && data.vip) {
+          pararChecagemAutomatica();
           fecharModal('modal-pix');
           mostrarAviso("VIP Ativado! 🎉", data.message, "👑");
           
@@ -1263,7 +1299,7 @@
       } catch (err) {
         mostrarAviso("Erro de Conexão", err.message, "❌");
       } finally {
-        btn.innerHTML = `🔄 Já Paguei / Verificar Agora`;
+        btn.innerHTML = `🔄 Já Paguei / Checar Agora`;
       }
     }
 
