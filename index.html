@@ -432,6 +432,12 @@
 
     .modal.active { display: flex; animation: fadeIn 0.25s ease-out; }
 
+    .modal-top {
+      align-items: flex-start !important;
+      padding-top: 30px !important;
+      z-index: 2000 !important;
+    }
+
     .modal-content {
       background: linear-gradient(145deg, #170f26, #2d1450);
       border: 1px solid var(--card-border);
@@ -884,47 +890,91 @@
       </div>
     </div>
 
+    <!-- TELA PARCEIROS -->
+    <div id="screen-search" class="screen">
+      <h2 style="margin-bottom:12px; font-weight:800;">Todos os Parceiros</h2>
+      <div style="background:var(--card); border:1px solid var(--card-border); padding:20px; border-radius:20px; text-align:center; margin-bottom:16px;">
+        <span style="font-size:2.5rem;">🗺️</span>
+        <h3 style="font-size:1.1rem; margin-top:8px; font-weight:800;">Pelotas / RS</h3>
+        <p style="font-size:0.8rem; color:var(--muted); margin-top:4px;">Estabelecimentos parceiros aceitando cupons hoje.</p>
+      </div>
+    </div>
+
+    <!-- TELA CARTEIRA -->
+    <div id="screen-wallet" class="screen">
+      <h2 style="margin-bottom:4px; font-weight:800;">Sua Carteira</h2>
+      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:18px;">Economia acumulada com o seu clube.</p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px;">
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; text-align:center;">
+          <span style="font-size:0.72rem; color:var(--muted); font-weight:700;">ECONOMIA TOTAL</span>
+          <div style="font-size:1.4rem; font-weight:900; color:var(--emerald); margin-top:4px;">R$ 114,50</div>
+        </div>
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; text-align:center;">
+          <span style="font-size:0.72rem; color:var(--muted); font-weight:700;">CUSTO DO APP</span>
+          <div style="font-size:1.4rem; font-weight:900; color:var(--primary); margin-top:4px;">R$ 1,20</div>
+        </div>
+      </div>
+    </div>
+
     <!-- TELA PERFIL -->
     <div id="screen-profile" class="screen">
-      <div style="text-align:center; margin-bottom:20px;">
+      <div style="text-align:center; margin-bottom:20px; margin-top:10px;">
         <div class="profile-avatar-container">
-          <img id="profile-avatar" class="profile-avatar-img" src="https://ui-avatars.com/api/?name=Cliente&background=a855f7&color=fff" alt="Avatar">
+          <img id="profile-avatar" class="profile-avatar-img" src="" alt="Foto de Perfil">
         </div>
-        <h2 id="profile-name" style="font-size:1.3rem; font-weight:800;">Carregando...</h2>
-        <p id="profile-email" style="font-size:0.8rem; color:var(--muted);">email@exemplo.com</p>
+        <h2 id="profile-name" style="font-weight:900; font-size:1.3rem;">Carregando...</h2>
+        <p id="profile-email" style="font-size:0.82rem; color:var(--muted); margin-top:2px;">-</p>
       </div>
 
-      <div id="profile-vip-card" class="card-vip-banner" style="display:none; margin-bottom:16px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div id="profile-vip-card" style="display:none; background:linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.2)); border:1px solid var(--emerald); padding:16px; border-radius:18px; margin-bottom:18px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.8rem;">👑</span>
           <div>
-            <span style="font-size:0.7rem; font-weight:800; color:#34d399; letter-spacing:1px;">STATUS DA CONTA</span>
-            <h3 style="font-size:1.1rem; font-weight:900; color:#fff;">👑 Assinatura VIP Ativa</h3>
-            <p style="font-size:0.75rem; color:var(--muted); margin-top:2px;">Válida até: <strong id="profile-vip-expira" style="color:#34d399;">30 dias</strong></p>
+            <div style="font-weight:800; color:#34d399; font-size:0.95rem;">Assinatura VIP Ativa</div>
+            <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">Válido até: <span id="profile-vip-expira" style="color:#fff; font-weight:700;">-</span></div>
           </div>
         </div>
       </div>
 
-      <div class="benefits-box">
+      <div style="background:var(--card); border:1px solid var(--card-border); border-radius:20px; padding:18px; margin-bottom:20px;">
         <div class="profile-info-row">
-          <span style="color:var(--muted);">Membro desde</span>
-          <strong id="profile-joined-date">Hoje</strong>
+          <span style="color:var(--muted); font-weight:600;">Status do Plano</span>
+          <div class="status-badge free">PLANO GRATUITO</div>
         </div>
         <div class="profile-info-row">
-          <span style="color:var(--muted);">Cidade</span>
-          <strong>Pelotas / RS</strong>
+          <span style="color:var(--muted); font-weight:600;">Membro Desde</span>
+          <span id="profile-joined-date" style="font-weight:700;">-</span>
+        </div>
+        <div class="profile-info-row">
+          <span style="color:var(--muted); font-weight:600;">Cidade</span>
+          <span style="font-weight:700;">Pelotas / RS</span>
         </div>
       </div>
 
-      <button class="btn btn-outline" onclick="fazerLogout()">🚪 Sair da Conta</button>
+      <button class="btn btn-outline" style="color:var(--danger); border-color:#ef444455;" onclick="deslogar()">Sair da Conta</button>
+
+      <div class="dev-credits">
+        🛠️ Desenvolvido por: <strong>Alex Ávila</strong> & <strong>Thiago Nunes</strong><br>
+        📌 <em>Versão de Desenvolvimento v1.0.4-dev</em>
+      </div>
     </div>
 
-    <!-- NAVEGAÇÃO INFERIOR -->
-    <div class="bottom-nav">
-      <div class="nav-item active" onclick="switchNav('home', this)">
-        <span class="nav-icon">🏷️</span>
-        <span>Cupons</span>
+    <!-- NAV INFERIOR -->
+    <div class="bottom-nav" style="display:none;">
+      <div class="nav-item active" onclick="navTo('home', this)">
+        <span class="nav-icon">🏠</span>
+        <span>Início</span>
       </div>
-      <div class="nav-item" onclick="switchNav('profile', this)">
+      <div class="nav-item" onclick="navTo('search', this)">
+        <span class="nav-icon">🔍</span>
+        <span>Parceiros</span>
+      </div>
+      <div class="nav-item" onclick="navTo('wallet', this)">
+        <span class="nav-icon">👛</span>
+        <span>Carteira</span>
+      </div>
+      <div class="nav-item" onclick="navTo('profile', this)">
         <span class="nav-icon">👤</span>
         <span>Perfil</span>
       </div>
@@ -932,119 +982,129 @@
 
   </div>
 
+  <!-- MODAL DE NOTIFICAÇÕES (NO TOPO POR CIMA DE TUDO) -->
+  <div id="modal-alert" class="modal modal-top">
+    <div class="modal-content" style="border-color: var(--primary);">
+      <div id="alert-icon" style="font-size:2rem; margin-bottom:6px;">⚡</div>
+      <h3 id="alert-title" style="font-size:1.1rem; font-weight:800; margin-bottom:6px;">Aviso</h3>
+      <p id="alert-msg" style="font-size:0.85rem; color:var(--muted); margin-bottom:14px; line-height:1.4;">---</p>
+      <button class="btn btn-secondary" style="padding:10px;" onclick="fecharModal('modal-alert')">OK</button>
+    </div>
+  </div>
+
   <!-- MODAL PIX -->
   <div id="modal-pix" class="modal">
     <div class="modal-content">
-      <h3 style="font-size:1.2rem; font-weight:900; margin-bottom:6px;">Assinatura VIP PRIME</h3>
-      <p style="font-size:0.8rem; color:var(--muted); margin-bottom:12px;">Pague R$ 1,20 no seu banco e ative o VIP na hora!</p>
+      <div style="font-size:2.2rem; margin-bottom:4px;">⚡</div>
+      <h3 style="font-size:1.2rem; font-weight:800;">Pagamento via PIX</h3>
+      <p style="font-size:0.8rem; color:var(--muted); margin-top:2px;">Escaneie o QR Code ou copie a chave abaixo:</p>
 
       <div class="qr-box">
-        <img id="img-qr-code" src="" alt="QR Code PIX">
+        <img id="pix-qr-img" src="" alt="QR Code Pix">
       </div>
 
-      <div class="form-group" style="margin-top:12px;">
-        <label>CÓDIGO PIX COPIA E COLA</label>
-        <input type="text" id="input-pix-copia-cola" class="form-control" readonly style="font-size:0.75rem; text-align:center;">
+      <button class="btn btn-secondary" style="margin-bottom:8px;" onclick="copiarPixCode()">📋 Copiar Código Pix</button>
+      <button id="btn-checar-vip" class="btn" style="margin-bottom:8px;" onclick="verificarStatusVipManual()">🔄 Já Paguei / Verificar Agora</button>
+      <button class="btn btn-outline" onclick="fecharModal('modal-pix')">Fechar</button>
+    </div>
+  </div>
+
+  <!-- MODAL CUPOM / BLOQUEIO SE NÃO FOR VIP -->
+  <div id="modal-coupon" class="modal">
+    <div class="modal-content">
+      <h3 id="modal-title" style="font-size:1.2rem; font-weight:800;">---</h3>
+      <div id="modal-disc" style="color:var(--emerald); font-weight:900; font-size:1.1rem; margin-top:4px;">---</div>
+
+      <!-- VISÃO PARA USUÁRIO GRATUITO -->
+      <div id="box-blocked" style="display:none; margin-top:16px; background:rgba(239, 68, 68, 0.1); border:1px solid var(--danger); padding:16px; border-radius:18px;">
+        <span style="font-size:2rem;">🔒</span>
+        <h4 style="font-size:0.92rem; font-weight:800; color:#f87171; margin-top:4px;">Código VIP Bloqueado!</h4>
+        <p style="font-size:0.78rem; color:var(--muted); margin-top:4px; line-height:1.3;">Seja membro VIP por apenas R$ 1,20 para desbloquear este e todos os cupons de Pelotas.</p>
+        <button class="btn btn-secondary" style="margin-top:12px;" onclick="gerarPixMercadoPago()">⚡ Desbloquear Cupons (R$ 1,20)</button>
       </div>
 
-      <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="copiarPix()">📋 Copiar PIX Copia e Cola</button>
-      
-      <div style="display:flex; align-items:center; justify-content:center; gap:8px; font-size:0.78rem; color:var(--emerald); margin:10px 0;">
-        <span class="spinner" style="border-top-color:var(--emerald);"></span>
-        <span>Aguardando confirmação do banco...</span>
+      <!-- VISÃO PARA USUÁRIO VIP -->
+      <div id="box-unlocked" style="display:none; margin-top:16px;">
+        <div style="font-size:0.75rem; color:var(--muted); font-weight:700;">CÓDIGO DE VALIDAÇÃO:</div>
+        <div id="modal-code" style="font-size:1.8rem; font-weight:900; letter-spacing:5px; color:var(--primary); margin:8px 0;">---</div>
+        <button class="btn btn-secondary" onclick="copiarCodigoCupom()">📋 Copiar Código</button>
       </div>
 
-      <button id="btn-checar-vip" class="btn btn-outline" style="font-size:0.8rem;" onclick="verificarStatusVipManual()">🔄 Já Paguei / Checar Agora</button>
-      
-      <button class="btn btn-outline" style="margin-top:8px; border:none; color:var(--muted);" onclick="fecharModal('modal-pix')">Cancelar</button>
+      <button class="btn btn-outline" style="margin-top:14px;" onclick="fecharModal('modal-coupon')">Fechar</button>
     </div>
   </div>
 
   <script>
-    // Variável global para controlar a checagem automática a cada 5s
-    let intervalChecagemPix = null;
+    let pixCopiaColaAtual = "";
+    let codigoCupomAtual = "";
+    let currentAuthTab = "login";
 
-    function switchNav(screen, element) {
-      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-      element.classList.add('active');
+    function mostrarAviso(titulo, mensagem, icone = "⚡") {
+      document.getElementById('alert-icon').innerText = icone;
+      document.getElementById('alert-title').innerText = titulo;
+      document.getElementById('alert-msg').innerText = mensagem;
+      document.getElementById('modal-alert').classList.add('active');
+    }
 
+    function fecharModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+    }
+
+    function switchAuthTab(type) {
+      currentAuthTab = type;
+      document.getElementById('tab-login').classList.toggle('active', type === 'login');
+      document.getElementById('tab-signup').classList.toggle('active', type === 'signup');
+      document.getElementById('group-name').style.display = type === 'signup' ? 'block' : 'none';
+      document.getElementById('box-esqueci').style.display = type === 'login' ? 'block' : 'none';
+      document.getElementById('btn-auth-submit').innerText = type === 'login' ? 'Entrar na Conta' : 'Criar Conta';
+    }
+
+    function navTo(screenId, btn) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-      if (screen === 'home') document.getElementById('screen-home').classList.add('active');
-      if (screen === 'profile') document.getElementById('screen-profile').classList.add('active');
-    }
-
-    function switchAuthTab(tab) {
-      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-      if (tab === 'login') {
-        document.getElementById('tab-login').classList.add('active');
-        document.getElementById('group-name').style.display = 'none';
-        document.getElementById('btn-auth-submit').innerText = "Entrar na Conta";
-      } else {
-        document.getElementById('tab-signup').classList.add('active');
-        document.getElementById('group-name').style.display = 'block';
-        document.getElementById('btn-auth-submit').innerText = "Criar Conta";
+      document.getElementById('screen-' + screenId).classList.add('active');
+      if (btn) {
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
       }
     }
 
-    async function executarAuth() {
-      const auth = window.firebaseAuth;
-      const dbMethods = window.dbMethods;
-      const isSignup = document.getElementById('tab-signup').classList.contains('active');
-      
-      const email = document.getElementById('reg-email').value.trim();
-      const pass = document.getElementById('reg-pass').value.trim();
-      const name = document.getElementById('reg-name').value.trim();
+    function filterCat(cat, btn) {
+      document.querySelectorAll('.category-pill').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+      const cards = document.querySelectorAll('.company-card');
+      cards.forEach(card => {
+        card.style.display = (cat === 'all' || card.dataset.cat === cat) ? 'block' : 'none';
+      });
+    }
 
-      if (!email || !pass) return alert("Preencha e-mail e senha!");
-
-      try {
-        if (isSignup) {
-          if (!name) return alert("Informe seu nome completo!");
-          const userCred = await dbMethods.createUserWithEmailAndPassword(auth, email, pass);
-          const db = window.firebaseDb;
-          await dbMethods.setDoc(dbMethods.doc(db, "usuarios", userCred.user.uid), {
-            nome: name,
-            email: email.toLowerCase(),
-            vip: false,
-            criadoEm: new Date().toISOString()
-          });
-        } else {
-          await dbMethods.signInWithEmailAndPassword(auth, email, pass);
-        }
-      } catch (err) {
-        alert("Erro na autenticação: " + err.message);
-      }
+    function filterStores(term) {
+      term = term.toLowerCase();
+      const cards = document.querySelectorAll('.company-card');
+      cards.forEach(card => {
+        const name = card.dataset.name || '';
+        card.style.display = name.includes(term) ? 'block' : 'none';
+      });
     }
 
     async function fazerLoginGoogle() {
       try {
-        await window.dbMethods.signInWithPopup(window.firebaseAuth, window.googleProvider);
+        const { signInWithPopup } = window.dbMethods;
+        await signInWithPopup(window.firebaseAuth, window.googleProvider);
       } catch (err) {
-        alert("Erro no login Google: " + err.message);
+        mostrarAviso("Erro no Google", err.message, "❌");
       }
-    }
-
-    async function recuperarSenha() {
-      const email = prompt("Informe seu e-mail para redefinição de senha:");
-      if (!email) return;
-      try {
-        await window.dbMethods.sendPasswordResetEmail(window.firebaseAuth, email);
-        alert("E-mail de redefinição enviado com sucesso!");
-      } catch (err) {
-        alert("Erro: " + err.message);
-      }
-    }
-
-    async function fazerLogout() {
-      await window.dbMethods.signOut(window.firebaseAuth);
     }
 
     function entrarComoVipTeste() {
       window.isVipUser = true;
+      document.getElementById('user-name-display').innerText = "Cliente VIP (Teste)";
+      document.getElementById('profile-name').innerText = "Cliente VIP (Teste)";
+      document.getElementById('profile-email').innerText = "vip@teste.com";
       document.querySelectorAll('.status-badge').forEach(b => {
         b.innerText = "ASSINANTE VIP";
         b.className = "status-badge vip";
       });
+      document.getElementById('banner-assinatura').style.display = 'none';
       document.getElementById('screen-auth').classList.remove('active');
       document.getElementById('screen-home').classList.add('active');
       document.querySelector('.bottom-nav').style.display = 'flex';
@@ -1052,190 +1112,182 @@
 
     function entrarComoGratuitoTeste() {
       window.isVipUser = false;
+      document.getElementById('user-name-display').innerText = "Visitante Gratuito";
+      document.getElementById('profile-name').innerText = "Visitante Gratuito";
+      document.getElementById('profile-email').innerText = "gratis@teste.com";
       document.querySelectorAll('.status-badge').forEach(b => {
         b.innerText = "PLANO GRATUITO";
         b.className = "status-badge free";
       });
+      document.getElementById('banner-assinatura').style.display = 'block';
       document.getElementById('screen-auth').classList.remove('active');
       document.getElementById('screen-home').classList.add('active');
       document.querySelector('.bottom-nav').style.display = 'flex';
     }
 
-    // --- FUNÇÕES DO PIX COM POLLING AUTOMÁTICO DE 5 SEGUNDOS ---
+    async function executarAuth() {
+      if (currentAuthTab === 'signup') {
+        const nome = document.getElementById('reg-name').value;
+        const email = document.getElementById('reg-email').value;
+        const pass = document.getElementById('reg-pass').value;
 
-    function abrirModal(id) {
-      document.getElementById(id).classList.add('active');
+        if (!email || !pass || !nome) return mostrarAviso("Campos Incompletos", "Preencha todos os campos para se cadastrar.", "⚠️");
+
+        try {
+          const { createUserWithEmailAndPassword, doc, setDoc } = window.dbMethods;
+          const res = await createUserWithEmailAndPassword(window.firebaseAuth, email.trim().toLowerCase(), pass);
+          
+          await setDoc(doc(window.firebaseDb, "usuarios", res.user.uid), {
+            nome: nome,
+            email: email.trim().toLowerCase(),
+            vip: false,
+            criadoEm: new Date().toISOString()
+          });
+
+          mostrarAviso("Sucesso", "Sua conta foi criada com sucesso!", "🎉");
+        } catch (err) {
+          mostrarAviso("Erro no Cadastro", err.message, "❌");
+        }
+      } else {
+        const email = document.getElementById('reg-email').value;
+        const pass = document.getElementById('reg-pass').value;
+
+        if (!email || !pass) return mostrarAviso("Atenção", "Preencha o e-mail e a senha para entrar!", "⚠️");
+
+        try {
+          await window.dbMethods.signInWithEmailAndPassword(window.firebaseAuth, email, pass);
+        } catch (err) {
+          mostrarAviso("Erro ao Entrar", err.message, "❌");
+        }
+      }
     }
 
-    function fecharModal(id) {
-      document.getElementById(id).classList.remove('active');
-      pararChecagemAutomatica();
+    async function recuperarSenha() {
+      const email = document.getElementById('reg-email').value;
+      if (!email || !email.includes('@')) {
+        return mostrarAviso("E-mail Necessário", "Digite seu e-mail no campo acima para enviarmos o link de redefinição de senha.", "✉️");
+      }
+
+      try {
+        await window.dbMethods.sendPasswordResetEmail(window.firebaseAuth, email.trim().toLowerCase());
+        mostrarAviso("E-mail Enviado!", "Enviamos um link para redefinição de senha para o seu e-mail.", "📧");
+      } catch (err) {
+        mostrarAviso("Erro", err.message, "❌");
+      }
     }
 
-    function copiarPix() {
-      const input = document.getElementById('input-pix-copia-cola');
-      if (input && input.value) {
-        input.select();
-        document.execCommand('copy');
-        alert("Código PIX copiado!");
+    async function deslogar() {
+      if (window.firebaseAuth.currentUser) {
+        await window.dbMethods.signOut(window.firebaseAuth);
+      } else {
+        localStorage.clear();
+        location.reload();
       }
     }
 
     async function gerarPixMercadoPago() {
-      const btn = document.getElementById('btn-gerar-pix');
-      const user = window.firebaseAuth?.currentUser;
-      const emailPix = user ? user.email : window.currentUserData?.email;
+      const user = window.firebaseAuth.currentUser;
+      const emailPix = user ? user.email : "teste@clubprime.com";
 
-      if (!emailPix) {
-        return alert("Você precisa estar logado para gerar o PIX.");
+      const btn = document.getElementById('btn-gerar-pix');
+      if (btn) {
+        btn.innerHTML = `<span class="spinner"></span> Gerando Pix...`;
+        btn.style.opacity = "0.7";
+        btn.style.pointerEvents = "none";
       }
 
-      btn.disabled = true;
-      btn.innerHTML = `<span class="spinner"></span> Gerando PIX...`;
-
       try {
-        const response = await fetch('/api/criar-pix', {
+        const response = await fetch('https://webhook-clubprime.vercel.app/api/criar-pix', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: emailPix.toLowerCase().trim(),
-            nome: window.currentUserData?.nome || 'Membro PRIME',
-            userId: user ? user.uid : null
+            email: emailPix.toLowerCase(),
+            nome: window.currentUserData?.nome || 'Membro PRIME'
           })
         });
 
-        const responseText = await response.text();
-        let data;
-        try {
-          data = JSON.parse(responseText);
-        } catch (e) {
-          throw new Error("Servidor retornou uma resposta inválida ao gerar PIX.");
+        const data = await response.json();
+
+        if (data.success && data.qrCodeBase64) {
+          document.getElementById('pix-qr-img').src = data.qrCodeBase64;
+          pixCopiaColaAtual = data.qrCodeCopiaCola;
+          fecharModal('modal-coupon');
+          document.getElementById('modal-pix').classList.add('active');
+        } else {
+          mostrarAviso("Erro", data.error || "Não foi possível gerar o Pix. Tente novamente.", "❌");
         }
-
-        if (!data.success) {
-          throw new Error(data.error || "Erro ao gerar cobrança.");
-        }
-
-        document.getElementById('img-qr-code').src = data.qrCodeBase64;
-        document.getElementById('input-pix-copia-cola').value = data.qrCodeCopiaCola;
-        
-        abrirModal('modal-pix');
-
-        // 🚀 Inicia a verificação automática de 5 em 5 segundos!
-        iniciarChecagemAutomatica(emailPix.toLowerCase(), user ? user.uid : "");
-
       } catch (err) {
-        alert("Erro ao Gerar PIX: " + err.message);
+        mostrarAviso("Erro de Conexão", err.message, "❌");
       } finally {
-        btn.disabled = false;
-        btn.innerHTML = `⚡ Pagar R$ 1,20 via PIX`;
-      }
-    }
-
-    function iniciarChecagemAutomatica(email, userId) {
-      pararChecagemAutomatica();
-
-      intervalChecagemPix = setInterval(async () => {
-        try {
-          const response = await fetch(`/api/checar-pix?email=${encodeURIComponent(email)}&userId=${encodeURIComponent(userId)}`);
-          const data = await response.json();
-
-          if (data.success && data.vip) {
-            pararChecagemAutomatica();
-            ativarVipNaTela(data.message);
-          }
-        } catch (err) {
-          console.warn("Aguardando confirmação do PIX...", err);
+        if (btn) {
+          btn.innerHTML = `⚡ Pagar R$ 1,20 via PIX`;
+          btn.style.opacity = "1";
+          btn.style.pointerEvents = "auto";
         }
-      }, 5000);
+      }
     }
 
-    function pararChecagemAutomatica() {
-      if (intervalChecagemPix) {
-        clearInterval(intervalChecagemPix);
-        intervalChecagemPix = null;
-      }
+    function copiarPixCode() {
+      if (!pixCopiaColaAtual) return;
+      navigator.clipboard.writeText(pixCopiaColaAtual);
+      mostrarAviso("Copiado!", "Código Pix Copia e Cola copiado para a área de transferência.", "📋");
     }
 
     async function verificarStatusVipManual() {
+      const user = window.firebaseAuth.currentUser;
+      if (!user || !user.email) {
+        return mostrarAviso("Atenção", "Faz login na tua conta para verificar o pagamento.", "⚠️");
+      }
+
       const btn = document.getElementById('btn-checar-vip');
-      const user = window.firebaseAuth?.currentUser;
-      const email = user ? user.email : window.currentUserData?.email;
-      const userId = user ? user.uid : "";
-
-      if (!email) return alert("Sessão não encontrada.");
-
-      btn.disabled = true;
-      btn.innerHTML = `<span class="spinner"></span> Verificando...`;
+      btn.innerHTML = `<span class="spinner"></span> Verificando no Banco...`;
 
       try {
-        const response = await fetch(`/api/checar-pix?email=${encodeURIComponent(email)}&userId=${encodeURIComponent(userId)}`);
+        const response = await fetch(`https://webhook-clubprime.vercel.app/api/checar-pix?email=${encodeURIComponent(user.email)}&userId=${user.uid}`);
         const data = await response.json();
 
         if (data.success && data.vip) {
-          pararChecagemAutomatica();
-          ativarVipNaTela(data.message);
+          fecharModal('modal-pix');
+          mostrarAviso("VIP Ativado! 🎉", data.message, "👑");
+          
+          window.isVipUser = true;
+          document.querySelectorAll('.status-badge').forEach(b => {
+            b.innerText = "ASSINANTE VIP";
+            b.className = "status-badge vip";
+          });
+          document.getElementById('banner-assinatura').style.display = 'none';
+          document.getElementById('profile-vip-card').style.display = 'block';
         } else {
-          alert(data.message || "Pagamento ainda não localizado. Conclua o PIX e tente novamente.");
+          mostrarAviso("Aguardando Pagamento ⏳", data.message || "O pagamento ainda não foi compensado pelo banco.", "ℹ️");
         }
       } catch (err) {
-        alert("Erro de conexão: " + err.message);
+        mostrarAviso("Erro de Conexão", err.message, "❌");
       } finally {
-        btn.disabled = false;
-        btn.innerHTML = `🔄 Já Paguei / Checar Agora`;
+        btn.innerHTML = `🔄 Já Paguei / Verificar Agora`;
       }
     }
 
-    function ativarVipNaTela(mensagem) {
-      fecharModal('modal-pix');
-      alert("🎉 " + (mensagem || "Acesso VIP liberado com sucesso!"));
+    function resgatarCupomReal(titulo, desconto, codigo) {
+      document.getElementById('modal-title').innerText = titulo;
+      document.getElementById('modal-disc').innerText = desconto;
+      codigoCupomAtual = codigo;
 
-      window.isVipUser = true;
-
-      document.querySelectorAll('.status-badge').forEach(b => {
-        b.innerText = "ASSINANTE VIP";
-        b.className = "status-badge vip";
-      });
-
-      const banner = document.getElementById('banner-assinatura');
-      if (banner) banner.style.display = 'none';
-
-      const vipCard = document.getElementById('profile-vip-card');
-      if (vipCard) vipCard.style.display = 'block';
-    }
-
-    function filterStores(query) {
-      const q = query.toLowerCase();
-      document.querySelectorAll('.company-card').forEach(card => {
-        const name = card.getAttribute('data-name') || "";
-        if (name.includes(q)) {
-          card.style.display = 'block';
-        } else {
-          card.style.display = 'none';
-        }
-      });
-    }
-
-    function filterCat(cat, el) {
-      document.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
-      el.classList.add('active');
-
-      document.querySelectorAll('.company-card').forEach(card => {
-        if (cat === 'all' || card.getAttribute('data-cat') === cat) {
-          card.style.display = 'block';
-        } else {
-          card.style.display = 'none';
-        }
-      });
-    }
-
-    function resgatarCupomReal(empresa, beneficio, codigo) {
-      if (!window.isVipUser) {
-        alert("🔒 Este cupom é exclusivo para assinantes VIP! Faça a assinatura por R$ 1,20 para liberar.");
-        gerarPixMercadoPago();
-        return;
+      if (window.isVipUser) {
+        document.getElementById('box-blocked').style.display = 'none';
+        document.getElementById('box-unlocked').style.display = 'block';
+        document.getElementById('modal-code').innerText = codigo;
+      } else {
+        document.getElementById('box-blocked').style.display = 'block';
+        document.getElementById('box-unlocked').style.display = 'none';
       }
-      alert(`🎟️ Cupom resgatado com sucesso para ${empresa}!\n\nBenefício: ${beneficio}\nCódigo Promocional: ${codigo}\n\nApresente este código no estabelecimento.`);
+
+      document.getElementById('modal-coupon').classList.add('active');
+    }
+
+    function copiarCodigoCupom() {
+      if (!codigoCupomAtual) return;
+      navigator.clipboard.writeText(codigoCupomAtual);
+      mostrarAviso("Copiado!", "Código promocional copiado com sucesso!", "📋");
     }
   </script>
 </body>
