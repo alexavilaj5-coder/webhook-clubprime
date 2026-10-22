@@ -13,25 +13,21 @@ export default async function handler(req, res) {
 
   const { email, userId } = req.query;
 
-  if (!email && !userId) {
-    return res.status(400).json({ success: false, error: "E-mail ou User ID necessário." });
-  }
-
   try {
-    const emailBusca = email ? email.toLowerCase().trim() : null;
     const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || process.env.MERCADOPAGO_ACCESS_TOKEN;
 
     if (!ACCESS_TOKEN) {
       return res.status(500).json({ success: false, error: 'Token do Mercado Pago não configurado.' });
     }
 
-    // Consulta os pagamentos recentes no Mercado Pago usando a referência do usuário
-    const referenciaBusca = userId || emailBusca;
-    const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&external_reference=${referenciaBusca}`, {
+    // Busca os últimos pagamentos diretamente da conta
+    const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=10`, {
       headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
     });
 
     const mpData = await mpRes.json();
+    
+    // Procura por qualquer pagamento aprovado recente
     const pagamentoAprovado = mpData.results?.find(p => p.status === 'approved');
 
     if (pagamentoAprovado) {
