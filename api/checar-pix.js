@@ -1,18 +1,3 @@
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID || "projeto-01-63111",
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    })
-  });
-}
-
-const db = getFirestore();
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -40,32 +25,9 @@ export default async function handler(req, res) {
       return res.status(500).json({ success: false, error: 'Token do Mercado Pago não configurado.' });
     }
 
-    let userRef = null;
-    let userDocId = userId;
-
-    if (userId) {
-      userRef = db.collection('usuarios').doc(userId);
-    } else if (emailBusca) {
-      const snapshot = await db.collection('usuarios').where('email', '==', emailBusca).get();
-      if (!snapshot.empty) {
-        userRef = snapshot.docs[0].ref;
-        userDocId = snapshot.docs[0].id;
-      }
-    }
-
-    if (!userRef) {
-      return res.status(404).json({ success: false, error: "Usuário não encontrado no banco." });
-    }
-
-    const userDoc = await userRef.get();
-    const userData = userDoc.data();
-
-    if (userData.vip) {
-      return res.status(200).json({ success: true, vip: true, message: "Assinatura VIP já ativa!" });
-    }
-
-    // Consulta os pagamentos no Mercado Pago
-    const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&external_reference=${userDocId || emailBusca}`, {
+    // Consulta os pagamentos recentes no Mercado Pago usando a referência do usuário
+    const referenciaBusca = userId || emailBusca;
+    const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&external_reference=${referenciaBusca}`, {
       headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
     });
 
@@ -73,17 +35,10 @@ export default async function handler(req, res) {
     const pagamentoAprovado = mpData.results?.find(p => p.status === 'approved');
 
     if (pagamentoAprovado) {
-      const dataExpiracao = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      
-      await userRef.update({
-        vip: true,
-        vipExpiraEm: dataExpiracao,
-        lastPaymentId: pagamentoAprovado.id
-      });
-
       return res.status(200).json({ 
         success: true, 
         vip: true, 
+        paymentId: pagamentoAprovado.id,
         message: "Pagamento confirmado com sucesso! Acesso VIP liberado." 
       });
     }
