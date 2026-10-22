@@ -5,26 +5,28 @@ function getFirebaseAdmin() {
 
   const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!rawServiceAccount) {
-    throw new Error("Variável FIREBASE_SERVICE_ACCOUNT não configurada na Vercel.");
+    console.warn("⚠️ AVISO: FIREBASE_SERVICE_ACCOUNT não configurada na Vercel.");
+    return null;
   }
 
-  let serviceAccount;
   try {
-    serviceAccount = JSON.parse(rawServiceAccount);
-  } catch (e) {
-    throw new Error("Erro ao converter FIREBASE_SERVICE_ACCOUNT em JSON: " + e.message);
+    const serviceAccount = typeof rawServiceAccount === 'string' 
+      ? JSON.parse(rawServiceAccount) 
+      : rawServiceAccount;
+
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+    }
+
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+
+    return admin.firestore();
+  } catch (error) {
+    console.error("❌ ERRO ao inicializar Firebase Admin:", error.message);
+    return null;
   }
-
-  // Corrige as quebras de linha da chave privada do Firebase
-  if (serviceAccount.private_key) {
-    serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
-  }
-
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-
-  return admin.firestore();
 }
 
 module.exports = async function handler(req, res) {
@@ -60,6 +62,7 @@ module.exports = async function handler(req, res) {
       });
     }
 
+    // Consulta os pagamentos no Mercado Pago
     const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=20`, {
       headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
     });
@@ -67,13 +70,14 @@ module.exports = async function handler(req, res) {
     const mpData = await mpRes.json();
 
     if (!mpRes.ok) {
-      console.error('Erro de consulta no Mercado Pago:', mpData);
+      console.error('❌ Erro Mercado Pago:', mpData);
       return res.status(400).json({ 
         success: false, 
         error: 'Erro ao consultar transações no Mercado Pago.' 
       });
     }
 
+    // Procura transação aprovada
     const pagamentoValido = mpData.results?.find(p => {
       const eAprovado = p.status === 'approved';
       const mesmaReferencia = userId && p.external_reference === userId;
@@ -84,36 +88,45 @@ module.exports = async function handler(req, res) {
     });
 
     if (pagamentoValido) {
-      // Pega a conexão com o Firestore (se der erro aqui, ele vai parar e te avisar)
-      const db = getFirebaseAdmin();
+      console.log(`✅ Pagamento Aprovado Encontrado ID: ${pagamentoValido.id}`);
 
-      const dataExpiracao = new Date();
-      dataExpiracao.setDate(dataExpiracao.getDate() + 30); // 30 dias de VIP
+      // Tenta salvar no Firestore (se falhar, não impede o usuário de receber o VIP)
+      try {
+        const db = getFirebaseAdmin();
+        if (db) {
+          const dataExpiracao = new Date();
+          dataExpiracao.setDate(dataExpiracao.getDate() + 30); // 30 dias
 
-      const dadosVip = {
-        vip: true,
-        vipExpiraEm: dataExpiracao.toISOString(),
-        atualizadoEm: new Date().toISOString()
-      };
+          const dadosVip = {
+            vip: true,
+            vipExpiraEm: dataExpiracao.toISOString(),
+            atualizadoEm: new Date().toISOString()
+          };
 
-      // SALVA NO BANCO DE DADOS DE FORMA OBRIGATÓRIA
-      if (userId) {
-        await db.collection('usuarios').doc(userId).set(dadosVip, { merge: true });
-      } else if (emailUsuario) {
-        const snapshot = await db.collection('usuarios').where('email', '==', emailUsuario).get();
-        if (!snapshot.empty) {
-          await snapshot.docs[0].ref.set(dadosVip, { merge: true });
+          if (userId) {
+            await db.collection('usuarios').doc(userId).set(dadosVip, { merge: true });
+          } else if (emailUsuario) {
+            const snapshot = await db.collection('usuarios').where('email', '==', emailUsuario).get();
+            if (!snapshot.empty) {
+              await snapshot.docs[0].ref.set(dadosVip, { merge: true });
+            } else {
+              await db.collection('usuarios').doc(emailUsuario).set(dadosVip, { merge: true });
+            }
+          }
+          console.log("👑 VIP salvo com sucesso no Firestore!");
         } else {
-          // Se não achar o doc pelo email, cria pelo email como ID
-          await db.collection('usuarios').doc(emailUsuario).set(dadosVip, { merge: true });
+          console.log("⚠️ Banco de dados não conectado, mas pagamento aprovado!");
         }
+      } catch (dbErr) {
+        console.error("❌ Erro ao tentar salvar no Firestore:", dbErr.message);
       }
 
+      // Retorna sucesso para o app imediatamente
       return res.status(200).json({ 
         success: true, 
         vip: true, 
         paymentId: pagamentoValido.id,
-        message: "Pagamento confirmado e salvo no banco com sucesso!" 
+        message: "Pagamento confirmado com sucesso! Acesso VIP liberado." 
       });
     }
 
@@ -124,7 +137,7 @@ module.exports = async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error("❌ ERRO CRÍTICO NO CHECAR-PIX:", err);
+    console.error("❌ ERRO CRÍTICO NO HANDLER:", err);
     return res.status(500).json({ success: false, error: err.message });
   }
 };
