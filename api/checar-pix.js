@@ -1,20 +1,34 @@
 const admin = require('firebase-admin');
 
-// Inicializa o Firebase Admin na Vercel via Variável de Ambiente
-if (!admin.apps.length) {
+// Função para inicializar o Firebase Admin com segurança na Vercel
+function getFirebaseAdmin() {
+  if (admin.apps.length) return admin.firestore();
+
   try {
+    const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (!rawServiceAccount) {
+      console.error("❌ ERRO: Variável FIREBASE_SERVICE_ACCOUNT não encontrada na Vercel!");
+      return null;
+    }
+
+    // Trata possíveis quebras de linha/aspas na variável da Vercel
+    const serviceAccount = typeof rawServiceAccount === 'string' 
+      ? JSON.parse(rawServiceAccount) 
+      : rawServiceAccount;
+
     admin.initializeApp({
-      credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT))
+      credential: admin.credential.cert(serviceAccount)
     });
+
+    console.log("✅ Firebase Admin inicializado com sucesso!");
+    return admin.firestore();
   } catch (error) {
-    console.error("Erro ao inicializar Firebase Admin:", error);
+    console.error("❌ Erro ao inicializar Firebase Admin:", error.message);
+    return null;
   }
 }
 
-const db = admin.firestore();
-
 module.exports = async function handler(req, res) {
-  // Configuração dos cabeçalhos CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -23,7 +37,6 @@ module.exports = async function handler(req, res) {
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
 
-  // Trata a requisição de pré-verificação do navegador (OPTIONS)
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -42,13 +55,14 @@ module.exports = async function handler(req, res) {
     const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || process.env.MERCADOPAGO_ACCESS_TOKEN;
 
     if (!ACCESS_TOKEN) {
+      console.error('❌ Token do Mercado Pago ausente.');
       return res.status(500).json({ 
         success: false, 
         error: 'Token do Mercado Pago não configurado na Vercel.' 
       });
     }
 
-    // Consulta os últimos 20 pagamentos recebidos no Mercado Pago
+    // Consulta os pagamentos no Mercado Pago
     const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=20`, {
       headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
     });
@@ -56,15 +70,14 @@ module.exports = async function handler(req, res) {
     const mpData = await mpRes.json();
 
     if (!mpRes.ok) {
-      console.error('Erro de consulta no Mercado Pago:', mpData);
+      console.error('❌ Erro Mercado Pago:', mpData);
       return res.status(400).json({ 
         success: false, 
         error: 'Erro ao consultar transações no Mercado Pago.' 
       });
     }
 
-    // FILTRO DE SEGURANÇA:
-    // Procura uma transação APROVADA vinculada ao userId ou e-mail do usuário
+    // Procura transação aprovada vinculada ao usuário
     const pagamentoValido = mpData.results?.find(p => {
       const eAprovado = p.status === 'approved';
       const mesmaReferencia = userId && p.external_reference === userId;
@@ -75,23 +88,33 @@ module.exports = async function handler(req, res) {
     });
 
     if (pagamentoValido) {
-      // 🚀 CALCULA EXATAMENTE 30 DIAS DE VIP A PARTIR DE HOJE
-      const dataExpiracao = new Date();
-      dataExpiracao.setDate(dataExpiracao.getDate() + 30);
+      console.log(`✅ Pagamento Aprovado Encontrado ID: ${pagamentoValido.id}`);
 
-      const dadosVip = {
-        vip: true,
-        vipExpiraEm: dataExpiracao.toISOString(),
-        atualizadoEm: new Date().toISOString()
-      };
+      // Tenta gravar no Firestore
+      const db = getFirebaseAdmin();
+      
+      if (db) {
+        const dataExpiracao = new Date();
+        dataExpiracao.setDate(dataExpiracao.getDate() + 30); // 30 Dias
 
-      // SALVA DE FORMA DEFINITIVA NO FIRESTORE
-      if (userId) {
-        await db.collection('usuarios').doc(userId).set(dadosVip, { merge: true });
-      } else if (emailUsuario) {
-        const snapshot = await db.collection('usuarios').where('email', '==', emailUsuario).get();
-        if (!snapshot.empty) {
-          await snapshot.docs[0].ref.set(dadosVip, { merge: true });
+        const dadosVip = {
+          vip: true,
+          vipExpiraEm: dataExpiracao.toISOString(),
+          atualizadoEm: new Date().toISOString()
+        };
+
+        try {
+          if (userId) {
+            await db.collection('usuarios').doc(userId).set(dadosVip, { merge: true });
+          } else if (emailUsuario) {
+            const snapshot = await db.collection('usuarios').where('email', '==', emailUsuario).get();
+            if (!snapshot.empty) {
+              await snapshot.docs[0].ref.set(dadosVip, { merge: true });
+            }
+          }
+          console.log("👑 VIP salvo com sucesso no Firestore!");
+        } catch (dbErr) {
+          console.error("❌ Erro ao salvar VIP no Firestore:", dbErr.message);
         }
       }
 
@@ -103,6 +126,7 @@ module.exports = async function handler(req, res) {
       });
     }
 
+    console.log("ℹ️ Nenhum pagamento aprovado localizado para este usuário.");
     return res.status(200).json({ 
       success: true, 
       vip: false, 
@@ -110,7 +134,7 @@ module.exports = async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error("Erro interno ao checar Pix:", err);
+    console.error("❌ Erro fatal no handler:", err);
     return res.status(500).json({ success: false, error: err.message });
   }
 };
