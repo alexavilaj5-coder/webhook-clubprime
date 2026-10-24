@@ -549,6 +549,35 @@
 
     let unsubscribeUser = null;
 
+    // BOTÕES DE TESTE MODO DEMO COM PERSISTÊNCIA REAL NO FIRESTORE/LOCALSTORAGE
+    window.entrarComoVipTeste = async function() {
+      const user = auth.currentUser;
+      const dataExpiracao = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // +30 dias
+      
+      if (user) {
+        const userDocRef = doc(db, "usuarios", user.uid);
+        await updateDoc(userDocRef, { vip: true, vipExpiraEm: dataExpiracao });
+        alert("Modo VIP ativado e salvo no seu perfil com sucesso!");
+      } else {
+        localStorage.setItem("clube_prime_demo_vip", "true");
+        localStorage.setItem("clube_prime_demo_exp", dataExpiracao);
+        window.location.reload();
+      }
+    };
+
+    window.entrarComoGratuitoTeste = async function() {
+      const user = auth.currentUser;
+      if (user) {
+        const userDocRef = doc(db, "usuarios", user.uid);
+        await updateDoc(userDocRef, { vip: false, vipExpiraEm: null });
+        alert("Alterado para Plano Gratuito.");
+      } else {
+        localStorage.removeItem("clube_prime_demo_vip");
+        localStorage.removeItem("clube_prime_demo_exp");
+        window.location.reload();
+      }
+    };
+
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userDocRef = doc(db, "usuarios", user.uid);
@@ -563,6 +592,7 @@
               email: user.email.toLowerCase(),
               fotoUrl: user.photoURL || null,
               vip: false,
+              vipExpiraEm: null,
               criadoEm: new Date().toISOString()
             };
             await setDoc(userDocRef, data);
@@ -572,7 +602,7 @@
             const expiraData = new Date(data.vipExpiraEm);
             if (new Date() > expiraData) {
               data.vip = false;
-              await updateDoc(userDocRef, { vip: false });
+              await updateDoc(userDocRef, { vip: false, vipExpiraEm: null });
             }
           }
 
@@ -621,6 +651,25 @@
         document.querySelector('.bottom-nav').style.display = 'flex';
       } else {
         if (unsubscribeUser) unsubscribeUser();
+
+        // Checagem de persistência demo offline
+        const demoVip = localStorage.getItem("clube_prime_demo_vip");
+        if (demoVip === "true") {
+          window.isVipUser = true;
+          document.querySelectorAll('.status-badge').forEach(b => {
+            b.innerText = "ASSINANTE VIP (DEMO)";
+            b.className = "status-badge vip";
+          });
+          document.getElementById('screen-auth').classList.remove('active');
+          document.getElementById('screen-home').classList.add('active');
+          document.querySelector('.bottom-nav').style.display = 'flex';
+          document.getElementById('user-name-display').innerText = "Alex (Demo VIP)";
+          document.getElementById('profile-name').innerText = "Alex (Demo VIP)";
+          document.getElementById('profile-email').innerText = "demo@clubeprime.rs";
+          document.getElementById('profile-avatar').src = "https://ui-avatars.com/api/?name=Alex+Demo&background=10b981&color=fff";
+          return;
+        }
+
         window.isVipUser = false;
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('screen-auth').classList.add('active');
@@ -700,7 +749,7 @@
 
         <div class="dev-credits">
           🛠️ Devs: <strong>Alex Ávila</strong> & <strong>Tiago Nunes</strong><br>
-          📌 <em>Versão Pro v1.0.5</em>
+          📌 <em>Versão Pro v1.0.6</em>
         </div>
       </div>
     </div>
@@ -938,7 +987,7 @@
 
       <div class="dev-credits">
         🛠️ Desenvolvido por: <strong>Alex Ávila</strong> & <strong>Tiago Nunes</strong><br>
-        📌 <em>Versão Pro v1.0.5</em>
+        📌 <em>Versão Pro v1.0.6</em>
       </div>
     </div>
 
@@ -1126,36 +1175,6 @@
       }
     }
 
-    function entrarComoVipTeste() {
-      window.isVipUser = true;
-      document.getElementById('user-name-display').innerText = "Cliente VIP (Teste)";
-      document.getElementById('profile-name').innerText = "Cliente VIP (Teste)";
-      document.getElementById('profile-email').innerText = "vip@teste.com";
-      document.querySelectorAll('.status-badge').forEach(b => {
-        b.innerText = "ASSINANTE VIP";
-        b.className = "status-badge vip";
-      });
-      document.getElementById('banner-assinatura').style.display = 'none';
-      document.getElementById('screen-auth').classList.remove('active');
-      document.getElementById('screen-home').classList.add('active');
-      document.querySelector('.bottom-nav').style.display = 'flex';
-    }
-
-    function entrarComoGratuitoTeste() {
-      window.isVipUser = false;
-      document.getElementById('user-name-display').innerText = "Visitante Gratuito";
-      document.getElementById('profile-name').innerText = "Visitante Gratuito";
-      document.getElementById('profile-email').innerText = "gratis@teste.com";
-      document.querySelectorAll('.status-badge').forEach(b => {
-        b.innerText = "PLANO GRATUITO";
-        b.className = "status-badge free";
-      });
-      document.getElementById('banner-assinatura').style.display = 'block';
-      document.getElementById('screen-auth').classList.remove('active');
-      document.getElementById('screen-home').classList.add('active');
-      document.querySelector('.bottom-nav').style.display = 'flex';
-    }
-
     async function executarAuth() {
       if (currentAuthTab === 'signup') {
         const nome = document.getElementById('reg-name').value;
@@ -1246,7 +1265,6 @@
           fecharModal('modal-coupon');
           document.getElementById('modal-pix').classList.add('active');
 
-          // Dispara checagem em 2o plano
           iniciarChecagemAutomatica();
         } else {
           mostrarAviso("Erro", data.error || "Não foi possível gerar o Pix. Tente novamente.", "❌");
@@ -1255,7 +1273,7 @@
         mostrarAviso("Erro de Conexão", err.message, "❌");
       } finally {
         if (btn) {
-          btn.innerHTML = `⚡ Ativar VIP por R$ 1,20 via PIX`;
+          btn.innerHTML = `⚡ Ativar VIP por R$ 19,90 via PIX`;
           btn.style.opacity = "1";
           btn.style.pointerEvents = "auto";
         }
