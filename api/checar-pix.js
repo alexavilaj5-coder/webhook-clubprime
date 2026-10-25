@@ -3,35 +3,28 @@ const admin = require('firebase-admin');
 function getFirebaseFirestore() {
   if (admin.apps.length) return admin.firestore();
 
-  const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!rawServiceAccount) {
-    console.error("❌ ERRO: FIREBASE_SERVICE_ACCOUNT não está configurada na Vercel.");
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+  if (!projectId || !clientEmail || !privateKey) {
+    console.error("❌ ERRO: As credenciais individuais do Firebase não estão configuradas corretamente na Vercel.");
     return null;
   }
 
   try {
-    let serviceAccount;
-    // Tenta limpar e converter a chave da Vercel para JSON com segurança
-    let cleanStr = typeof rawServiceAccount === 'string' ? rawServiceAccount.trim() : rawServiceAccount;
-    
-    if (typeof cleanStr === 'string' && cleanStr.startsWith('"') && cleanStr.endsWith('"')) {
-      cleanStr = cleanStr.slice(1, -1);
-    }
-
-    serviceAccount = typeof cleanStr === 'string' ? JSON.parse(cleanStr) : cleanStr;
-
-    if (serviceAccount.private_key) {
-      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
-    }
-
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
+      credential: admin.credential.cert({
+        projectId: projectId.trim(),
+        clientEmail: clientEmail.trim(),
+        privateKey: privateKey.replace(/\\n/g, '\n'),
+      })
     });
 
-    console.log("✅ Firebase Admin inicializado com sucesso!");
+    console.log("✅ Firebase Admin inicializado com sucesso via variáveis separadas!");
     return admin.firestore();
   } catch (error) {
-    console.error("❌ ERRO AO PROCESSAR A CHAVE DO FIREBASE:", error.message);
+    console.error("❌ ERRO AO INICIALIZAR O FIREBASE:", error.message);
     return null;
   }
 }
@@ -60,7 +53,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const emailUsuario = email ? email.toLowerCase().trim() : null;
-    const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || process.env.MERCADOPAGO_ACCESS_TOKEN;
+    const ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN;
 
     if (!ACCESS_TOKEN) {
       return res.status(500).json({ 
@@ -69,7 +62,6 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Consulta os pagamentos no Mercado Pago
     const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=20`, {
       headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
     });
@@ -84,7 +76,6 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Procura transação aprovada
     const pagamentoValido = mpData.results?.find(p => {
       const eAprovado = p.status === 'approved';
       const mesmaReferencia = userId && p.external_reference === userId;
@@ -97,12 +88,11 @@ module.exports = async function handler(req, res) {
     if (pagamentoValido) {
       console.log(`✅ Pagamento Aprovado Encontrado ID: ${pagamentoValido.id}`);
 
-      // Tenta salvar no Firestore de forma segura (se falhar, não trava o usuário)
       try {
         const db = getFirebaseFirestore();
         if (db) {
           const dataExpiracao = new Date();
-          dataExpiracao.setDate(dataExpiracao.getDate() + 30); // 30 dias
+          dataExpiracao.setDate(dataExpiracao.getDate() + 30);
 
           const dadosVip = {
             vip: true,
@@ -121,14 +111,11 @@ module.exports = async function handler(req, res) {
             }
           }
           console.log("👑 VIP salvo com sucesso no Firestore!");
-        } else {
-          console.warn("⚠️ ATENÇÃO: O Firestore não conectou. O VIP vai ativar na tela, mas vai sumir ao atualizar a página até corrigirmos a chave na Vercel.");
         }
       } catch (dbErr) {
         console.error("❌ Erro interno ao salvar no Firestore:", dbErr.message);
       }
 
-      // RETORNA SUCESSO SEMPRE QUE O PAGAMENTO FOR APROVADO
       return res.status(200).json({ 
         success: true, 
         vip: true, 
