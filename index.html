@@ -116,6 +116,7 @@
       border: 1px solid var(--card-border);
     }
 
+    /* Oculta todas as telas por padrão e só mostra a que tiver a classe active */
     .screen {
       display: none;
       padding: 20px;
@@ -524,13 +525,12 @@
       if (user) {
         const userDocRef = doc(db, "usuarios", user.uid);
         
-        try {
-          const initialSnap = await getDoc(userDocRef);
-          let initialData = null;
-          if (initialSnap.exists()) {
-            initialData = initialSnap.data();
+        unsubscribeUser = onSnapshot(userDocRef, async (snapshot) => {
+          let data = null;
+          if (snapshot.exists()) {
+            data = snapshot.data();
           } else {
-            initialData = {
+            data = {
               nome: user.displayName || "Cliente Clube PRIME",
               email: user.email.toLowerCase(),
               fotoUrl: user.photoURL || null,
@@ -538,19 +538,8 @@
               vipExpiraEm: null,
               criadoEm: new Date().toISOString()
             };
-            await setDoc(userDocRef, initialData);
+            await setDoc(userDocRef, data);
           }
-
-          window.currentUserData = initialData;
-          aplicarDadosUsuario(user, initialData);
-
-        } catch (e) {
-          console.log("Erro ao carregar dados do usuário:", e);
-        }
-
-        unsubscribeUser = onSnapshot(userDocRef, async (snapshot) => {
-          if (!snapshot.exists()) return;
-          let data = snapshot.data();
 
           if (data.vip && data.vipExpiraEm) {
             const expiraData = new Date(data.vipExpiraEm);
@@ -561,7 +550,43 @@
           }
 
           window.currentUserData = data;
-          aplicarDadosUsuario(user, data);
+          document.getElementById('user-name-display').innerText = data.nome || user.displayName || "Cliente";
+          document.getElementById('profile-name').innerText = data.nome || user.displayName || "Cliente";
+          document.getElementById('profile-email').innerText = data.email || user.email;
+          
+          const avatarImg = document.getElementById('profile-avatar');
+          if (user.photoURL || data.fotoUrl) {
+            avatarImg.src = user.photoURL || data.fotoUrl;
+          } else {
+            avatarImg.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(data.nome || 'User') + "&background=2563eb&color=fff";
+          }
+
+          const dataCriado = data.criadoEm ? new Date(data.criadoEm).toLocaleDateString('pt-BR') : 'Hoje';
+          document.getElementById('profile-joined-date').innerText = dataCriado;
+
+          if (data.vip) {
+            window.isVipUser = true;
+            document.querySelectorAll('.status-badge').forEach(b => {
+              b.innerText = "ASSINANTE VIP";
+              b.className = "status-badge vip";
+            });
+            document.getElementById('banner-assinatura').style.display = 'none';
+            document.getElementById('profile-vip-card').style.display = 'block';
+            
+            if (data.vipExpiraEm) {
+              const expiraStr = new Date(data.vipExpiraEm).toLocaleDateString('pt-BR');
+              document.getElementById('profile-vip-expira').innerText = expiraStr;
+            }
+            fecharModal('modal-pix');
+          } else {
+            window.isVipUser = false;
+            document.querySelectorAll('.status-badge').forEach(b => {
+              b.innerText = "PLANO GRATUITO";
+              b.className = "status-badge free";
+            });
+            document.getElementById('banner-assinatura').style.display = 'block';
+            document.getElementById('profile-vip-card').style.display = 'none';
+          }
         });
 
         document.getElementById('screen-auth').classList.remove('active');
@@ -593,48 +618,6 @@
         document.querySelector('.bottom-nav').style.display = 'none';
       }
     });
-
-    function aplicarDadosUsuario(user, data) {
-      const nomeFinal = data.nome || user.displayName || "Cliente";
-      const emailFinal = data.email || user.email || "-";
-
-      document.getElementById('user-name-display').innerText = nomeFinal;
-      document.getElementById('profile-name').innerText = nomeFinal;
-      document.getElementById('profile-email').innerText = emailFinal;
-      
-      const avatarImg = document.getElementById('profile-avatar');
-      if (user.photoURL || data.fotoUrl) {
-        avatarImg.src = user.photoURL || data.fotoUrl;
-      } else {
-        avatarImg.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(nomeFinal) + "&background=2563eb&color=fff";
-      }
-
-      const dataCriado = data.criadoEm ? new Date(data.criadoEm).toLocaleDateString('pt-BR') : 'Hoje';
-      document.getElementById('profile-joined-date').innerText = dataCriado;
-
-      if (data.vip) {
-        window.isVipUser = true;
-        document.querySelectorAll('.status-badge').forEach(b => {
-          b.innerText = "ASSINANTE VIP";
-          b.className = "status-badge vip";
-        });
-        document.getElementById('banner-assinatura').style.display = 'none';
-        document.getElementById('profile-vip-card').style.display = 'block';
-        
-        if (data.vipExpiraEm) {
-          const expiraStr = new Date(data.vipExpiraEm).toLocaleDateString('pt-BR');
-          document.getElementById('profile-vip-expira').innerText = expiraStr;
-        }
-      } else {
-        window.isVipUser = false;
-        document.querySelectorAll('.status-badge').forEach(b => {
-          b.innerText = "PLANO GRATUITO";
-          b.className = "status-badge free";
-        });
-        document.getElementById('banner-assinatura').style.display = 'block';
-        document.getElementById('profile-vip-card').style.display = 'none';
-      }
-    }
   </script>
 </head>
 <body>
