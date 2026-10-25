@@ -595,15 +595,18 @@
     });
 
     function aplicarDadosUsuario(user, data) {
-      document.getElementById('user-name-display').innerText = data.nome || user.displayName || "Cliente";
-      document.getElementById('profile-name').innerText = data.nome || user.displayName || "Cliente";
-      document.getElementById('profile-email').innerText = data.email || user.email;
+      const nomeFinal = data.nome || user.displayName || "Cliente";
+      const emailFinal = data.email || user.email || "-";
+
+      document.getElementById('user-name-display').innerText = nomeFinal;
+      document.getElementById('profile-name').innerText = nomeFinal;
+      document.getElementById('profile-email').innerText = emailFinal;
       
       const avatarImg = document.getElementById('profile-avatar');
       if (user.photoURL || data.fotoUrl) {
         avatarImg.src = user.photoURL || data.fotoUrl;
       } else {
-        avatarImg.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(data.nome || 'User') + "&background=2563eb&color=fff";
+        avatarImg.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(nomeFinal) + "&background=2563eb&color=fff";
       }
 
       const dataCriado = data.criadoEm ? new Date(data.criadoEm).toLocaleDateString('pt-BR') : 'Hoje';
