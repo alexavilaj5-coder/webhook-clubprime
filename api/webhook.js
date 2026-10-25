@@ -1,15 +1,24 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// Inicializa Firebase Admin se ainda não foi inicializado
+// Inicializa Firebase Admin usando as variáveis individuais da Vercel
 if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID || "projeto-01-63111",
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    })
-  });
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+  if (projectId && clientEmail && privateKey) {
+    initializeApp({
+      credential: cert({
+        projectId: projectId.trim(),
+        clientEmail: clientEmail.trim(),
+        privateKey: privateKey.replace(/\\n/g, '\n'),
+      })
+    });
+    console.log("✅ Firebase Admin inicializado com sucesso no Webhook!");
+  } else {
+    console.error("❌ ERRO: Credenciais do Firebase incompletas nas variáveis de ambiente da Vercel.");
+  }
 }
 
 const db = getFirestore();
@@ -26,10 +35,13 @@ export default async function handler(req, res) {
     console.log(`LOG - Payment ID Capturado: ${paymentId}`);
 
     if (paymentId) {
+      // Pega o token do Mercado Pago da Vercel com segurança
+      const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN;
+
       // 1. Consulta o status real do pagamento direto no Mercado Pago
       const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
         headers: {
-          'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}`
+          'Authorization': `Bearer ${accessToken}`
         }
       });
 
