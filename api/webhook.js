@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(200).send('OK');
 
   try {
-    const { type, data, action } = req.body;
+    const { data } = req.body;
     const paymentId = data?.id || req.query['data.id'] || req.query.id;
 
     console.log(`LOG - Payment ID Capturado: ${paymentId}`);
@@ -48,32 +48,37 @@ export default async function handler(req, res) {
         const emailPagador = paymentData.payer?.email?.toLowerCase()?.trim();
         const externalRef = paymentData.external_reference;
 
+        const dataExpiracao = new Date();
+        dataExpiracao.setDate(dataExpiracao.getDate() + 30);
+
+        const dadosVip = {
+          vip: true,
+          vipExpiraEm: dataExpiracao.toISOString(),
+          atualizadoEm: new Date().toISOString(),
+          lastPaymentId: paymentId
+        };
+
         if (externalRef) {
-          const userDoc = await db.collection('usuarios').doc(externalRef).get();
-          if (userDoc.exists) {
-            await userDoc.ref.update({
-              vip: true,
-              vipExpiraEm: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-              lastPaymentId: paymentId
-            });
-            console.log(`✅ VIP Ativado para UID: ${externalRef}`);
-            return res.status(200).json({ status: 'success' });
-          }
+          // Usa .set com merge: true para garantir que cria caso não exista
+          await db.collection('usuarios').doc(externalRef).set(dadosVip, { merge: true });
+          console.log(`👑 VIP Ativado com sucesso para o UID/Ref: ${externalRef}`);
+          return res.status(200).json({ status: 'success' });
         }
 
         if (emailPagador) {
           const snapshot = await db.collection('usuarios').where('email', '==', emailPagador).get();
           
           if (!snapshot.empty) {
-            snapshot.forEach(async (docSnap) => {
-              await docSnap.ref.update({
-                vip: true,
-                vipExpiraEm: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                lastPaymentId: paymentId
-              });
-            });
-            console.log(`✅ VIP Ativado para E-mail: ${emailPagador}`);
+            for (const docSnap of snapshot.docs) {
+              await docSnap.ref.set(dadosVip, { merge: true });
+            }
+            console.log(`👑 VIP Ativado por e-mail para: ${emailPagador}`);
+          } else {
+            // Se não achar por query, cria um doc com o email como ID para salvaguardar
+            await db.collection('usuarios').doc(emailPagador).set(dadosVip, { merge: true });
+            console.log(`👑 VIP Ativado criando documento por e-mail: ${emailPagador}`);
           }
+          return res.status(200).json({ status: 'success' });
         }
       }
     }
