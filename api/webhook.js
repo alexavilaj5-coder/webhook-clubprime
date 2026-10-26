@@ -4,14 +4,23 @@ import { getFirestore } from 'firebase-admin/firestore';
 if (!getApps().length) {
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (projectId && clientEmail && privateKey) {
+    if (!privateKey.includes('-----\n') && privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+      privateKey = privateKey
+        .replace(/-----BEGIN PRIVATE KEY-----/, '-----BEGIN PRIVATE KEY-----\n')
+        .replace(/-----END PRIVATE KEY-----/, '\n-----END PRIVATE KEY-----')
+        .replace(/ /g, '\n');
+    } else {
+      privateKey = privateKey.replace(/\\n/g, '\n');
+    }
+
     initializeApp({
       credential: cert({
         projectId: projectId.trim(),
         clientEmail: clientEmail.trim(),
-        privateKey: privateKey.replace(/\\n/g, '\n'),
+        privateKey: privateKey.trim(),
       })
     });
     console.log("✅ Firebase Admin inicializado com sucesso no Webhook!");
@@ -59,7 +68,6 @@ export default async function handler(req, res) {
         };
 
         if (externalRef) {
-          // Usa .set com merge: true para garantir que cria caso não exista
           await db.collection('usuarios').doc(externalRef).set(dadosVip, { merge: true });
           console.log(`👑 VIP Ativado com sucesso para o UID/Ref: ${externalRef}`);
           return res.status(200).json({ status: 'success' });
@@ -74,7 +82,6 @@ export default async function handler(req, res) {
             }
             console.log(`👑 VIP Ativado por e-mail para: ${emailPagador}`);
           } else {
-            // Se não achar por query, cria um doc com o email como ID para salvaguardar
             await db.collection('usuarios').doc(emailPagador).set(dadosVip, { merge: true });
             console.log(`👑 VIP Ativado criando documento por e-mail: ${emailPagador}`);
           }
