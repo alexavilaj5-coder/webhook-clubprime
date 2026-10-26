@@ -8,7 +8,7 @@ function getFirebaseFirestore() {
   const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (!projectId || !clientEmail || !privateKey) {
-    console.error("❌ ERRO: As credenciais individuais do Firebase não estão configuradas corretamente na Vercel.");
+    console.error("❌ ERRO: As credenciais do Firebase não estão configuradas corretamente nas variáveis da Vercel.");
     return null;
   }
 
@@ -53,7 +53,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const emailUsuario = email ? email.toLowerCase().trim() : null;
-    const ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN;
+    const ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN || process.env.MERCADOPAGO_ACCESS_TOKEN;
 
     if (!ACCESS_TOKEN) {
       return res.status(500).json({ 
