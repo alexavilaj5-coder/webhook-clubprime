@@ -5,35 +5,37 @@ if (!getApps().length) {
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 
-  // Chave concatenada com \n explícito para evitar erros de ASN.1 / DER bytes
-  const privateKey = "-----BEGIN PRIVATE KEY-----\n" +
-    "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDM4mFZWohuwWAg\n" +
-    "mdxIp3nvh1M7tSmrK03xRj24mNRZ5PZ4shQIug+gX5pLG63u6VqpY0FSsvLjbie0\n" +
-    "jRe2E0rjycE4zqesFoVbiTexVB0SI77A6vp3VSca2iYRqoNWkGPsW2x2idvPfubH\n" +
-    "xzYdoJG+xIe+C5lo+G1LeNc/g1yOkmwLET3d7Xo4LN0NpsDMI0aLX5pd/sy6039t\n" +
-    "6fs9yO3J4xobYbPK+7RI2e2kNrj2+mGDDjGMxtH5WMhcpVucBc7qH52A4oouOyhO\n" +
-    "fafd+aBUkPIgdO0R/YtbW4EqyGBkFNgD1cfPLv7s3OXU5KWwEaTpzwZfPQCROgS1\n" +
-    "4nHrnw7PAgMBAAECggEABLwpBcvUbvYKU7AnabwJ7GHTQZ3MaoewrT/M7Pds1bsE\n" +
-    "TmiT+Y1BqTIsbbBXeVFsf/eqqpxqH2lygqpNsi6JKSSGuHP5Zte9magp+lYrg2zO\n" +
-    "25FSqO/CqWZoDmzc/8lZSQmzD8/cNzppxcb/CcY/nnBwtqqr9ZB9B75+MwCR/G8W\n" +
-    "EpItXKXg52G6d+15hQmGZEXExrNCD3IudJM7v2JBlLoHnJ3Oe2JyaHgmfRzzvU50\n" +
-    "39+z6YntDVq7T26XFrL6/K4fEg5Ipxbtw7ztlMUvQ2vtxLQ5AYTAkf+U28z3t1vs\n" +
-    "Djjrn8UEbAObyE9Gd7DRTB1E7x0ofXMAsBVRI2xcYQKBgQDlwjDNDRyBiE24xu5T\n" +
-    "6PFdkSwc45yRY46AIOiVrzLdCuqCwbYj+jfeb41pDW0SSvZvDc7HqLJsMfiM+4sa\n" +
-    "mbIMfUF77CKUVhnJhSq8vokrSxvL1oR2dEQpUevcpkeNs+GxoJJvWsbaCIFqscbx\n" +
-    "bk/Bk6loiCSj+rsJUeV6Ou0R0QKBgQDkSObxRI4uqYt3siBU72QJdrWG7n7njmWz\n" +
-    "5Acwt8sCR9fHEvt1YcwnBvEVmUhF6gNgKiwUdd8FqNp1FuKXdySnz6AkdVHOvLfb\n" +
-    "nnUuHatQj8HpBdkIdr9mvUmTZdUluidv3V2+FGFEf84fD5dpWBCbLwKuB2mR0Wd6G\n" +
-    "CpMwscKenwKBgCAFlqOdhjGPe7WbFDBhsPInf4xvNK0WwQ+ehowGJQKluNWMhgQx\n" +
-    "pYO87GqN0nvQMtR7iixNmMB3nnqXvGVyslwHQQ8ydAdUkLeDdddkft2n1DHurfuM\n" +
-    "nbMuNfV/9VM+tGHGXPZGDh19v/AmQyXdwtnD2UZAeGW05TsQXw/HrMIthAoGAfNvW\n" +
-    "3J1XevQmoQgfIPVybK6t6KgnZvT+cV7GBAJymcO7pFmgiXo9FBd64wpcekjdIcrP\n" +
-    "Iz25BrptCd/DfX6f4NzxxR8Z6I5VrVuiBOYMM8ACzi0lSmF1GaxiFoJM8JWcZvM+\n" +
-    "vrgnHuevGRltyuAobAbsh3BwwyaoS/4atWZ0gRcCgYEAnx9fJwlQa/BmVy2v0dq1\n" +
-    "nzgQ2nhVLUj++oFYk1VkzG89dtICc4y+gETI9AuAmyF2/nEzB6nMsg9vCwW9Qoihn\n" +
-    "ndBiFNW8MPK3yHuiCgFEyLDAjO7n37poI3jDC+08e9RgZNzJT4fXtivSQ0Wz+W6Gw\n" +
-    "RS7BwECU+Br3kqH118mqDU4=\n" +
-    "-----END PRIVATE KEY-----";
+  // Chave privada blindada em array para evitar qualquer erro de formatação na Vercel
+  const privateKey = [
+    "-----BEGIN PRIVATE KEY-----",
+    "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDM4mFZWohuwWAg",
+    "mdxIp3nvh1M7tSmrK03xRj24mNRZ5PZ4shQIug+gX5pLG63u6VqpY0FSsvLjbie0",
+    "jRe2E0rjycE4zqesFoVbiTexVB0SI77A6vp3VSca2iYRqoNWkGPsW2x2idvPfubH",
+    "xzYdoJG+xIe+C5lo+G1LeNc/g1yOkmwLET3d7Xo4LN0NpsDMI0aLX5pd/sy6039t",
+    "6fs9yO3J4xobYbPK+7RI2e2kNrj2+mGDDjGMxtH5WMhcpVucBc7qH52A4oouOyhO",
+    "fafd+aBUkPIgdO0R/YtbW4EqyGBkFNgD1cfPLv7s3OXU5KWwEaTpzwZfPQCROgS1",
+    "4nHrnw7PAgMBAAECggEABLwpBcvUbvYKU7AnabwJ7GHTQZ3MaoewrT/M7Pds1bsE",
+    "TmiT+Y1BqTIsbbBXeVFsf/eqqpxqH2lygqpNsi6JKSSGuHP5Zte9magp+lYrg2zO",
+    "25FSqO/CqWZoDmzc/8lZSQmzD8/cNzppxcb/CcY/nnBwtqqr9ZB9B75+MwCR/G8W",
+    "EpItXKXg52G6d+15hQmGZEXExrNCD3IudJM7v2JBlLoHnJ3Oe2JyaHgmfRzzvU50",
+    "39+z6YntDVq7T26XFrL6/K4fEg5Ipxbtw7ztlMUvQ2vtxLQ5AYTAkf+U28z3t1vs",
+    "Djjrn8UEbAObyE9Gd7DRTB1E7x0ofXMAsBVRI2xcYQKBgQDlwjDNDRyBiE24xu5T",
+    "6PFdkSwc45yRY46AIOiVrzLdCuqCwbYj+jfeb41pDW0SSvZvDc7HqLJsMfiM+4sa",
+    "mbIMfUF77CKUVhnJhSq8vokrSxvL1oR2dEQpUevcpkeNs+GxoJJvWsbaCIFqscbx",
+    "bk/Bk6loiCSj+rsJUeV6Ou0R0QKBgQDkSObxRI4uqYt3siBU72QJdrWG7n7njmWz",
+    "5Acwt8sCR9fHEvt1YcwnBvEVmUhF6gNgKiwUdd8FqNp1FuKXdySnz6AkdVHOvLfb",
+    "nnUuHatQj8HpBdkIdr9mvUmTZdUluidv3V2+FGFEf84fD5dpWBCbLwKuB2mR0Wd6G",
+    "CpMwscKenwKBgCAFlqOdhjGPe7WbFDBhsPInf4xvNK0WwQ+ehowGJQKluNWMhgQx",
+    "pYO87GqN0nvQMtR7iixNmMB3nnqXvGVyslwHQQ8ydAdUkLeDdddkft2n1DHurfuM",
+    "nbMuNfV/9VM+tGHGXPZGDh19v/AmQyXdwtnD2UZAeGW05TsQXw/HrMIthAoGAfNvW",
+    "3J1XevQmoQgfIPVybK6t6KgnZvT+cV7GBAJymcO7pFmgiXo9FBd64wpcekjdIcrP",
+    "Iz25BrptCd/DfX6f4NzxxR8Z6I5VrVuiBOYMM8ACzi0lSmF1GaxiFoJM8JWcZvM+",
+    "vrgnHuevGRltyuAobAbsh3BwwyaoS/4atWZ0gRcCgYEAnx9fJwlQa/BmVy2v0dq1",
+    "nzgQ2nhVLUj++oFYk1VkzG89dtICc4y+gETI9AuAmyF2/nEzB6nMsg9vCwW9Qoihn",
+    "ndBiFNW8MPK3yHuiCgFEyLDAjO7n37poI3jDC+08e9RgZNzJT4fXtivSQ0Wz+W6Gw",
+    "RS7BwECU+Br3kqH118mqDU4=",
+    "-----END PRIVATE KEY-----"
+  ].join('\n');
 
   if (projectId && clientEmail) {
     initializeApp({
