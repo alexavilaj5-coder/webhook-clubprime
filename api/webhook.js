@@ -2,51 +2,49 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
 if (!getApps().length) {
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const projectId = "projeto-01-63111";
+  const clientEmail = "firebase-adminsdk-fbsvc@projeto-01-63111.iam.gserviceaccount.com";
   
-  // Chave estática com alinhamento absoluto à esquerda (coluna 0)
-  const privateKey = `-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDM4mFZWohuwWAg
-mdxIp3nvh1M7tSmrK03xRj24mNRZ5PZ4shQIug+gX5pLG63u6VqpY0FSsvLjbie0
-jRe2E0rjycE4zqesFoVbiTexVB0SI77A6vp3VSca2iYRqoNWkGPsW2x2idvPfubH
-xzYdoJG+xIe+C5lo+G1LeNc/g1yOkmwLET3d7Xo4LN0NpsDMI0aLX5pd/sy6039t
-6fs9yO3J4xobYbPK+7RI2e2kNrj2+mGDDjGMxtH5WMhcpVucBc7qH52A4oouOyhO
-fafd+aBUkPIgdO0R/YtbW4EqyGBkFNgD1cfPLv7s3OXU5KWwEaTpzwZfPQCROgS1
-4nHrnw7PAgMBAAECggEABLwpBcvUbvYKU7AnabwJ7GHTQZ3MaoewrT/M7Pds1bsE
-TmiT+Y1BqTIsbbBXeVFsf/eqqpxqH2lygqpNsi6JKSSGuHP5Zte9magp+lYrg2zO
-25FSqO/CqWZoDmzc/8lZSQmzD8/cNzppxcb/CcY/nnBwtqqr9ZB9B75+MwCR/G8W
-EpItXKXg52G6d+15hQmGZEXExrNCD3IudJM7v2JBlLoHnJ3Oe2JyaHgmfRzzvU50
-39+z6YntDVq7T26XFrL6/K4fEg5Ipxbtw7ztlMUvQ2vtxLQ5AYTAkf+U28z3t1vs
-Djjrn8UEbAObyE9Gd7DRTB1E7x0ofXMAsBVRI2xcYQKBgQDlwjDNDRyBiE24xu5T
-6PFdkSwc45yRY46AIOiVrzLdCuqCwbYj+jfeb41pDW0SSvZvDc7HqLJsMfiM+4sa
-mbIMfUF77CKUVhnJhSq8vokrSxvL1oR2dEQpUevcpkeNs+GxoJJvWsbaCIFqscbx
-bk/Bk6loiCSj+rsJUeV6Ou0R0QKBgQDkSObxRI4uqYt3siBU72QJdrWG7n7njmWz
-5Acwt8sCR9fHEvt1YcwnBvEVmUhF6gNgKiwUdd8FqNp1FuKXdySnz6AkdVHOvLfb
-nnUuHatQj8HpBdkIdr9mvUmTZdUluidv3V2+FGFEf84fD5dpWBCbLwKuB2mR0Wd6G
-CpMwscKenwKBgCAFlqOdhjGPe7WbFDBhsPInf4xvNK0WwQ+ehowGJQKluNWMhgQx
-pYO87GqN0nvQMtR7iixNmMB3nnqXvGVyslwHQQ8ydAdUkLeDdddkft2n1DHurfuM
-nbMuNfV/9VM+tGHGXPZGDh19v/AmQyXdwtnD2UZAeGW05TsQXw/HrMIthAoGAfNvW
-3J1XevQmoQgfIPVybK6t6KgnZvT+cV7GBAJymcO7pFmgiXo9FBd64wpcekjdIcrP
-Iz25BrptCd/DfX6f4NzxxR8Z6I5VrVuiBOYMM8ACzi0lSmF1GaxiFoJM8JWcZvM+
-vrgnHuevGRltyuAobAbsh3BwwyaoS/4atWZ0gRcCgYEAnx9fJwlQa/BmVy2v0dq1
-nzgQ2nhVLUj++oFYk1VkzG89dtICc4y+gETI9AuAmyF2/nEzB6nMsg9vCwW9Qoihn
-ndBiFNW8MPK3yHuiCgFEyLDAjO7n37poI3jDC+08e9RgZNzJT4fXtivSQ0Wz+W6Gw
-RS7BwECU+Br3kqH118mqDU4=
------END PRIVATE KEY-----`;
+  // Chave privada nova inserida linha a linha para blindar contra erros de formato na Vercel
+  const privateKey = [
+    "-----BEGIN PRIVATE KEY-----",
+    "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDLtp1D9TlHAqLO",
+    "c2OdwRt4mJkVkc9cAlPDXwLjoB+6kOFI7oI0SBJnhjnMoOQCd7IZjfs6r3t3CKER",
+    "3L45fkEB19SxCaaHGOqM/ItHbqTt5WRu5uNOpiXmOj2BwT/HSUBNpuFyvpWfPzjX",
+    "6WOb8PhdWoiEkPZ9rqptPT9CxafeIICc/oGFtCMgGRMEQK3VCdbNRX2LM7Qspik9",
+    "Ig+gJhhjrNcruGhAhnX3c5xXaNJ8bi3p9RIC7yrY2Xdqdp1FfiXfkvL5WcpNOY8y",
+    "nUsaCnByurKYfuQsWD9DTZ+bXczXNRsx2yuDjjDrmwGSieChMRrWNvv4SkDQyzPt",
+    "Q8r975xjAgMBAAECggEACi00vQclcUpV654wyGwz+HnOfs/aa6oMq1KIZjOnX9U4",
+    "SsHFw4Yjnc1VbNlz46f0Gzn95kgdx8dxyrpJqirjicKIYeQABwtGPzODYx/t875y",
+    "+eXlTl9ymfPxTDoJsdNKLrbj/HX0vWKe7vrithDNb3q61L0aBFxOeRnZiEAv9EdV",
+    "Q7tthVoZP0vDLO21+sMlR3WupxhqZus7A1vsaPF+aOjPjz0y29mAgiIL5YRzQlDA",
+    "J3Py+yUbOgkCNyctFzBIy5j9HoW+6dSzBOhBz1CnCDtwFm48RoAJdFDcM4aHLAx7",
+    "bdk1f0mZfnDa7JWsS1CLtzgxsyU9O8ab0oVYcgxzlQKBgQDuSxBKbj8OV5EJUiIM",
+    "24D8tfsRzyfof/pnOrcUWAenWf2UKjPdhmf++E4hCdKAzpdEDfIj4xdA+V4U3Ad/",
+    "kI0qBdzX08bquN1r1hCIERsDjabOpHO1zz3CBodlA+B9tfeECmqP9tKAnKkBwZG9",
+    "OQydtfgX8so1aa613e3VSe9U3QKBgQDa2cEfV/aW/rUkGV3G+pjfbYZAn2TbtLhX",
+    "VdatfVTgL7KFNxaJzqlJQ+bz0+s7fB5sgq2um21RYnF8Lhdi3k3oKRVfnCMHM24j",
+    "0/O8pqHXZ0cgetL0fNY3+ZwDouBrsq9rawQmBQJy1us8JEbiEN/TsBKsSaJDf/eC",
+    "qFjtnOACPwKBgQC2rFSQunMcS4Sj4JK5yIvZLqiJvoSZd4I+IIS408MKR7JdIv0f",
+    "lSmkDDXYne8BT14mjYpSeIQbCw9UblhRMj8FN/lUesTCq3USdce2h2ZuEukNAISz",
+    "m2t8kgS5K3+s3xIf5txKAKzeazokXn+az2EchaLquPTKfXmxcbAhEcynAQKBgCpW",
+    "7HTq6KsHtfW47pqbSs4W+10vOS0ERpGm6rR/xdblg20gXjzk/X1OJLVRb3X/qkcl",
+    "9QIN0dVn7TqwFBgtl/btU9Q+ecxf19QYolQCDNeGhI01FfD04eDMarGNZkuPsz5d",
+    "4tyUJYggKjxlbE06JINo0gQA7uKONE1T0niN3AyzAoGBANUkTkndBm6gxlQF/ZLi",
+    "IOxydCd4CnAyJ7wZA7/Hltv9LH1ldzbuVuMWeT6nCbtsh47QWADHy5a0kikYp4SB",
+    "aVi4O16PXSVHmXGhTkhDxDZHUPxuGBP7UItorcdVhaFTqYUk+WcDgiRgkxTs6v/7",
+    "/1njYdLKgl1Pb1xLZ+TGFew4",
+    "-----END PRIVATE KEY-----"
+  ].join('\n');
 
-  if (projectId && clientEmail) {
-    initializeApp({
-      credential: cert({
-        projectId: projectId.trim(),
-        clientEmail: clientEmail.trim(),
-        privateKey: privateKey,
-      })
-    });
-    console.log("✅ Firebase Admin inicializado com sucesso no Webhook!");
-  } else {
-    console.error("❌ ERRO: Credenciais do Firebase incompletas nas variáveis de ambiente da Vercel.");
-  }
+  initializeApp({
+    credential: cert({
+      projectId,
+      clientEmail,
+      privateKey,
+    })
+  });
+  console.log("✅ Firebase Admin inicializado com sucesso no Webhook!");
 }
 
 const db = getFirestore();
