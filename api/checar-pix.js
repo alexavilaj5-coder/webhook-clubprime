@@ -5,7 +5,7 @@ function getFirebaseFirestore() {
 
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (!projectId || !clientEmail || !privateKey) {
     console.error("❌ ERRO: As credenciais do Firebase não estão configuradas corretamente nas variáveis da Vercel.");
@@ -13,11 +13,20 @@ function getFirebaseFirestore() {
   }
 
   try {
+    if (!privateKey.includes('-----\n') && privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+      privateKey = privateKey
+        .replace(/-----BEGIN PRIVATE KEY-----/, '-----BEGIN PRIVATE KEY-----\n')
+        .replace(/-----END PRIVATE KEY-----/, '\n-----END PRIVATE KEY-----')
+        .replace(/ /g, '\n');
+    } else {
+      privateKey = privateKey.replace(/\\n/g, '\n');
+    }
+
     admin.initializeApp({
       credential: admin.credential.cert({
         projectId: projectId.trim(),
         clientEmail: clientEmail.trim(),
-        privateKey: privateKey.replace(/\\n/g, '\n'),
+        privateKey: privateKey.trim(),
       })
     });
 
@@ -97,7 +106,8 @@ module.exports = async function handler(req, res) {
           const dadosVip = {
             vip: true,
             vipExpiraEm: dataExpiracao.toISOString(),
-            atualizadoEm: new Date().toISOString()
+            atualizadoEm: new Date().toISOString(),
+            lastPaymentId: pagamentoValido.id
           };
 
           if (userId) {
