@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // Configura CORS para permitir requisições do teu app web de qualquer origem
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -8,7 +7,6 @@ export default async function handler(req, res) {
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
 
-  // Trata a requisição preflight do navegador (OPTIONS)
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -26,8 +24,8 @@ export default async function handler(req, res) {
 
     const emailLimpo = email.toLowerCase().trim();
     
-    // Busca o token configurado no painel da Vercel
-    const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || process.env.MERCADOPAGO_ACCESS_TOKEN;
+    // Aceita qualquer variação do token da Vercel
+    const ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN || process.env.MERCADOPAGO_ACCESS_TOKEN;
 
     if (!ACCESS_TOKEN) {
       return res.status(500).json({ 
@@ -36,7 +34,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Dados da cobrança Pix de R$ 1,20 para o Mercado Pago
     const paymentData = {
       transaction_amount: 1.20,
       description: "Assinatura VIP - Clube PRIME",
@@ -45,7 +42,6 @@ export default async function handler(req, res) {
         email: emailLimpo,
         first_name: nome || "Membro PRIME"
       },
-      // Vincula o external_reference ao UID ou e-mail para identificação no webhook/checar-pix
       external_reference: userId || emailLimpo,
       notification_url: "https://webhook-clubprime.vercel.app/api/webhook"
     };
@@ -70,7 +66,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Extrai o QR Code e o Pix Copia e Cola
     const pointOfInteraction = data.point_of_interaction;
     const qrCodeBase64 = pointOfInteraction?.transaction_data?.qr_code_base64;
     const qrCodeCopiaCola = pointOfInteraction?.transaction_data?.qr_code;
