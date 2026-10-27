@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     }
 
     const paymentData = {
-      transaction_amount: 1.20,
+      transaction_amount: 19.90,
       description: "Assinatura VIP - Clube PRIME",
       payment_method_id: "pix",
       payer: {
