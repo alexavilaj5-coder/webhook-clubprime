@@ -3,29 +3,24 @@ const admin = require('firebase-admin');
 function getFirebaseFirestore() {
   if (admin.apps.length) return admin.firestore();
 
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const projectId = "projeto-01-63111";
+  const clientEmail = "firebase-adminsdk-fbsvc@projeto-01-63111.iam.gserviceaccount.com";
+  
+  // Chave nova tratada com conversão direta de barras invertidas para quebras reais
+  const rawKey = `-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDLtp1D9TlHAqLO\nc2OdwRt4mJkVkc9cAlPDXwLjoB+6kOFI7oI0SBJnhjnMoOQCd7IZjfs6r3t3CKER\n3L45fkEB19SxCaaHGOqM/ItHbqTt5WRu5uNOpiXmOj2BwT/HSUBNpuFyvpWfPzjX\n6WOb8PhdWoiEkPZ9rqptPT9CxafeIICc/oGFtCMgGRMEQK3VCdbNRX2LM7Qspik9\nIg+gJhhjrNcruGhAhnX3c5xXaNJ8bi3p9RIC7yrY2Xdqdp1FfiXfkvL5WcpNOY8y\nnUsaCnByurKYfuQsWD9DTZ+bXczXNRsx2yuDjjDrmwGSieChMRrWNvv4SkDQyzPt\nQ8r975xjAgMBAAECggEACi00vQclcUpV654wyGwz+HnOfs/aa6oMq1KIZjOnX9U4\nSsHFw4Yjnc1VbNlz46f0Gzn95kgdx8dxyrpJqirjicKIYeQABwtGPzODYx/t875y\n+eXlTl9ymfPxTDoJsdNKLrbj/HX0vWKe7vrithDNb3q61L0aBFxOeRnZiEAv9EdV\nQ7tthVoZP0vDLO21+sMlR3WupxhqZus7A1vsaPF+aOjPjz0y29mAgiIL5YRzQlDA\nJ3Py+yUbOgkCNyctFzBIy5j9HoW+6dSzBOhBz1CnCDtwFm48RoAJdFDcM4aHLAx7\nbdk1f0mZfnDa7JWsS1CLtzgxsyU9O8ab0oVYcgxzlQKBgQDuSxBKbj8OV5EJUiIM\n24D8tfsRzyfof/pnOrcUWAenWf2UKjPdhmf++E4hCdKAzpdEDfIj4xdA+V4U3Ad/\nkI0qBdzX08bquN1r1hCIERsDjabOpHO1zz3CBodlA+B9tfeECmqP9tKAnKkBwZG9\nOQydtfgX8so1aa613e3VSe9U3QKBgQDa2cEfV/aW/rUkGV3G+pjfbYZAn2TbtLhX\nVdatfVTgL7KFNxaJzqlJQ+bz0+s7fB5sgq2um21RYnF8Lhdi3k3oKRVfnCMHM24j\n0/O8pqHXZ0cgetL0fNY3+ZwDouBrsq9rawQmBQJy1us8JEbiEN/TsBKsSaJDf/eC\nqFjtnOACPwKBgQC2rFSQunMcS4Sj4JK5yIvZLqiJvoSZd4I+IIS408MKR7JdIv0f\nlSmkDDXYne8BT14mjYpSeIQbCw9UblhRMj8FN/lUesTCq3USdce2h2ZuEukNAISz\nm2t8kgS5K3+s3xIf5txKAKzeazokXn+az2EchaLquPTKfXmxcbAhEcynAQKBgCpW\n7HTq6KsHtfW47pqbSs4W+10vOS0ERpGm6rR/xdblg20gXjzk/X1OJLVRb3X/qkcl\n9QIN0dVn7TqwFBgtl/btU9Q+ecxf19QYolQCDNeGhI01FfD04eDMarGNZkuPsz5d\n4tyUJYggKjxlbE06JINo0gQA7uKONE1T0niN3AyzAoGBANUkTkndBm6gxlQF/ZLi\nIOxydCd4CnAyJ7wZA7/Hltv9LH1ldzbuVuMWeT6nCbtsh47QWADHy5a0kikYp4SB\naVi4O16PXSVHmXGhTkhDxDZHUPxuGBP7UItorcdVhaFTqYUk+WcDgiRgkxTs6v/7\n/1njYdLKgl1Pb1xLZ+TGFew4\n-----END PRIVATE KEY-----`;
 
-  // Chave decodificada de Base64 em tempo de execução
-  const privateKeyBase64 = "LS0tLS1CRUdJTiBQUklWQVRFIEtFWy0tLS0tCk1JSUV2UUlCQURBTkJna3FoamtpRzkwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRRE00bUZaV29odXdXQWcKbWR4SXAzbnZoMU03dFNtcktmM1hSaiI0bU5SWjVaWjRzaFFJdWcrZ1g1cExHNjN1NlZxcFkwRlNzdkxqYmllMApqUmUyRTByanljRTR6cWVzRm9WYmlUZXhWQjBTSTc3QTZ2cDNWU2NhMmlZUlFvTldrR1BzVzJ4MmlkdlBmdWJICnh6WWRvSkcreEllLUM1bG8rRzFMZU5jL2cxeU9rbXdMRVQzZDdYbzRMSTBOcHNETUkwYUxYNXBkL3N5NjAzOXQKNmZzOXlPSjNceG9iWWJQays3UjJlMmtucmozK21HRERqR014dEY1V01oY3BWdWNCYzdxSDUyQTRvb3VPeWhPCmZhZmQrYUJVa1BJZ2RPMFIvWXRiVzRFcXlHQmtmTmdEMWNmUEx2N3MzT1hVMUtXd0VhVHB6d1pmUFFDUk9nUzEKNG5Icm53N1BhZ01iQUFFQ2dnRUFMS3dwQmN2VWJ2WUtVN0FuYWJ3SjdHVFFaM01hb2V3clQvTTdQZHMxYnNFClRtaVQrWTFCcVRJc2JiQlhldkZzZi9lcXFweHFIMmx5Z3FwTnNpNkJKU1NHdUhQNlp0ZTltYWdwK2xZcmcyek8KMjVGU3FPL0NxV1pvRG16Yy84bFpTUW16RDgvY056cHB4Y2IvQ2NZL25uQnd0cXFyOVpCOUItNStNd0NSL0c4VwpFcEl0WEtYZzUyRzZkKzE1aFFtR1pFWEV4ck5DRzNJdWRKTTd2MkpCbExvSG5KM09lMkp5YUhnTWZScnp2VTUwCjM5K3o2WW50RFZxN1QyNlhGckw2L0s0ZkVnNUlweGJ0dzd6dGxNVXBRMnZ0eExRNUFZVEFrZiVVMjJ6M3QxdnMKRGpqcm44VUViQU9ieUU5R2Q3RFI4VEExR3gwZm9YTUFzQlZSSTJ4Y1lRS0JnUURsd2pETkRSeUJpRTI0eHU1VgolUEZka1N3YzQ1eVJZNjZBSUlpVnJ6TGRDdXFDYndiSi9qZmViNDFwRFcwU1N6dlZkYzdIcWxKc01maU00c2EKbWJJTWZVZjc3Q0tVVmhuaFNxOHZva3JTeHZMMW9SMmRFUXBVZXZjcGtlTnMrR3hvSkpJV3NiYUNJRnFzYnh4CmJrL0JrNmxvaUNTaityc0pVRXYnT3BSMFBRS0JnUURrc09ieFJJNHVxeVQzc2lCVTcyUUpkcldHN243bmptV3oKNUFjd3Q4c0NSOWZIRXZ0MVljd25CdkVWbVVoRjZnTkdLaXdVZGQ4RlFuUDExRlVrWGR5U256NkFrZFZIT3ZMRmIKbm5VMUhhdFFqOEhwQmRrSWRyOW12VW1UWmRVbHVpZHYzVjItRkdGRWY4NGZENWRwV0JDYkx3S3VCNm1SMFdkNkIKQ3BNd3NjS2VueHdLamdDQUZscU9kaGpHUGU3V2JGREJoc1BJbmY0eHZOSzBXd1FlZm93R2pRSWxsdE5XTWhnUXgKcFlPMzhHcU4wbnZRTXRSN2l4aU5tTUIzbm5xWGZHVnlzbHdIUVE4eWRBZEFrTGVEZGRkZGZmdDIybjFESHVyZnVN \\nbnBNdU5mVi85Vk0gdEdHSFBYWkdEaDE5di9BbVF5WGR3dG5EMlpaRWdHdzA1VHNRUHdDL0hyTUl0aEFvR0FmTndX \\nM0oxWGV2UW1vUWdmSVBZdmI2azdLa2duWlQtY1ZGN0dCQUp5bUMwN3BGbWdpWG85RkJkNjR3cGNla2pkSWNyUA \\nkjVCcnB0Q2QvRGZYNmY0Tnp4eFI4ejZJNVRyVnVpQk9ZTU04QUN6aTBsU21GMUdheGlGb0pNNEpXb1p2TSs \\ndnduSHVldkdSbHR5dUFvYkFic2gzQnd3eWFvUy80YXRXWjBnUkNDZ0VdQW54OWZKd2FRL0JtdVkydjBkcTE \\nbnpHcTJuaFZMVWpqK29GWWsxVmt6Rzg5ZHRJQ3M0eSxnRVRJOUF1QW15RjIvbkV6QjZuTXNnOTZ3Q1dXOVFvaWhu \\nbmRCaUZOVzhNUEszeUh1aUNnRkV5TERBalE3bjM3cG9JM2pEQzAwOGU5UmdabkpUMDRmWHRpdlNRMFd6K1c2R3c \\UlM3QndFQ1UrQnIzS3FsMTExOG1xRFU0PQotLS0tLUVORCBQUklWQVRFIEtFWy0tLS0t";
-
-  const privateKey = Buffer.from(privateKeyBase64, 'base64').toString('utf8');
-
-  if (!projectId || !clientEmail) {
-    console.error("❌ ERRO: As credenciais do Firebase não estão configuradas corretamente.");
-    return null;
-  }
+  const privateKey = rawKey.replace(/\\n/g, '\n');
 
   try {
     admin.initializeApp({
       credential: admin.credential.cert({
-        projectId: projectId.trim(),
-        clientEmail: clientEmail.trim(),
-        privateKey: privateKey,
+        projectId,
+        clientEmail,
+        privateKey,
       })
     });
 
-    console.log("✅ Firebase Admin inicializado com sucesso!");
+    console.log("✅ Firebase Admin inicializado com sucesso no checar-pix!");
     return admin.firestore();
   } catch (error) {
     console.error("❌ ERRO AO INICIALIZAR O FIREBASE:", error.message);
@@ -92,34 +87,33 @@ module.exports = async function handler(req, res) {
     if (pagamentoValido) {
       console.log(`✅ Pagamento Aprovado Encontrado ID: ${pagamentoValido.id}`);
 
-      try {
-        const db = getFirebaseFirestore();
-        if (db) {
-          const dataExpiracao = new Date();
-          dataExpiracao.setDate(dataExpiracao.getDate() + 30);
-
-          const dadosVip = {
-            vip: true,
-            vipExpiraEm: dataExpiracao.toISOString(),
-            atualizadoEm: new Date().toISOString(),
-            lastPaymentId: pagamentoValido.id
-          };
-
-          if (userId) {
-            await db.collection('usuarios').doc(userId).set(dadosVip, { merge: true });
-          } else if (emailUsuario) {
-            const snapshot = await db.collection('usuarios').where('email', '==', emailUsuario).get();
-            if (!snapshot.empty) {
-              await snapshot.docs[0].ref.set(dadosVip, { merge: true });
-            } else {
-              await db.collection('usuarios').doc(emailUsuario).set(dadosVip, { merge: true });
-            }
-          }
-          console.log("👑 VIP salvo com sucesso no Firestore!");
-        }
-      } catch (dbErr) {
-        console.error("❌ Erro interno ao salvar no Firestore:", dbErr.message);
+      const db = getFirebaseFirestore();
+      if (!db) {
+        throw new Error("Falha crítica ao conectar com o banco de dados (Firebase).");
       }
+
+      const dataExpiracao = new Date();
+      dataExpiracao.setDate(dataExpiracao.getDate() + 30);
+
+      const dadosVip = {
+        vip: true,
+        vipExpiraEm: dataExpiracao.toISOString(),
+        atualizadoEm: new Date().toISOString(),
+        lastPaymentId: pagamentoValido.id
+      };
+
+      // Gravação estrita com verificação: se falhar, vai cair no catch e não dá falso positivo
+      if (userId) {
+        await db.collection('usuarios').doc(userId).set(dadosVip, { merge: true });
+      } else if (emailUsuario) {
+        const snapshot = await db.collection('usuarios').where('email', '==', emailUsuario).get();
+        if (!snapshot.empty) {
+          await snapshot.docs[0].ref.set(dadosVip, { merge: true });
+        } else {
+          await db.collection('usuarios').doc(emailUsuario).set(dadosVip, { merge: true });
+        }
+      }
+      console.log("👑 VIP salvo com sucesso no Firestore!");
 
       return res.status(200).json({ 
         success: true, 
@@ -136,7 +130,7 @@ module.exports = async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error("❌ ERRO CRÍTICO NO HANDLER:", err);
-    return res.status(500).json({ success: false, error: err.message });
+    console.error("❌ ERRO CRÍTICO NO HANDLER:", err.message);
+    return res.status(500).json({ success: false, vip: false, error: err.message });
   }
 };
