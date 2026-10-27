@@ -24,7 +24,6 @@ let pixCopiaColaAtual = "";
 let codigoCupomAtual = "";
 let currentAuthTab = "login";
 let intervalPixCheck = null;
-let favoritos = JSON.parse(localStorage.getItem('clube_favs') || '[]');
 let economiaTotal = parseFloat(localStorage.getItem('clube_econ') || '0.00');
 
 let unsubscribeUser = null;
@@ -37,8 +36,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const themeBtn = document.querySelector('.theme-toggle-btn');
   if (themeBtn) themeBtn.innerText = savedTheme === 'dark' ? '☀️' : '🌙';
   atualizarCarteiraUI();
-  atualizarFavoritosUI();
   escutarBannerGlobal();
+  escutarBannerLojista();
 });
 
 onAuthStateChanged(auth, async (user) => {
@@ -76,7 +75,16 @@ onAuthStateChanged(auth, async (user) => {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('screen-merchant').classList.add('active');
         document.querySelector('.bottom-nav').style.display = 'none';
-        document.getElementById('merchant-store-name').innerText = data.empresaNome || "Empresa Parceira";
+        
+        const nomeEmpresa = data.empresaNome || "Empresa Parceira";
+        const enderecoEmpresa = data.empresaEndereco || "Pelotas / RS";
+        const telefoneEmpresa = data.empresaTelefone || "";
+
+        document.getElementById('merchant-store-name').innerText = nomeEmpresa;
+        if (document.getElementById('merchant-edit-name')) document.getElementById('merchant-edit-name').value = nomeEmpresa;
+        if (document.getElementById('merchant-edit-address')) document.getElementById('merchant-edit-address').value = enderecoEmpresa;
+        if (document.getElementById('merchant-edit-phone')) document.getElementById('merchant-edit-phone').value = telefoneEmpresa;
+
         carregarEstatisticasLojista(user.uid);
         carregarCuponsDoLojista(user.uid);
         return;
@@ -171,11 +179,41 @@ function escutarBannerGlobal() {
   });
 }
 
+function escutarBannerLojista() {
+  const bannerRef = doc(db, "configuracoes", "banner_lojistas");
+  onSnapshot(bannerRef, (docSnap) => {
+    const bannerEl = document.getElementById('merchant-banner-notice');
+    const contentEl = document.getElementById('merchant-banner-content');
+    const adminInput = document.getElementById('admin-merchant-banner-text');
+
+    if (docSnap.exists() && docSnap.data().texto) {
+      const texto = docSnap.data().texto;
+      if (bannerEl && contentEl) {
+        contentEl.innerText = texto;
+        bannerEl.style.display = 'block';
+      }
+      if (adminInput) adminInput.value = texto;
+    } else {
+      if (bannerEl) bannerEl.style.display = 'none';
+    }
+  });
+}
+
 window.salvarBannerGlobalAdmin = async function() {
   const texto = document.getElementById('admin-global-banner-text').value.trim();
   try {
     await setDoc(doc(db, "configuracoes", "banner_global"), { texto: texto });
-    mostrarAviso("Atualizado! 📢", "O aviso global foi publicado.", "✅");
+    mostrarAviso("Atualizado! 📢", "Aviso de clientes publicado.", "✅");
+  } catch (err) {
+    mostrarAviso("Erro", err.message, "❌");
+  }
+};
+
+window.salvarBannerLojistaAdmin = async function() {
+  const texto = document.getElementById('admin-merchant-banner-text').value.trim();
+  try {
+    await setDoc(doc(db, "configuracoes", "banner_lojistas"), { texto: texto });
+    mostrarAviso("Atualizado! 🏢", "Recado para lojistas publicado.", "✅");
   } catch (err) {
     mostrarAviso("Erro", err.message, "❌");
   }
@@ -197,10 +235,10 @@ function carregarCuponsVitrine() {
     let html = '';
     cuponsArray.forEach((cupom) => {
       let imgHtml = cupom.imagem ? `<img src="${cupom.imagem}" alt="Foto" style="width:100%; height:120px; object-fit:cover; border-radius:12px; margin-bottom:10px;">` : '';
+      const limiteTxt = cupom.limite === 'daily' ? '1 por dia' : cupom.limite === 'once' ? 'Uso único' : 'Ilimitado';
 
       html += `
         <div class="company-card" data-cat="${cupom.categoria}" data-name="${cupom.titulo.toLowerCase()} ${cupom.empresaNome.toLowerCase()}" data-id="${cupom.id}">
-          <div class="favorite-btn" onclick="toggleFavorite('${cupom.id}', this)">🤍</div>
           ${imgHtml}
           <div class="company-header">
             <div>
@@ -213,8 +251,9 @@ function carregarCuponsVitrine() {
             <div class="discount-badge">${cupom.descontoBadge || 'OFERTA'}</div>
           </div>
           <h4 style="font-size:0.95rem; font-weight:800; margin-bottom:4px;">${cupom.titulo}</h4>
-          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">${cupom.descricao}</p>
-          <button class="btn btn-cyan" onclick="clicarElesResgatar('${cupom.id}', '${cupom.empresaId}', '${cupom.empresaNome}', '${cupom.titulo}', '${cupom.codigo}', ${cupom.valorEconomia || 10.00}, '${cupom.endereco || ''}', '${cupom.telefone || ''}', '${cupom.regras || ''}')">
+          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:6px;">${cupom.descricao}</p>
+          <p style="font-size:0.7rem; color:var(--primary); font-weight:700; margin-bottom:14px;">Regra: ${limiteTxt}</p>
+          <button class="btn btn-cyan" onclick="clicarElesResgatar('${cupom.id}', '${cupom.empresaId}', '${cupom.empresaNome}', '${cupom.titulo}', '${cupom.codigo || 'PRIME'}', ${cupom.valorEconomia || 10.00}, '${cupom.endereco || 'Pelotas / RS'}', '${cupom.telefone || ''}', '${cupom.regras || ''}', '${cupom.limite || 'daily'}')">
             🎟️ Resgatar Cupom
           </button>
         </div>
@@ -223,20 +262,51 @@ function carregarCuponsVitrine() {
 
     if (html !== '') {
       container.innerHTML = html;
-      atualizarFavoritosUI();
     } else {
       container.innerHTML = `<p style="font-size:0.8rem; color:var(--muted); text-align:center; padding:20px;">Nenhum cupom ativo no momento.</p>`;
     }
   });
 }
 
-window.clicarElesResgatar = async function(cupomId, empresaId, empresaNome, titulo, codigo, econ, endereco, telefone, regras) {
+window.clicarElesResgatar = async function(cupomId, empresaId, empresaNome, titulo, prefixoCodigo, econ, endereco, telefone, regras, limite) {
+  const user = auth.currentUser;
+  if (!user) return mostrarAviso("Atenção", "Faça login para resgatar.", "⚠️");
+
+  // Checa restrição de uso (Diário / Único)
+  if (limite !== 'unlimited') {
+    try {
+      const qCheck = query(
+        collection(db, "logs_resgates"),
+        where("usuarioUid", "==", user.uid),
+        where("cupomId", "==", cupomId)
+      );
+      const snapCheck = await getDocs(qCheck);
+
+      if (!snapCheck.empty) {
+        if (limite === 'once') {
+          return mostrarAviso("Cupom Já Utilizado! ⚠️", "Esta oferta é de USO ÚNICO e você já a resgatou anteriormente.", "🔒");
+        } else if (limite === 'daily') {
+          const hojeStr = new Date().toISOString().split('T')[0];
+          let jaUsouHoje = false;
+          snapCheck.forEach(docSnap => {
+            const dataUso = docSnap.data().dataHora || '';
+            if (dataUso.startsWith(hojeStr)) jaUsouHoje = true;
+          });
+          if (jaUsouHoje) {
+            return mostrarAviso("Limite Diário Atingido! ⏳", "Você já resgatou este cupom hoje. Tente novamente amanhã!", "📅");
+          }
+        }
+      }
+    } catch(e) {}
+  }
+
   try {
     await updateDoc(doc(db, "cupons", cupomId), {
       cliquesCount: increment(1)
     });
   } catch(e) {}
-  resgatarCupomReal(empresaNome, titulo, codigo, econ, endereco, telefone, regras);
+
+  resgatarCupomReal(cupomId, empresaId, empresaNome, titulo, prefixoCodigo, econ, endereco, telefone, regras);
 };
 
 async function carregarEstatisticasLojista(empresaUid) {
@@ -248,6 +318,10 @@ async function carregarEstatisticasLojista(empresaUid) {
       totalCliques += (d.data().cliquesCount || 0);
     });
     document.getElementById('merchant-stat-clicks').innerText = totalCliques;
+
+    const qValid = query(collection(db, "logs_resgates"), where("empresaId", "==", empresaUid), where("status", "==", "usado"));
+    const snapValid = await getDocs(qValid);
+    document.getElementById('merchant-stat-validations').innerText = snapValid.size;
   } catch(e) {}
 }
 
@@ -276,10 +350,10 @@ function carregarCuponsDoLojista(empresaUid) {
             <h4 style="font-size:0.9rem; font-weight:800;">${cupom.titulo}</h4>
             <span style="font-size:0.7rem; font-weight:800;">${statusText}</span>
           </div>
-          <p style="font-size:0.75rem; color:var(--muted); margin:4px 0;">Código: <strong>${cupom.codigo}</strong> | Cliques: <strong>${cliques}</strong> | Ordem: ${cupom.ordem || 0}</p>
+          <p style="font-size:0.75rem; color:var(--muted); margin:4px 0;">Prefixo: <strong>${cupom.codigo || 'PRIME'}</strong> | Cliques: <strong>${cliques}</strong></p>
           <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
             <button class="btn btn-outline btn-small" onclick="toggleStatusCupom('${docId}', ${cupom.ativo})">⏸️ ${btnPausaText}</button>
-            <button class="btn btn-outline btn-small" onclick="abrirModalEditarOferta('${docId}', '${encodeURIComponent(cupom.titulo)}', '${encodeURIComponent(cupom.descricao)}', '${encodeURIComponent(cupom.endereco || '')}', '${encodeURIComponent(cupom.telefone || '')}', '${encodeURIComponent(cupom.regras || '')}', '${cupom.categoria}', '${encodeURIComponent(cupom.descontoBadge || '')}', ${cupom.valorEconomia || 10}, '${cupom.codigo}', ${cupom.ordem || 0}, '${encodeURIComponent(cupom.imagem || '')}')">✏️ Editar</button>
+            <button class="btn btn-outline btn-small" onclick="abrirModalEditarOferta('${docId}', '${encodeURIComponent(cupom.titulo)}', '${encodeURIComponent(cupom.descricao)}', '${encodeURIComponent(cupom.regras || '')}', '${cupom.categoria}', '${encodeURIComponent(cupom.descontoBadge || '')}', ${cupom.valorEconomia || 10}, '${cupom.codigo || 'PRIME'}', '${encodeURIComponent(cupom.imagem || '')}', '${cupom.limite || 'daily'}')">✏️ Editar</button>
             <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="excluirCupom('${docId}')">🗑️ Excluir</button>
           </div>
         </div>
@@ -337,10 +411,10 @@ async function carregarPainelAdmin() {
             <div style="font-size:0.85rem; font-weight:800;">${c.titulo} <span style="color:var(--muted); font-weight:600;">(${c.empresaNome})</span></div>
             <span style="font-size:0.7rem; font-weight:800;">${statusText}</span>
           </div>
-          <div style="font-size:0.72rem; color:var(--muted); margin-top:2px;">Tag: <strong>${c.codigo}</strong> | Ordem: <strong>${c.ordem || 0}</strong></div>
+          <div style="font-size:0.72rem; color:var(--muted); margin-top:2px;">Prefixo: <strong>${c.codigo || 'PRIME'}</strong> | Ordem: <strong>${c.ordem || 0}</strong></div>
           <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
             <button class="btn btn-outline btn-small" onclick="toggleStatusCupom('${docId}', ${c.ativo})">⏸️ ${btnPausaText}</button>
-            <button class="btn btn-outline btn-small" onclick="abrirModalEditarOferta('${docId}', '${encodeURIComponent(c.titulo)}', '${encodeURIComponent(c.descricao)}', '${encodeURIComponent(c.endereco || '')}', '${encodeURIComponent(c.telefone || '')}', '${encodeURIComponent(c.regras || '')}', '${c.categoria}', '${encodeURIComponent(c.descontoBadge || '')}', ${c.valorEconomia || 10}, '${c.codigo}', ${c.ordem || 0}, '${encodeURIComponent(c.imagem || '')}')">✏️ Editar</button>
+            <button class="btn btn-outline btn-small" onclick="abrirModalEditarOferta('${docId}', '${encodeURIComponent(c.titulo)}', '${encodeURIComponent(c.descricao)}', '${encodeURIComponent(c.regras || '')}', '${c.categoria}', '${encodeURIComponent(c.descontoBadge || '')}', ${c.valorEconomia || 10}, '${c.codigo || 'PRIME'}', '${encodeURIComponent(c.imagem || '')}', '${c.limite || 'daily'}', ${c.ordem || 0})">✏️ Editar</button>
             <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="excluirCupom('${docId}')">🗑️ Excluir</button>
           </div>
         </div>
@@ -351,10 +425,11 @@ async function carregarPainelAdmin() {
     let logsHtml = '';
     snapLogs.forEach(logSnap => {
       const l = logSnap.data();
+      const statusColor = l.status === "usado" ? "#10b981" : "#f59e0b";
       logsHtml += `
         <div style="background:var(--card); border:1px solid var(--card-border); padding:10px 12px; border-radius:10px; margin-bottom:6px; font-size:0.75rem;">
-          <div><strong>${l.usuarioNome || 'Cliente'}</strong> resgatou <span style="color:var(--primary);">${l.cupomTitulo}</span> em <em>${l.empresaNome}</em></div>
-          <div style="color:var(--muted); font-size:0.68rem; margin-top:2px;">${new Date(l.dataHora).toLocaleString('pt-BR')}</div>
+          <div><strong>${l.usuarioNome || 'Cliente'}</strong> [${l.codigoGerado}] - <span style="color:${statusColor}; font-weight:800;">${(l.status || 'gerado').toUpperCase()}</span></div>
+          <div style="color:var(--muted); font-size:0.68rem; margin-top:2px;">${l.cupomTitulo} em <em>${l.empresaNome}</em> • ${new Date(l.dataHora).toLocaleString('pt-BR')}</div>
         </div>
       `;
     });
@@ -394,36 +469,76 @@ window.excluirCupom = async function(docId) {
   }
 };
 
+window.salvarDadosEmpresaLojista = async function() {
+  const user = auth.currentUser;
+  if (!user) return;
+  const novoNome = document.getElementById('merchant-edit-name').value.trim();
+  const novoEndereco = document.getElementById('merchant-edit-address').value.trim();
+  const novoTelefone = document.getElementById('merchant-edit-phone').value.trim();
+
+  if (!novoNome) return mostrarAviso("Atenção", "Informe o nome da empresa.", "⚠️");
+
+  try {
+    await updateDoc(doc(db, "usuarios", user.uid), {
+      empresaNome: novoNome,
+      empresaEndereco: novoEndereco || 'Pelotas / RS',
+      empresaTelefone: novoTelefone || ''
+    });
+
+    window.currentUserData.empresaNome = novoNome;
+    window.currentUserData.empresaEndereco = novoEndereco;
+    window.currentUserData.empresaTelefone = novoTelefone;
+
+    document.getElementById('merchant-store-name').innerText = novoNome;
+    mostrarAviso("Sucesso! 🏢", "Informações da empresa salvas com sucesso.", "✅");
+  } catch (err) {
+    mostrarAviso("Erro", err.message, "❌");
+  }
+};
+
 window.abrirModalCriarOferta = function() {
   document.getElementById('modal-offer-heading').innerText = "➕ Nova Oferta";
   document.getElementById('edit-offer-id').value = "";
   document.getElementById('offer-title').value = "";
   document.getElementById('offer-desc').value = "";
-  document.getElementById('offer-address').value = "";
-  document.getElementById('offer-phone').value = "";
   document.getElementById('offer-rules').value = "";
   document.getElementById('offer-image').value = "";
   document.getElementById('offer-badge').value = "";
   document.getElementById('offer-econ').value = "";
   document.getElementById('offer-code').value = "";
-  document.getElementById('offer-order').value = "0";
+  document.getElementById('offer-limit').value = "daily";
+
+  const boxAdmin = document.getElementById('box-admin-order');
+  if (boxAdmin) {
+    boxAdmin.style.display = window.currentUserData?.funcao === "admin" ? "block" : "none";
+  }
+
   document.getElementById('modal-add-offer').classList.add('active');
 };
 
-window.abrirModalEditarOferta = function(id, titulo, desc, endereco, telefone, regras, cat, badge, econ, codigo, ordem, imagem) {
+window.abrirModalEditarOferta = function(id, titulo, desc, regras, cat, badge, econ, codigo, imagem, limite = 'daily', ordem = 0) {
   document.getElementById('modal-offer-heading').innerText = "✏️ Editar Oferta";
   document.getElementById('edit-offer-id').value = id;
   document.getElementById('offer-title').value = decodeURIComponent(titulo);
   document.getElementById('offer-desc').value = decodeURIComponent(desc);
-  document.getElementById('offer-address').value = decodeURIComponent(endereco);
-  document.getElementById('offer-phone').value = decodeURIComponent(telefone);
   document.getElementById('offer-rules').value = decodeURIComponent(regras);
   document.getElementById('offer-image').value = decodeURIComponent(imagem || '');
   document.getElementById('offer-cat').value = cat;
   document.getElementById('offer-badge').value = decodeURIComponent(badge);
   document.getElementById('offer-econ').value = econ;
   document.getElementById('offer-code').value = codigo;
-  document.getElementById('offer-order').value = ordem;
+  document.getElementById('offer-limit').value = limite;
+
+  const boxAdmin = document.getElementById('box-admin-order');
+  if (boxAdmin) {
+    if (window.currentUserData?.funcao === "admin") {
+      boxAdmin.style.display = "block";
+      document.getElementById('offer-order').value = ordem;
+    } else {
+      boxAdmin.style.display = "none";
+    }
+  }
+
   document.getElementById('modal-add-offer').classList.add('active');
 };
 
@@ -431,15 +546,13 @@ window.salvarOfertaGeral = async function() {
   const editId = document.getElementById('edit-offer-id').value;
   const titulo = document.getElementById('offer-title').value;
   const desc = document.getElementById('offer-desc').value;
-  const endereco = document.getElementById('offer-address').value;
-  const telefone = document.getElementById('offer-phone').value;
   const regras = document.getElementById('offer-rules').value;
   const imagem = document.getElementById('offer-image').value;
   const cat = document.getElementById('offer-cat').value;
   const badge = document.getElementById('offer-badge').value || 'OFERTA';
   const econ = parseFloat(document.getElementById('offer-econ').value) || 10.00;
-  const codigo = document.getElementById('offer-code').value || 'PRIME10';
-  const ordem = parseInt(document.getElementById('offer-order').value) || 0;
+  const codigo = document.getElementById('offer-code').value.toUpperCase().trim() || 'PRIME';
+  const limite = document.getElementById('offer-limit').value || 'daily';
 
   if (!titulo || !desc) return mostrarAviso("Atenção", "Preencha o título e a descrição.", "⚠️");
 
@@ -450,16 +563,19 @@ window.salvarOfertaGeral = async function() {
     const dadosCupom = {
       titulo: titulo,
       descricao: desc,
-      endereco: endereco || 'Pelotas / RS',
-      telefone: telefone || '',
       regras: regras || 'Sem restrições',
       imagem: imagem || '',
       categoria: cat,
       descontoBadge: badge,
       valorEconomia: econ,
       codigo: codigo,
-      ordem: ordem
+      limite: limite
     };
+
+    if (window.currentUserData?.funcao === "admin") {
+      const ordemInput = document.getElementById('offer-order');
+      if (ordemInput) dadosCupom.ordem = parseInt(ordemInput.value) || 0;
+    }
 
     if (editId) {
       await updateDoc(doc(db, "cupons", editId), dadosCupom);
@@ -467,9 +583,12 @@ window.salvarOfertaGeral = async function() {
     } else {
       dadosCupom.empresaId = user.uid;
       dadosCupom.empresaNome = window.currentUserData?.empresaNome || 'Parceiro Local Pelotas';
+      dadosCupom.endereco = window.currentUserData?.empresaEndereco || 'Pelotas / RS';
+      dadosCupom.telefone = window.currentUserData?.empresaTelefone || '';
       dadosCupom.ativo = true;
       dadosCupom.cliquesCount = 0;
       dadosCupom.criadoEm = new Date().toISOString();
+      dadosCupom.ordem = 0;
       await addDoc(collection(db, "cupons"), dadosCupom);
       mostrarAviso("Publicado! 🎉", "Promoção ativa na vitrine.", "✅");
     }
@@ -490,12 +609,51 @@ window.adminAlternarVip = async function(userId, novoEstado) {
   } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
 };
 
-window.validarCupomTextoLojista = function() {
-  const codigoDigitado = document.getElementById('input-validar-codigo').value.trim();
-  if (!codigoDigitado) return mostrarAviso("Atenção", "Digite o código.", "⚠️");
-  dispararConfetes();
-  mostrarAviso("✅ CUPOM VALIDADO!", `O código "${codigoDigitado.toUpperCase()}" foi conferido!`, "🎉");
-  document.getElementById('input-validar-codigo').value = '';
+// VALIDAÇÃO E ELIMINAÇÃO DO CUPOM NO CAIXA DO LOJISTA
+window.validarCupomTextoLojista = async function() {
+  const codigoDigitado = document.getElementById('input-validar-codigo').value.trim().toUpperCase();
+  if (!codigoDigitado) return mostrarAviso("Atenção", "Digite o código único do cliente.", "⚠️");
+
+  const user = auth.currentUser;
+  if (!user) return mostrarAviso("Erro", "Sessão expirada.", "❌");
+
+  try {
+    const qCode = query(
+      collection(db, "logs_resgates"),
+      where("codigoGerado", "==", codigoDigitado),
+      where("empresaId", "==", user.uid)
+    );
+    const snapCode = await getDocs(qCode);
+
+    if (snapCode.empty) {
+      return mostrarAviso("Código Inválido ❌", `O código "${codigoDigitado}" não foi encontrado para a sua loja.`, "⚠️");
+    }
+
+    let cupomDocRef = null;
+    let cupomData = null;
+
+    snapCode.forEach(docSnap => {
+      cupomDocRef = doc(db, "logs_resgates", docSnap.id);
+      cupomData = docSnap.data();
+    });
+
+    if (cupomData.status === "usado") {
+      return mostrarAviso("CUPOM JÁ UTILIZADO 🚫", `O código "${codigoDigitado}" já foi validado em ${new Date(cupomData.dataValidacao).toLocaleString('pt-BR')}.`, "❌");
+    }
+
+    // Marca como utilizado / eliminado
+    await updateDoc(cupomDocRef, {
+      status: "usado",
+      dataValidacao: new Date().toISOString()
+    });
+
+    dispararConfetes();
+    mostrarAviso("✅ DESCONTO APLICADO!", `O cupom "${codigoDigitado}" foi validado e marcado como UTILIZADO!`, "🎉");
+    document.getElementById('input-validar-codigo').value = '';
+    carregarEstatisticasLojista(user.uid);
+  } catch (err) {
+    mostrarAviso("Erro na validação", err.message, "❌");
+  }
 };
 
 window.toggleTheme = function() {
@@ -513,21 +671,6 @@ window.dispararConfetes = function() {
 window.atualizarCarteiraUI = function() {
   const el = document.getElementById('wallet-economy');
   if (el) el.innerText = `R$ ${economiaTotal.toFixed(2).replace('.', ',')}`;
-};
-
-window.toggleFavorite = function(id, btn) {
-  const index = favoritos.indexOf(id);
-  if (index > -1) { favoritos.splice(index, 1); btn.innerText = '🤍'; }
-  else { favoritos.push(id); btn.innerText = '❤️'; }
-  localStorage.setItem('clube_favs', JSON.stringify(favoritos));
-};
-
-window.atualizarFavoritosUI = function() {
-  document.querySelectorAll('.company-card').forEach(card => {
-    const id = card.dataset.id;
-    const btn = card.querySelector('.favorite-btn');
-    if (btn && favoritos.includes(id)) btn.innerText = '❤️';
-  });
 };
 
 window.toggleMerchantFields = function(checked) {
@@ -599,7 +742,6 @@ window.filterCat = function(cat, btn) {
   const cards = document.querySelectorAll('.company-card');
   cards.forEach(card => {
     if (cat === 'all') card.style.display = 'block';
-    else if (cat === 'favoritos') card.style.display = favoritos.includes(card.dataset.id) ? 'block' : 'none';
     else card.style.display = card.dataset.cat === cat ? 'block' : 'none';
   });
 };
@@ -623,8 +765,10 @@ window.executarAuth = async function() {
     const email = document.getElementById('reg-email').value;
     const pass = document.getElementById('reg-pass').value;
     const isMerchant = document.getElementById('chk-is-merchant').checked;
-    const storeName = document.getElementById('reg-store-name').value;
-    const storeCode = document.getElementById('reg-store-code').value;
+    const storeName = document.getElementById('reg-store-name')?.value;
+    const storeAddress = document.getElementById('reg-store-address')?.value || 'Pelotas / RS';
+    const storePhone = document.getElementById('reg-store-phone')?.value || '';
+    const storeCode = document.getElementById('reg-store-code')?.value;
 
     if (!email || !pass || !nome) return mostrarAviso("Atenção", "Preencha todos os campos.", "⚠️");
     let userRole = "cliente";
@@ -636,10 +780,22 @@ window.executarAuth = async function() {
 
     try {
       const res = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), pass);
-      await setDoc(doc(db, "usuarios", res.user.uid), {
-        nome: nome, email: email.trim().toLowerCase(), funcao: userRole, empresaNome: isMerchant ? storeName : null, vip: false, criadoEm: new Date().toISOString()
-      });
-      mostrarAviso("Sucesso! 🎉", "Conta criada!", "🎉");
+      const userData = {
+        nome: nome,
+        email: email.trim().toLowerCase(),
+        funcao: userRole,
+        vip: false,
+        criadoEm: new Date().toISOString()
+      };
+
+      if (isMerchant) {
+        userData.empresaNome = storeName;
+        userData.empresaEndereco = storeAddress;
+        userData.empresaTelefone = storePhone;
+      }
+
+      await setDoc(doc(db, "usuarios", res.user.uid), userData);
+      mostrarAviso("Sucesso! 🎉", "Conta criada com sucesso!", "🎉");
     } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
   } else {
     const email = document.getElementById('reg-email').value;
@@ -708,29 +864,41 @@ window.verificarStatusVipManual = async function() {
   finally { btn.innerHTML = `🔄 Já Paguei / Checar Agora`; }
 };
 
-window.resgatarCupomReal = function(titulo, desconto, codigo, valorEconomia = 10.00, endereco = '', telefone = '', regras = '') {
+// GERAÇÃO DO CÓDIGO ÚNICO VARIÁVEL PARA CADA CLIENTE
+window.resgatarCupomReal = async function(cupomId, empresaId, empresaNome, titulo, prefixo, valorEconomia = 10.00, endereco = 'Pelotas / RS', telefone = '', regras = '') {
   document.getElementById('modal-title').innerText = titulo;
-  document.getElementById('modal-disc').innerText = desconto;
+  document.getElementById('modal-disc').innerText = empresaNome;
   document.getElementById('modal-address').innerText = endereco || 'Pelotas / RS';
   document.getElementById('modal-phone').innerText = telefone || 'Não informado';
   document.getElementById('modal-rules').innerText = regras || 'Sem restrições';
-  codigoCupomAtual = codigo;
 
   if (window.isVipUser) {
     document.getElementById('box-blocked').style.display = 'none';
     document.getElementById('box-unlocked').style.display = 'block';
-    document.getElementById('modal-code').innerText = codigo;
+
+    // Gerador de sufixo aleatório (Ex: BARBER-9A2F)
+    const sufixoAleatorio = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const prefixoLimpo = (prefixo || 'PRIME').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const codigoUnico = `${prefixoLimpo}-${sufixoAleatorio}`;
+
+    codigoCupomAtual = codigoUnico;
+    document.getElementById('modal-code').innerText = codigoUnico;
 
     economiaTotal += valorEconomia;
     localStorage.setItem('clube_econ', economiaTotal.toFixed(2));
     atualizarCarteiraUI();
 
     try {
-      addDoc(collection(db, "logs_resgates"), {
+      await addDoc(collection(db, "logs_resgates"), {
+        usuarioUid: auth.currentUser?.uid || 'anonimo',
         usuarioEmail: auth.currentUser?.email || 'desconhecido',
-        usuarioNome: window.currentUserData?.nome || 'Membro',
+        usuarioNome: window.currentUserData?.nome || 'Membro VIP',
+        cupomId: cupomId,
         cupomTitulo: titulo,
-        empresaNome: desconto,
+        empresaId: empresaId,
+        empresaNome: empresaNome,
+        codigoGerado: codigoUnico,
+        status: "gerado", // Fica como "gerado" até o lojista dar baixa ("usado")
         dataHora: new Date().toISOString()
       });
     } catch(e) {}
@@ -745,5 +913,5 @@ window.resgatarCupomReal = function(titulo, desconto, codigo, valorEconomia = 10
 window.copiarCodigoCupom = function() {
   if (!codigoCupomAtual) return;
   navigator.clipboard.writeText(codigoCupomAtual);
-  mostrarAviso("Copiado!", "Código copiado!", "📋");
+  mostrarAviso("Copiado!", "Código único copiado!", "📋");
 };

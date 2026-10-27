@@ -6,11 +6,7 @@
   <title>CLUBE PRIME - Pelotas / RS</title>
   
   <link rel="stylesheet" href="style.css">
-  
-  <!-- Biblioteca de Confetes para Celebração VIP -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
-  <!-- Script da Aplicação em JS -->
   <script type="module" src="app.js"></script>
 </head>
 <body>
@@ -63,7 +59,15 @@
         <div id="merchant-fields" style="display:none; margin-top:12px;">
           <div class="form-group">
             <label>NOME DA SUA EMPRESA / LOJA</label>
-            <input type="text" id="reg-store-name" class="form-control" placeholder="Ex: Barbearia Silva, Oficina Frontino">
+            <input type="text" id="reg-store-name" class="form-control" placeholder="Ex: Barbearia Silva">
+          </div>
+          <div class="form-group">
+            <label>ENDEREÇO DA EMPRESA</label>
+            <input type="text" id="reg-store-address" class="form-control" placeholder="Ex: Rua Barão de Mauá, 450">
+          </div>
+          <div class="form-group">
+            <label>TELEFONE / WHATSAPP DA EMPRESA</label>
+            <input type="text" id="reg-store-phone" class="form-control" placeholder="Ex: 53 99999-9999">
           </div>
           <div class="form-group">
             <label>CÓDIGO DE ATIVAÇÃO DE PARCEIRO</label>
@@ -96,8 +100,8 @@
 
       <div class="dev-credits">
         🚀 Powered by: <strong>Prime Labs</strong> • Pelotas / RS<br>
-        <a href="https://wa.me/5553999999999?text=Olá,%20preciso%20de%20suporte%20no%20Clube%20Prime!" target="_blank" style="display:inline-flex; align-items:center; gap:4px; margin-top:6px; color:var(--primary); text-decoration:none; font-weight:800;">
-          💬 Suporte via WhatsApp
+        <a href="https://wa.me/555384052112?text=Olá,%20preciso%20de%20suporte%20no%20Clube%20Prime!" target="_blank" style="display:inline-flex; align-items:center; gap:4px; margin-top:6px; color:var(--primary); text-decoration:none; font-weight:800;">
+          💬 Suporte via WhatsApp (53 8405-2112)
         </a>
       </div>
     </div>
@@ -112,6 +116,25 @@
         <div class="status-badge lojista">PARCEIRO ATIVO</div>
       </div>
 
+      <!-- BANNER EXCLUSIVO PARA LOJISTAS -->
+      <div id="merchant-banner-notice" style="display:none; background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:#ffffff; padding:14px 16px; border-radius:18px; margin-bottom:16px; font-size:0.82rem; font-weight:700; box-shadow:0 6px 16px rgba(37,99,235,0.2);">
+        📢 <span id="merchant-banner-content">-</span>
+      </div>
+
+      <!-- LEITURA DE CUPOM EM DESTAQUE -->
+      <div style="background:var(--card); border:2px solid var(--primary); padding:20px; border-radius:20px; text-align:center; margin-bottom:16px; box-shadow:0 8px 20px rgba(37,99,235,0.15);">
+        <span style="font-size:2.2rem;">🎟️</span>
+        <h3 style="font-size:1.1rem; font-weight:800; margin-top:6px;">Validar Cupom do Cliente</h3>
+        <p style="font-size:0.8rem; color:var(--muted); margin-top:2px; margin-bottom:14px;">Digite o código único gerado no celular do cliente para dar baixa.</p>
+
+        <div class="form-group" style="text-align:left;">
+          <label>CÓDIGO ÚNICO DO CUPOM</label>
+          <input type="text" id="input-validar-codigo" class="form-control" placeholder="Ex: BARBER-8F2K" style="text-transform:uppercase;">
+        </div>
+
+        <button class="btn btn-cyan" onclick="validarCupomTextoLojista()">✅ Validar e Dar Baixa no Caixa</button>
+      </div>
+
       <!-- MÉTRICAS DA LOJA -->
       <div class="admin-grid" style="margin-bottom:16px;">
         <div class="admin-stat-card">
@@ -119,29 +142,39 @@
           <div id="merchant-stat-clicks" class="admin-stat-val">0</div>
         </div>
         <div class="admin-stat-card">
-          <div class="admin-stat-lbl">Cupons Validados</div>
+          <div class="admin-stat-lbl">Cupons Utilizados</div>
           <div id="merchant-stat-validations" class="admin-stat-val">0</div>
         </div>
       </div>
 
+      <!-- EDITAR DADOS DA EMPRESA (ESCONDIDO/EXPANSÍVEL) -->
+      <details style="background:var(--card); border:1px solid var(--card-border); border-radius:18px; margin-bottom:16px; overflow:hidden;">
+        <summary style="padding:14px 16px; font-weight:800; font-size:0.95rem; cursor:pointer; background:var(--card); list-style:none; display:flex; justify-content:space-between; align-items:center;">
+          <span>⚙️ Editar Informações da Empresa</span>
+          <span style="font-size:0.8rem; color:var(--muted);">▼</span>
+        </summary>
+        <div style="padding:16px; border-top:1px solid var(--card-border);">
+          <div class="form-group" style="text-align:left; margin-bottom:8px;">
+            <label>NOME DA EMPRESA</label>
+            <input type="text" id="merchant-edit-name" class="form-control" placeholder="Nome da Loja">
+          </div>
+          <div class="form-group" style="text-align:left; margin-bottom:8px;">
+            <label>ENDEREÇO</label>
+            <input type="text" id="merchant-edit-address" class="form-control" placeholder="Ex: Rua Barão de Mauá, 450">
+          </div>
+          <div class="form-group" style="text-align:left; margin-bottom:12px;">
+            <label>TELEFONE / WHATSAPP</label>
+            <input type="text" id="merchant-edit-phone" class="form-control" placeholder="Ex: 53 99999-9999">
+          </div>
+          <button class="btn btn-outline" style="padding:8px; font-size:0.8rem;" onclick="salvarDadosEmpresaLojista()">💾 Salvar Alterações da Empresa</button>
+        </div>
+      </details>
+
       <!-- BOTÃO PEDIR DESTAQUE AO ADM -->
       <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:16px; text-align:center;">
         <h4 style="font-size:0.9rem; font-weight:800; margin-bottom:4px;">⭐ Quer mais clientes na sua loja?</h4>
-        <p style="font-size:0.75rem; color:var(--muted); margin-bottom:10px;">Solicite destaque de patrocínio com a equipa da Prime Labs.</p>
-        <a href="https://wa.me/5553999999999?text=Olá,%20sou%20lojista%20parceiro%20e%20quero%20destacar%20minha%20loja%20no%20Clube%20Prime!" target="_blank" class="btn btn-cyan" style="display:inline-block; text-decoration:none; padding:8px 16px; font-size:0.8rem;">🚀 Solicitar Destaque via WhatsApp</a>
-      </div>
-
-      <div style="background:var(--card); border:1px solid var(--card-border); padding:20px; border-radius:20px; text-align:center; margin-bottom:20px;">
-        <span style="font-size:2.2rem;">🎟️</span>
-        <h3 style="font-size:1.1rem; font-weight:800; margin-top:6px;">Validar Cupom do Cliente</h3>
-        <p style="font-size:0.8rem; color:var(--muted); margin-top:2px; margin-bottom:14px;">Digite o código apresentado pelo cliente no caixa para aplicar o desconto.</p>
-
-        <div class="form-group" style="text-align:left;">
-          <label>CÓDIGO DO CUPOM</label>
-          <input type="text" id="input-validar-codigo" class="form-control" placeholder="Ex: PRIME10">
-        </div>
-
-        <button class="btn btn-cyan" onclick="validarCupomTextoLojista()">✅ Validar Desconto no Caixa</button>
+        <p style="font-size:0.75rem; color:var(--muted); margin-bottom:10px;">Solicite destaque de patrocínio com a equipe da Prime Labs.</p>
+        <a href="https://wa.me/555384052112?text=Olá,%20sou%20lojista%20parceiro%20e%20quero%20destacar%20minha%20loja%20no%20Clube%20Prime!" target="_blank" class="btn btn-cyan" style="display:inline-block; text-decoration:none; padding:8px 16px; font-size:0.8rem;">🚀 Solicitar Destaque via WhatsApp</a>
       </div>
 
       <button class="btn" style="margin-bottom:20px;" onclick="abrirModalCriarOferta()">➕ Publicar Nova Oferta / Cupom</button>
@@ -183,15 +216,26 @@
         </div>
       </div>
 
-      <!-- BANNER / AVISO GLOBAL (PATROCÍNIO) -->
-      <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:20px;">
-        <h3 style="font-size:1rem; font-weight:800; margin-bottom:8px;">📢 Aviso / Patrocínio Global (App Inteiro)</h3>
-        <p style="font-size:0.75rem; color:var(--muted); margin-bottom:10px;">Defina um aviso ou anúncio visível para todos os utilizadores na página inicial.</p>
+      <!-- BANNER / AVISO CLIENTES -->
+      <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:16px;">
+        <h3 style="font-size:1rem; font-weight:800; margin-bottom:8px;">📢 Aviso para Todos os Clientes</h3>
+        <p style="font-size:0.75rem; color:var(--muted); margin-bottom:10px;">Exibido na página inicial do app dos clientes.</p>
         
         <div class="form-group" style="text-align:left; margin-bottom:8px;">
-          <input type="text" id="admin-global-banner-text" class="form-control" placeholder="Ex: 🔥 Patrocínio Master: Oficina Frontino com 20% OFF!">
+          <input type="text" id="admin-global-banner-text" class="form-control" placeholder="Ex: 🔥 Patrocínio Master na Cidade!">
         </div>
-        <button class="btn btn-cyan" style="padding:10px; font-size:0.85rem;" onclick="salvarBannerGlobalAdmin()">💾 Publicar Aviso para Todos</button>
+        <button class="btn btn-cyan" style="padding:10px; font-size:0.85rem;" onclick="salvarBannerGlobalAdmin()">💾 Publicar Aviso Clientes</button>
+      </div>
+
+      <!-- BANNER / AVISO EXCLUSIVO PARA LOJISTAS -->
+      <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:20px;">
+        <h3 style="font-size:1rem; font-weight:800; margin-bottom:8px;">🏢 Recado Exclusivo para os Lojistas</h3>
+        <p style="font-size:0.75rem; color:var(--muted); margin-bottom:10px;">Exibido apenas dentro do Painel do Lojista.</p>
+        
+        <div class="form-group" style="text-align:left; margin-bottom:8px;">
+          <input type="text" id="admin-merchant-banner-text" class="form-control" placeholder="Ex: ⚠️ Reunião de parceiros nesta Quinta-feira!">
+        </div>
+        <button class="btn btn-cyan" style="padding:10px; font-size:0.85rem;" onclick="salvarBannerLojistaAdmin()">💾 Publicar Recado para Lojistas</button>
       </div>
 
       <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:12px;">Gestão Global de Cupons (Todos)</h3>
@@ -214,7 +258,6 @@
 
     <!-- TELA HOME (CLIENTE) -->
     <div id="screen-home" class="screen">
-      <!-- AVISO / PATROCÍNIO GLOBAL DINÂMICO -->
       <div id="client-global-banner" style="display:none; background:linear-gradient(135deg, #f97316 0%, #ea580c 100%); color:#ffffff; padding:12px 16px; border-radius:16px; margin-bottom:16px; font-size:0.82rem; font-weight:800; text-align:center; box-shadow:0 6px 16px rgba(249,115,22,0.2);">
         📢 <span id="client-global-banner-content">-</span>
       </div>
@@ -259,7 +302,6 @@
 
       <div class="categories-bar">
         <div class="category-pill active" onclick="filterCat('all', this)">Todos Os Cupons</div>
-        <div class="category-pill" onclick="filterCat('favoritos', this)">❤️ Favoritos</div>
         <div class="category-pill" onclick="filterCat('gastronomia', this)">🍔 Gastronomia & Delivery</div>
         <div class="category-pill" onclick="filterCat('compras', this)">🛍️ Lojas & Compras</div>
         <div class="category-pill" onclick="filterCat('automotivo', this)">🔧 Automotivo</div>
@@ -337,8 +379,8 @@
 
       <div class="dev-credits">
         🚀 Desenvolvido por: <strong>Prime Labs</strong> • Pelotas / RS<br>
-        <a href="https://wa.me/5553999999999?text=Olá,%20preciso%20de%20suporte%20no%20Clube%20Prime!" target="_blank" style="display:inline-flex; align-items:center; gap:4px; margin-top:6px; color:var(--primary); text-decoration:none; font-weight:800;">
-          💬 Suporte via WhatsApp
+        <a href="https://wa.me/555384052112?text=Olá,%20preciso%20de%20suporte%20no%20Clube%20Prime!" target="_blank" style="display:inline-flex; align-items:center; gap:4px; margin-top:6px; color:var(--primary); text-decoration:none; font-weight:800;">
+          💬 Suporte via WhatsApp (53 8405-2112)
         </a>
       </div>
     </div>
@@ -417,13 +459,13 @@
       </div>
 
       <div id="box-unlocked" style="display:none; margin-top:16px;">
-        <div style="font-size:0.75rem; color:var(--muted); font-weight:700; margin-bottom:6px;">APRESENTE ESTE CÓDIGO NO CAIXA:</div>
+        <div style="font-size:0.75rem; color:var(--muted); font-weight:700; margin-bottom:6px;">APRESENTE ESTE CÓDIGO ÚNICO NO CAIXA:</div>
         
         <div style="background:var(--secondary); border:2px dashed var(--primary); padding:16px; border-radius:16px; margin:10px 0;">
           <div id="modal-code" style="font-size:1.6rem; font-weight:900; letter-spacing:2px; color:var(--primary);">---</div>
         </div>
 
-        <button class="btn" onclick="copiarCodigoCupom()">📋 Copiar Código</button>
+        <button class="btn" onclick="copiarCodigoCupom()">📋 Copiar Código Único</button>
       </div>
 
       <button class="btn btn-outline" style="margin-top:14px;" onclick="fecharModal('modal-coupon')">Fechar</button>
@@ -447,18 +489,22 @@
       </div>
 
       <div class="form-group" style="text-align:left;">
-        <label>ENDEREÇO DA LOJA</label>
-        <input type="text" id="offer-address" class="form-control" placeholder="Ex: Rua Barão de Mauá, 450 - Pelotas">
-      </div>
-
-      <div class="form-group" style="text-align:left;">
-        <label>WHATSAPP / CONTATO</label>
-        <input type="text" id="offer-phone" class="form-control" placeholder="Ex: (53) 99999-9999">
-      </div>
-
-      <div class="form-group" style="text-align:left;">
         <label>DIAS E HORÁRIOS DE VALIDADE</label>
         <input type="text" id="offer-rules" class="form-control" placeholder="Ex: Terça a Quinta, das 14h às 18h">
+      </div>
+
+      <div class="form-group" style="text-align:left;">
+        <label>PREFIXO DO CÓDIGO (PREFIXO INICIAL)</label>
+        <input type="text" id="offer-code" class="form-control" placeholder="Ex: BARBER (O app vai gerar BARBER-8F2K)" style="text-transform:uppercase;">
+      </div>
+
+      <div class="form-group" style="text-align:left;">
+        <label>LIMITE DE USO POR PESSOA</label>
+        <select id="offer-limit" class="form-control">
+          <option value="daily">1 cupom por dia por pessoa</option>
+          <option value="once">Apenas 1 cupom por pessoa (Uso Único)</option>
+          <option value="unlimited">Ilimitado</option>
+        </select>
       </div>
 
       <div class="form-group" style="text-align:left;">
@@ -486,13 +532,8 @@
         <input type="number" id="offer-econ" class="form-control" placeholder="15.00">
       </div>
 
-      <div class="form-group" style="text-align:left;">
-        <label>CÓDIGO PROMOCIONAL (TAG)</label>
-        <input type="text" id="offer-code" class="form-control" placeholder="Ex: FOCO20">
-      </div>
-
-      <div class="form-group" style="text-align:left;">
-        <label>ORDEM DE POSICIONAMENTO (MENOR = TOPO)</label>
+      <div class="form-group" style="text-align:left; display:none;" id="box-admin-order">
+        <label>ORDEM DE POSICIONAMENTO (MENOR = TOPO - APENAS ADM)</label>
         <input type="number" id="offer-order" class="form-control" value="0" placeholder="Ex: 1, 2, 3...">
       </div>
 
