@@ -238,22 +238,42 @@
         <button class="btn btn-cyan" style="padding:10px; font-size:0.85rem;" onclick="salvarBannerLojistaAdmin()">💾 Publicar Recado para Lojistas</button>
       </div>
 
-      <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:12px;">Gestão Global de Cupons (Todos)</h3>
-      <div id="admin-all-coupons-list" style="margin-bottom:20px; max-height:260px; overflow-y:auto; padding-right:4px;">
-        <p style="font-size:0.8rem; color:var(--muted);">Carregando todos os cupons...</p>
+      <!-- ABAS DO PAINEL ADMIN -->
+      <div class="auth-tabs" style="margin-bottom:16px;">
+        <div id="adm-tab-cupons" class="auth-tab active" onclick="switchAdminTab('cupons')">🎟️ Cupons Usados</div>
+        <div id="adm-tab-clientes" class="auth-tab" onclick="switchAdminTab('clientes')">👥 Clientes & VIP</div>
+        <div id="adm-tab-empresas" class="auth-tab" onclick="switchAdminTab('empresas')">🏢 Empresas</div>
       </div>
 
-      <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:12px;">Gestão de Usuários e VIPs</h3>
-      <div id="admin-users-list" style="margin-bottom:20px; max-height:200px; overflow-y:auto; padding-right:4px;">
-        <p style="font-size:0.8rem; color:var(--muted);">Carregando utilizadores...</p>
+      <!-- CONTEÚDO ABA 1: CUPONS -->
+      <div id="adm-section-cupons" class="admin-tab-content">
+        <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:12px;">Gestão Global de Cupons (Todos)</h3>
+        <div id="admin-all-coupons-list" style="margin-bottom:20px; max-height:260px; overflow-y:auto; padding-right:4px;">
+          <p style="font-size:0.8rem; color:var(--muted);">Carregando todos os cupons...</p>
+        </div>
+        <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:12px;">Logs de Resgates Recentes</h3>
+        <div id="admin-logs-list" style="margin-bottom:20px; max-height:160px; overflow-y:auto; padding-right:4px;">
+          <p style="font-size:0.8rem; color:var(--muted);">A aguardar resgates...</p>
+        </div>
       </div>
 
-      <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:12px;">Logs de Resgates Recentes</h3>
-      <div id="admin-logs-list" style="margin-bottom:20px; max-height:160px; overflow-y:auto; padding-right:4px;">
-        <p style="font-size:0.8rem; color:var(--muted);">A aguardar resgates...</p>
+      <!-- CONTEÚDO ABA 2: CLIENTES E VIP -->
+      <div id="adm-section-clientes" class="admin-tab-content" style="display:none;">
+        <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:12px;">Gestão de Usuários e VIPs</h3>
+        <div id="admin-users-list" style="margin-bottom:20px; max-height:360px; overflow-y:auto; padding-right:4px;">
+          <p style="font-size:0.8rem; color:var(--muted);">Carregando utilizadores...</p>
+        </div>
       </div>
 
-      <button class="btn btn-outline" style="color:var(--danger); border-color:#ef444455;" onclick="deslogar()">Sair do Painel Admin</button>
+      <!-- CONTEÚDO ABA 3: EMPRESAS -->
+      <div id="adm-section-empresas" class="admin-tab-content" style="display:none;">
+        <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:12px;">Lojistas e Empresas Parceiras</h3>
+        <div id="admin-merchants-list" style="margin-bottom:20px; max-height:360px; overflow-y:auto; padding-right:4px;">
+          <p style="font-size:0.8rem; color:var(--muted);">Carregando empresas...</p>
+        </div>
+      </div>
+
+      <button class="btn btn-outline" style="color:var(--danger); border-color:#ef444455; margin-top:20px;" onclick="deslogar()">Sair do Painel Admin</button>
     </div>
 
     <!-- TELA HOME (CLIENTE) -->

@@ -272,7 +272,6 @@ window.clicarElesResgatar = async function(cupomId, empresaId, empresaNome, titu
   const user = auth.currentUser;
   if (!user) return mostrarAviso("Atenção", "Faça login para resgatar.", "⚠️");
 
-  // Checa restrição de uso (Diário / Único)
   if (limite !== 'unlimited') {
     try {
       const qCheck = query(
@@ -364,6 +363,17 @@ function carregarCuponsDoLojista(empresaUid) {
   });
 }
 
+// ABAS DO PAINEL ADMIN
+window.switchAdminTab = function(tabName) {
+  document.getElementById('adm-tab-cupons').classList.toggle('active', tabName === 'cupons');
+  document.getElementById('adm-tab-clientes').classList.toggle('active', tabName === 'clientes');
+  document.getElementById('adm-tab-empresas').classList.toggle('active', tabName === 'empresas');
+
+  document.getElementById('adm-section-cupons').style.display = tabName === 'cupons' ? 'block' : 'none';
+  document.getElementById('adm-section-clientes').style.display = tabName === 'clientes' ? 'block' : 'none';
+  document.getElementById('adm-section-empresas').style.display = tabName === 'empresas' ? 'block' : 'none';
+};
+
 async function carregarPainelAdmin() {
   try {
     const snapUsers = await getDocs(collection(db, "usuarios"));
@@ -371,6 +381,7 @@ async function carregarPainelAdmin() {
     let totalVips = 0;
     let totalMerchants = 0;
     let listUsersHtml = '';
+    let listMerchantsHtml = '';
 
     snapUsers.forEach(docSnap => {
       totalUsers++;
@@ -383,15 +394,39 @@ async function carregarPainelAdmin() {
       const btnVipActionText = u.vip ? "Remover VIP" : "Tornar VIP";
       const nextVipState = !u.vip;
 
+      const criadoEmData = u.criadoEm ? new Date(u.criadoEm).toLocaleDateString('pt-BR') : 'Não registrada';
+      const expiraDataStr = u.vipExpiraEm ? new Date(u.vipExpiraEm).toLocaleDateString('pt-BR') : (u.vip ? 'Ativo (Ilimitado)' : 'Não assinante');
+
       listUsersHtml += `
-        <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <div style="font-size:0.85rem; font-weight:800;">${u.nome || 'Usuário'} (${u.funcao})</div>
-            <div style="font-size:0.72rem; color:var(--muted);">${u.email} • <span style="font-weight:700; color:var(--primary);">${badgeVipTxt}</span></div>
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <div>
+              <div style="font-size:0.95rem; font-weight:900;">${u.nome || 'Usuário'} <span style="font-size:0.75rem; color:var(--muted);">(${u.funcao})</span></div>
+              <div style="font-size:0.78rem; color:var(--muted); margin-top:2px;">📧 ${u.email}</div>
+            </div>
+            <span style="font-weight:800; font-size:0.75rem; padding:4px 10px; border-radius:12px; background:var(--secondary); color:var(--primary);">${badgeVipTxt}</span>
           </div>
-          <button class="btn btn-outline btn-small" onclick="adminAlternarVip('${uid}', ${nextVipState})">${btnVipActionText}</button>
+          <div style="font-size:0.75rem; background:var(--secondary); padding:10px; border-radius:12px; margin:8px 0; display:flex; flex-direction:column; gap:4px;">
+            <div>📅 <strong>Membro Desde:</strong> ${criadoEmData}</div>
+            <div>⏳ <strong>Validade VIP:</strong> <span style="color:var(--accent); font-weight:700;">${expiraDataStr}</span></div>
+          </div>
+          <button class="btn btn-outline btn-small" style="width:100%; margin-top:4px;" onclick="adminAlternarVip('${uid}', ${nextVipState})">${btnVipActionText}</button>
         </div>
       `;
+
+      if (u.funcao === "lojista") {
+        listMerchantsHtml += `
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <h4 style="font-size:1rem; font-weight:900; color:var(--text);">🏢 ${u.empresaNome || 'Empresa Sem Nome'}</h4>
+              <span class="status-badge lojista">PARCEIRO</span>
+            </div>
+            <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">👤 <strong>Responsável:</strong> ${u.nome || '-'}</p>
+            <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📍 <strong>Endereço:</strong> ${u.empresaEndereco || 'Pelotas / RS'}</p>
+            <p style="font-size:0.78rem; color:var(--muted);">📞 <strong>Contato:</strong> ${u.empresaTelefone || 'Não informado'}</p>
+          </div>
+        `;
+      }
     });
 
     const snapCuponsAll = await getDocs(collection(db, "cupons"));
@@ -441,6 +476,7 @@ async function carregarPainelAdmin() {
 
     document.getElementById('admin-all-coupons-list').innerHTML = allCuponsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum cupom registado.</p>';
     document.getElementById('admin-users-list').innerHTML = listUsersHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum utilizador encontrado.</p>';
+    document.getElementById('admin-merchants-list').innerHTML = listMerchantsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhuma empresa parceira registrada.</p>';
     document.getElementById('admin-logs-list').innerHTML = logsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Ainda não há resgates registados.</p>';
   } catch (err) {
     console.error("Erro admin:", err);
@@ -609,7 +645,6 @@ window.adminAlternarVip = async function(userId, novoEstado) {
   } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
 };
 
-// VALIDAÇÃO E ELIMINAÇÃO DO CUPOM NO CAIXA DO LOJISTA
 window.validarCupomTextoLojista = async function() {
   const codigoDigitado = document.getElementById('input-validar-codigo').value.trim().toUpperCase();
   if (!codigoDigitado) return mostrarAviso("Atenção", "Digite o código único do cliente.", "⚠️");
@@ -641,7 +676,6 @@ window.validarCupomTextoLojista = async function() {
       return mostrarAviso("CUPOM JÁ UTILIZADO 🚫", `O código "${codigoDigitado}" já foi validado em ${new Date(cupomData.dataValidacao).toLocaleString('pt-BR')}.`, "❌");
     }
 
-    // Marca como utilizado / eliminado
     await updateDoc(cupomDocRef, {
       status: "usado",
       dataValidacao: new Date().toISOString()
@@ -864,7 +898,6 @@ window.verificarStatusVipManual = async function() {
   finally { btn.innerHTML = `🔄 Já Paguei / Checar Agora`; }
 };
 
-// GERAÇÃO DO CÓDIGO ÚNICO VARIÁVEL PARA CADA CLIENTE
 window.resgatarCupomReal = async function(cupomId, empresaId, empresaNome, titulo, prefixo, valorEconomia = 10.00, endereco = 'Pelotas / RS', telefone = '', regras = '') {
   document.getElementById('modal-title').innerText = titulo;
   document.getElementById('modal-disc').innerText = empresaNome;
@@ -876,7 +909,6 @@ window.resgatarCupomReal = async function(cupomId, empresaId, empresaNome, titul
     document.getElementById('box-blocked').style.display = 'none';
     document.getElementById('box-unlocked').style.display = 'block';
 
-    // Gerador de sufixo aleatório (Ex: BARBER-9A2F)
     const sufixoAleatorio = Math.random().toString(36).substring(2, 6).toUpperCase();
     const prefixoLimpo = (prefixo || 'PRIME').toUpperCase().replace(/[^A-Z0-9]/g, '');
     const codigoUnico = `${prefixoLimpo}-${sufixoAleatorio}`;
@@ -898,7 +930,7 @@ window.resgatarCupomReal = async function(cupomId, empresaId, empresaNome, titul
         empresaId: empresaId,
         empresaNome: empresaNome,
         codigoGerado: codigoUnico,
-        status: "gerado", // Fica como "gerado" até o lojista dar baixa ("usado")
+        status: "gerado",
         dataHora: new Date().toISOString()
       });
     } catch(e) {}
