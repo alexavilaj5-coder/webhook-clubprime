@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCTVY6ogF-o7pGuDeHPYCkGfrkeLTvpjKU",
@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (themeBtn) themeBtn.innerText = savedTheme === 'dark' ? '☀️' : '🌙';
   atualizarCarteiraUI();
   atualizarFavoritosUI();
+  escutarBannerGlobal();
 });
 
 onAuthStateChanged(auth, async (user) => {
@@ -76,6 +77,7 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('screen-merchant').classList.add('active');
         document.querySelector('.bottom-nav').style.display = 'none';
         document.getElementById('merchant-store-name').innerText = data.empresaNome || "Empresa Parceira";
+        carregarEstatisticasLojista(user.uid);
         carregarCuponsDoLojista(user.uid);
         return;
       }
@@ -149,20 +151,57 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
+function escutarBannerGlobal() {
+  const bannerRef = doc(db, "configuracoes", "banner_global");
+  onSnapshot(bannerRef, (docSnap) => {
+    const bannerEl = document.getElementById('client-global-banner');
+    const contentEl = document.getElementById('client-global-banner-content');
+    const adminInput = document.getElementById('admin-global-banner-text');
+
+    if (docSnap.exists() && docSnap.data().texto) {
+      const texto = docSnap.data().texto;
+      if (bannerEl && contentEl) {
+        contentEl.innerText = texto;
+        bannerEl.style.display = 'block';
+      }
+      if (adminInput) adminInput.value = texto;
+    } else {
+      if (bannerEl) bannerEl.style.display = 'none';
+    }
+  });
+}
+
+window.salvarBannerGlobalAdmin = async function() {
+  const texto = document.getElementById('admin-global-banner-text').value.trim();
+  try {
+    await setDoc(doc(db, "configuracoes", "banner_global"), { texto: texto });
+    mostrarAviso("Atualizado! 📢", "O aviso global foi publicado.", "✅");
+  } catch (err) {
+    mostrarAviso("Erro", err.message, "❌");
+  }
+};
+
 function carregarCuponsVitrine() {
   const q = query(collection(db, "cupons"), where("ativo", "==", true));
   unsubscribeCupons = onSnapshot(q, (snapshot) => {
     const container = document.getElementById('stores-list-dynamic');
     if (!container) return;
     
-    let html = '';
+    let cuponsArray = [];
     snapshot.forEach((docSnap) => {
-      const cupom = docSnap.data();
-      const docId = docSnap.id;
+      cuponsArray.push({ id: docSnap.id, ...docSnap.data() });
+    });
+
+    cuponsArray.sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+
+    let html = '';
+    cuponsArray.forEach((cupom) => {
+      let imgHtml = cupom.imagem ? `<img src="${cupom.imagem}" alt="Foto" style="width:100%; height:120px; object-fit:cover; border-radius:12px; margin-bottom:10px;">` : '';
 
       html += `
-        <div class="company-card" data-cat="${cupom.categoria}" data-name="${cupom.titulo.toLowerCase()} ${cupom.empresaNome.toLowerCase()}" data-id="${docId}">
-          <div class="favorite-btn" onclick="toggleFavorite('${docId}', this)">🤍</div>
+        <div class="company-card" data-cat="${cupom.categoria}" data-name="${cupom.titulo.toLowerCase()} ${cupom.empresaNome.toLowerCase()}" data-id="${cupom.id}">
+          <div class="favorite-btn" onclick="toggleFavorite('${cupom.id}', this)">🤍</div>
+          ${imgHtml}
           <div class="company-header">
             <div>
               <div class="company-title">${cupom.empresaNome}</div>
@@ -175,7 +214,7 @@ function carregarCuponsVitrine() {
           </div>
           <h4 style="font-size:0.95rem; font-weight:800; margin-bottom:4px;">${cupom.titulo}</h4>
           <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">${cupom.descricao}</p>
-          <button class="btn btn-cyan" onclick="resgatarCupomReal('${cupom.empresaNome}', '${cupom.titulo}', '${cupom.codigo}', ${cupom.valorEconomia || 10.00}, '${cupom.endereco || ''}', '${cupom.telefone || ''}', '${cupom.regras || ''}')">
+          <button class="btn btn-cyan" onclick="clicarElesResgatar('${cupom.id}', '${cupom.empresaId}', '${cupom.empresaNome}', '${cupom.titulo}', '${cupom.codigo}', ${cupom.valorEconomia || 10.00}, '${cupom.endereco || ''}', '${cupom.telefone || ''}', '${cupom.regras || ''}')">
             🎟️ Resgatar Cupom
           </button>
         </div>
@@ -185,8 +224,31 @@ function carregarCuponsVitrine() {
     if (html !== '') {
       container.innerHTML = html;
       atualizarFavoritosUI();
+    } else {
+      container.innerHTML = `<p style="font-size:0.8rem; color:var(--muted); text-align:center; padding:20px;">Nenhum cupom ativo no momento.</p>`;
     }
   });
+}
+
+window.clicarElesResgatar = async function(cupomId, empresaId, empresaNome, titulo, codigo, econ, endereco, telefone, regras) {
+  try {
+    await updateDoc(doc(db, "cupons", cupomId), {
+      cliquesCount: increment(1)
+    });
+  } catch(e) {}
+  resgatarCupomReal(empresaNome, titulo, codigo, econ, endereco, telefone, regras);
+};
+
+async function carregarEstatisticasLojista(empresaUid) {
+  try {
+    const q = query(collection(db, "cupons"), where("empresaId", "==", empresaUid));
+    const snap = await getDocs(q);
+    let totalCliques = 0;
+    snap.forEach(d => {
+      totalCliques += (d.data().cliquesCount || 0);
+    });
+    document.getElementById('merchant-stat-clicks').innerText = totalCliques;
+  } catch(e) {}
 }
 
 function carregarCuponsDoLojista(empresaUid) {
@@ -206,6 +268,7 @@ function carregarCuponsDoLojista(empresaUid) {
       const docId = docSnap.id;
       const statusText = cupom.ativo ? "🟢 ATIVA" : "🔴 PAUSADA";
       const btnPausaText = cupom.ativo ? "Pausar" : "Ativar";
+      const cliques = cupom.cliquesCount || 0;
 
       html += `
         <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:10px;">
@@ -213,10 +276,11 @@ function carregarCuponsDoLojista(empresaUid) {
             <h4 style="font-size:0.9rem; font-weight:800;">${cupom.titulo}</h4>
             <span style="font-size:0.7rem; font-weight:800;">${statusText}</span>
           </div>
-          <p style="font-size:0.75rem; color:var(--muted); margin:4px 0;">Código: <strong>${cupom.codigo}</strong> | Economia: R$ ${cupom.valorEconomia}</p>
-          <div style="display:flex; gap:8px; margin-top:10px;">
-            <button class="btn btn-outline btn-small" onclick="toggleStatusCupomLojista('${docId}', ${cupom.ativo})">⏸️ ${btnPausaText}</button>
-            <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="excluirCupomLojista('${docId}')">🗑️ Excluir</button>
+          <p style="font-size:0.75rem; color:var(--muted); margin:4px 0;">Código: <strong>${cupom.codigo}</strong> | Cliques: <strong>${cliques}</strong> | Ordem: ${cupom.ordem || 0}</p>
+          <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+            <button class="btn btn-outline btn-small" onclick="toggleStatusCupom('${docId}', ${cupom.ativo})">⏸️ ${btnPausaText}</button>
+            <button class="btn btn-outline btn-small" onclick="abrirModalEditarOferta('${docId}', '${encodeURIComponent(cupom.titulo)}', '${encodeURIComponent(cupom.descricao)}', '${encodeURIComponent(cupom.endereco || '')}', '${encodeURIComponent(cupom.telefone || '')}', '${encodeURIComponent(cupom.regras || '')}', '${cupom.categoria}', '${encodeURIComponent(cupom.descontoBadge || '')}', ${cupom.valorEconomia || 10}, '${cupom.codigo}', ${cupom.ordem || 0}, '${encodeURIComponent(cupom.imagem || '')}')">✏️ Editar</button>
+            <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="excluirCupom('${docId}')">🗑️ Excluir</button>
           </div>
         </div>
       `;
@@ -226,117 +290,211 @@ function carregarCuponsDoLojista(empresaUid) {
   });
 }
 
-window.toggleStatusCupomLojista = async function(docId, estadoAtual) {
-  try {
-    await updateDoc(doc(db, "cupons", docId), { ativo: !estadoAtual });
-  } catch (err) {
-    mostrarAviso("Erro", err.message, "❌");
-  }
-};
-
-window.excluirCupomLojista = async function(docId) {
-  if (confirm("Deseja realmente excluir esta oferta definitivamente?")) {
-    try {
-      await deleteDoc(doc(db, "cupons", docId));
-      mostrarAviso("Excluído", "A oferta foi removida da plataforma.", "🗑️");
-    } catch (err) {
-      mostrarAviso("Erro ao excluir", err.message, "❌");
-    }
-  }
-};
-
 async function carregarPainelAdmin() {
   try {
     const snapUsers = await getDocs(collection(db, "usuarios"));
     let totalUsers = 0;
     let totalVips = 0;
     let totalMerchants = 0;
-    let listMerchantsHtml = '';
+    let listUsersHtml = '';
 
     snapUsers.forEach(docSnap => {
       totalUsers++;
       const u = docSnap.data();
+      const uid = docSnap.id;
       if (u.vip) totalVips++;
-      if (u.funcao === "lojista") {
-        totalMerchants++;
-        listMerchantsHtml += `
-          <div style="background:var(--card); border:1px solid var(--card-border); padding:10px 14px; border-radius:12px; margin-bottom:6px; font-size:0.8rem;">
-            <strong>${u.empresaNome || 'Sem Nome'}</strong> (${u.email})
+      if (u.funcao === "lojista") totalMerchants++;
+
+      const badgeVipTxt = u.vip ? "👑 VIP" : "👤 Free";
+      const btnVipActionText = u.vip ? "Remover VIP" : "Tornar VIP";
+      const nextVipState = !u.vip;
+
+      listUsersHtml += `
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:0.85rem; font-weight:800;">${u.nome || 'Usuário'} (${u.funcao})</div>
+            <div style="font-size:0.72rem; color:var(--muted);">${u.email} • <span style="font-weight:700; color:var(--primary);">${badgeVipTxt}</span></div>
           </div>
-        `;
-      }
+          <button class="btn btn-outline btn-small" onclick="adminAlternarVip('${uid}', ${nextVipState})">${btnVipActionText}</button>
+        </div>
+      `;
     });
 
-    const snapCupons = await getDocs(query(collection(db, "cupons"), where("ativo", "==", true)));
+    const snapCuponsAll = await getDocs(collection(db, "cupons"));
+    let allCuponsHtml = '';
+    let totalCuponsAtivos = 0;
+
+    snapCuponsAll.forEach(docSnap => {
+      const c = docSnap.data();
+      const docId = docSnap.id;
+      if (c.ativo) totalCuponsAtivos++;
+      const statusText = c.ativo ? "🟢 ATIVA" : "🔴 PAUSADA";
+      const btnPausaText = c.ativo ? "Pausar" : "Ativar";
+
+      allCuponsHtml += `
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-size:0.85rem; font-weight:800;">${c.titulo} <span style="color:var(--muted); font-weight:600;">(${c.empresaNome})</span></div>
+            <span style="font-size:0.7rem; font-weight:800;">${statusText}</span>
+          </div>
+          <div style="font-size:0.72rem; color:var(--muted); margin-top:2px;">Tag: <strong>${c.codigo}</strong> | Ordem: <strong>${c.ordem || 0}</strong></div>
+          <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+            <button class="btn btn-outline btn-small" onclick="toggleStatusCupom('${docId}', ${c.ativo})">⏸️ ${btnPausaText}</button>
+            <button class="btn btn-outline btn-small" onclick="abrirModalEditarOferta('${docId}', '${encodeURIComponent(c.titulo)}', '${encodeURIComponent(c.descricao)}', '${encodeURIComponent(c.endereco || '')}', '${encodeURIComponent(c.telefone || '')}', '${encodeURIComponent(c.regras || '')}', '${c.categoria}', '${encodeURIComponent(c.descontoBadge || '')}', ${c.valorEconomia || 10}, '${c.codigo}', ${c.ordem || 0}, '${encodeURIComponent(c.imagem || '')}')">✏️ Editar</button>
+            <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="excluirCupom('${docId}')">🗑️ Excluir</button>
+          </div>
+        </div>
+      `;
+    });
+
+    const snapLogs = await getDocs(collection(db, "logs_resgates"));
+    let logsHtml = '';
+    snapLogs.forEach(logSnap => {
+      const l = logSnap.data();
+      logsHtml += `
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:10px 12px; border-radius:10px; margin-bottom:6px; font-size:0.75rem;">
+          <div><strong>${l.usuarioNome || 'Cliente'}</strong> resgatou <span style="color:var(--primary);">${l.cupomTitulo}</span> em <em>${l.empresaNome}</em></div>
+          <div style="color:var(--muted); font-size:0.68rem; margin-top:2px;">${new Date(l.dataHora).toLocaleString('pt-BR')}</div>
+        </div>
+      `;
+    });
 
     document.getElementById('admin-count-users').innerText = totalUsers;
     document.getElementById('admin-count-vips').innerText = totalVips;
     document.getElementById('admin-count-merchants').innerText = totalMerchants;
-    document.getElementById('admin-count-offers').innerText = snapCupons.size;
+    document.getElementById('admin-count-offers').innerText = totalCuponsAtivos;
 
-    document.getElementById('admin-merchants-list').innerHTML = listMerchantsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum parceiro cadastrado.</p>';
+    document.getElementById('admin-all-coupons-list').innerHTML = allCuponsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum cupom registado.</p>';
+    document.getElementById('admin-users-list').innerHTML = listUsersHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum utilizador encontrado.</p>';
+    document.getElementById('admin-logs-list').innerHTML = logsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Ainda não há resgates registados.</p>';
   } catch (err) {
     console.error("Erro admin:", err);
   }
 }
 
-window.publicarNovaOfertaLojista = async function() {
+window.toggleStatusCupom = async function(docId, estadoAtual) {
+  try {
+    await updateDoc(doc(db, "cupons", docId), { ativo: !estadoAtual });
+    mostrarAviso("Sucesso", "Status alterado.", "✅");
+    if (window.currentUserData?.funcao === "admin") carregarPainelAdmin();
+  } catch (err) {
+    mostrarAviso("Erro", err.message, "❌");
+  }
+};
+
+window.excluirCupom = async function(docId) {
+  if (confirm("Deseja realmente excluir esta oferta?")) {
+    try {
+      await deleteDoc(doc(db, "cupons", docId));
+      mostrarAviso("Excluído", "Oferta removida.", "🗑️");
+      if (window.currentUserData?.funcao === "admin") carregarPainelAdmin();
+    } catch (err) {
+      mostrarAviso("Erro", err.message, "❌");
+    }
+  }
+};
+
+window.abrirModalCriarOferta = function() {
+  document.getElementById('modal-offer-heading').innerText = "➕ Nova Oferta";
+  document.getElementById('edit-offer-id').value = "";
+  document.getElementById('offer-title').value = "";
+  document.getElementById('offer-desc').value = "";
+  document.getElementById('offer-address').value = "";
+  document.getElementById('offer-phone').value = "";
+  document.getElementById('offer-rules').value = "";
+  document.getElementById('offer-image').value = "";
+  document.getElementById('offer-badge').value = "";
+  document.getElementById('offer-econ').value = "";
+  document.getElementById('offer-code').value = "";
+  document.getElementById('offer-order').value = "0";
+  document.getElementById('modal-add-offer').classList.add('active');
+};
+
+window.abrirModalEditarOferta = function(id, titulo, desc, endereco, telefone, regras, cat, badge, econ, codigo, ordem, imagem) {
+  document.getElementById('modal-offer-heading').innerText = "✏️ Editar Oferta";
+  document.getElementById('edit-offer-id').value = id;
+  document.getElementById('offer-title').value = decodeURIComponent(titulo);
+  document.getElementById('offer-desc').value = decodeURIComponent(desc);
+  document.getElementById('offer-address').value = decodeURIComponent(endereco);
+  document.getElementById('offer-phone').value = decodeURIComponent(telefone);
+  document.getElementById('offer-rules').value = decodeURIComponent(regras);
+  document.getElementById('offer-image').value = decodeURIComponent(imagem || '');
+  document.getElementById('offer-cat').value = cat;
+  document.getElementById('offer-badge').value = decodeURIComponent(badge);
+  document.getElementById('offer-econ').value = econ;
+  document.getElementById('offer-code').value = codigo;
+  document.getElementById('offer-order').value = ordem;
+  document.getElementById('modal-add-offer').classList.add('active');
+};
+
+window.salvarOfertaGeral = async function() {
+  const editId = document.getElementById('edit-offer-id').value;
   const titulo = document.getElementById('offer-title').value;
   const desc = document.getElementById('offer-desc').value;
   const endereco = document.getElementById('offer-address').value;
   const telefone = document.getElementById('offer-phone').value;
   const regras = document.getElementById('offer-rules').value;
+  const imagem = document.getElementById('offer-image').value;
   const cat = document.getElementById('offer-cat').value;
   const badge = document.getElementById('offer-badge').value || 'OFERTA';
   const econ = parseFloat(document.getElementById('offer-econ').value) || 10.00;
   const codigo = document.getElementById('offer-code').value || 'PRIME10';
+  const ordem = parseInt(document.getElementById('offer-order').value) || 0;
 
-  if (!titulo || !desc) return mostrarAviso("Atenção", "Preencha o título e a descrição da oferta.", "⚠️");
+  if (!titulo || !desc) return mostrarAviso("Atenção", "Preencha o título e a descrição.", "⚠️");
 
   const user = auth.currentUser;
-  if (!user) return mostrarAviso("Erro", "Usuário não autenticado.", "❌");
+  if (!user) return mostrarAviso("Erro", "Não autenticado.", "❌");
 
   try {
-    await addDoc(collection(db, "cupons"), {
-      empresaId: user.uid,
-      empresaNome: window.currentUserData?.empresaNome || 'Parceiro Local Pelotas',
+    const dadosCupom = {
       titulo: titulo,
       descricao: desc,
       endereco: endereco || 'Pelotas / RS',
       telefone: telefone || '',
       regras: regras || 'Sem restrições',
+      imagem: imagem || '',
       categoria: cat,
       descontoBadge: badge,
       valorEconomia: econ,
       codigo: codigo,
-      ativo: true,
-      criadoEm: new Date().toISOString()
-    });
+      ordem: ordem
+    };
 
-    mostrarAviso("Oferta Publicada! 🎉", "A sua promoção já está visível na vitrine de Pelotas.", "✅");
+    if (editId) {
+      await updateDoc(doc(db, "cupons", editId), dadosCupom);
+      mostrarAviso("Atualizado! 🚀", "Oferta modificada com sucesso.", "✅");
+    } else {
+      dadosCupom.empresaId = user.uid;
+      dadosCupom.empresaNome = window.currentUserData?.empresaNome || 'Parceiro Local Pelotas';
+      dadosCupom.ativo = true;
+      dadosCupom.cliquesCount = 0;
+      dadosCupom.criadoEm = new Date().toISOString();
+      await addDoc(collection(db, "cupons"), dadosCupom);
+      mostrarAviso("Publicado! 🎉", "Promoção ativa na vitrine.", "✅");
+    }
+
     fecharModal('modal-add-offer');
-    
-    document.getElementById('offer-title').value = '';
-    document.getElementById('offer-desc').value = '';
-    document.getElementById('offer-address').value = '';
-    document.getElementById('offer-phone').value = '';
-    document.getElementById('offer-rules').value = '';
-    document.getElementById('offer-badge').value = '';
-    document.getElementById('offer-econ').value = '';
-    document.getElementById('offer-code').value = '';
+    if (window.currentUserData?.funcao === "admin") carregarPainelAdmin();
   } catch (err) {
-    mostrarAviso("Erro ao Publicar", err.message, "❌");
+    mostrarAviso("Erro", err.message, "❌");
   }
+};
+
+window.adminAlternarVip = async function(userId, novoEstado) {
+  try {
+    const expiraEm = novoEstado ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null;
+    await updateDoc(doc(db, "usuarios", userId), { vip: novoEstado, vipExpiraEm: expiraEm });
+    mostrarAviso("Atualizado!", "Status VIP alterado.", "👑");
+    carregarPainelAdmin();
+  } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
 };
 
 window.validarCupomTextoLojista = function() {
   const codigoDigitado = document.getElementById('input-validar-codigo').value.trim();
-  if (!codigoDigitado) {
-    return mostrarAviso("Atenção", "Digite o código informado pelo cliente.", "⚠️");
-  }
-
+  if (!codigoDigitado) return mostrarAviso("Atenção", "Digite o código.", "⚠️");
   dispararConfetes();
-  mostrarAviso("✅ CUPOM VALIDADO!", `O código "${codigoDigitado.toUpperCase()}" foi conferido com sucesso!`, "🎉");
+  mostrarAviso("✅ CUPOM VALIDADO!", `O código "${codigoDigitado.toUpperCase()}" foi conferido!`, "🎉");
   document.getElementById('input-validar-codigo').value = '';
 };
 
@@ -349,9 +507,7 @@ window.toggleTheme = function() {
 };
 
 window.dispararConfetes = function() {
-  if (typeof confetti === 'function') {
-    confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
-  }
+  if (typeof confetti === 'function') confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
 };
 
 window.atualizarCarteiraUI = function() {
@@ -361,13 +517,8 @@ window.atualizarCarteiraUI = function() {
 
 window.toggleFavorite = function(id, btn) {
   const index = favoritos.indexOf(id);
-  if (index > -1) {
-    favoritos.splice(index, 1);
-    btn.innerText = '🤍';
-  } else {
-    favoritos.push(id);
-    btn.innerText = '❤️';
-  }
+  if (index > -1) { favoritos.splice(index, 1); btn.innerText = '🤍'; }
+  else { favoritos.push(id); btn.innerText = '❤️'; }
   localStorage.setItem('clube_favs', JSON.stringify(favoritos));
 };
 
@@ -375,9 +526,7 @@ window.atualizarFavoritosUI = function() {
   document.querySelectorAll('.company-card').forEach(card => {
     const id = card.dataset.id;
     const btn = card.querySelector('.favorite-btn');
-    if (btn && favoritos.includes(id)) {
-      btn.innerText = '❤️';
-    }
+    if (btn && favoritos.includes(id)) btn.innerText = '❤️';
   });
 };
 
@@ -394,44 +543,31 @@ window.mostrarAviso = function(titulo, mensagem, icone = "⚡") {
 
 window.fecharModal = function(modalId) {
   document.getElementById(modalId).classList.remove('active');
-  if (modalId === 'modal-pix') {
-    pararChecagemAutomatica();
-  }
+  if (modalId === 'modal-pix') pararChecagemAutomatica();
 };
 
 function iniciarChecagemAutomatica() {
   pararChecagemAutomatica();
-  intervalPixCheck = setInterval(() => {
-    checarPixSilencioso();
-  }, 5000);
+  intervalPixCheck = setInterval(() => { checarPixSilencioso(); }, 5000);
 }
 
 function pararChecagemAutomatica() {
-  if (intervalPixCheck) {
-    clearInterval(intervalPixCheck);
-    intervalPixCheck = null;
-  }
+  if (intervalPixCheck) { clearInterval(intervalPixCheck); intervalPixCheck = null; }
 }
 
 async function checarPixSilencioso() {
   const user = auth.currentUser;
   if (!user || !user.email) return;
-
   try {
     const response = await fetch(`https://webhook-clubprime.vercel.app/api/checar-pix?email=${encodeURIComponent(user.email)}&userId=${user.uid}`);
     const data = await response.json();
-
     if (data.success && data.vip) {
       pararChecagemAutomatica();
       fecharModal('modal-pix');
       dispararConfetes();
       mostrarAviso("VIP Ativado! 🎉", data.message, "👑");
-      
       window.isVipUser = true;
-      document.querySelectorAll('.status-badge').forEach(b => {
-        b.innerText = "ASSINANTE VIP";
-        b.className = "status-badge vip";
-      });
+      document.querySelectorAll('.status-badge').forEach(b => { b.innerText = "ASSINANTE VIP"; b.className = "status-badge vip"; });
       document.getElementById('banner-assinatura').style.display = 'none';
       document.getElementById('profile-vip-card').style.display = 'block';
     }
@@ -462,13 +598,9 @@ window.filterCat = function(cat, btn) {
   btn.classList.add('active');
   const cards = document.querySelectorAll('.company-card');
   cards.forEach(card => {
-    if (cat === 'all') {
-      card.style.display = 'block';
-    } else if (cat === 'favoritos') {
-      card.style.display = favoritos.includes(card.dataset.id) ? 'block' : 'none';
-    } else {
-      card.style.display = card.dataset.cat === cat ? 'block' : 'none';
-    }
+    if (cat === 'all') card.style.display = 'block';
+    else if (cat === 'favoritos') card.style.display = favoritos.includes(card.dataset.id) ? 'block' : 'none';
+    else card.style.display = card.dataset.cat === cat ? 'block' : 'none';
   });
 };
 
@@ -482,11 +614,7 @@ window.filterStores = function(term) {
 };
 
 window.fazerLoginGoogle = async function() {
-  try {
-    await signInWithPopup(auth, googleProvider);
-  } catch (err) {
-    mostrarAviso("Erro no Google", err.message, "❌");
-  }
+  try { await signInWithPopup(auth, googleProvider); } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
 };
 
 window.executarAuth = async function() {
@@ -498,111 +626,62 @@ window.executarAuth = async function() {
     const storeName = document.getElementById('reg-store-name').value;
     const storeCode = document.getElementById('reg-store-code').value;
 
-    if (!email || !pass || !nome) return mostrarAviso("Campos Incompletos", "Preencha todos os campos para se cadastrar.", "⚠️");
-
+    if (!email || !pass || !nome) return mostrarAviso("Atenção", "Preencha todos os campos.", "⚠️");
     let userRole = "cliente";
     if (isMerchant) {
-      if (storeCode !== CODIGO_SECRETO_LOJISTA) {
-        return mostrarAviso("Código Inválido", "O código de ativação de parceiro está incorreto.", "❌");
-      }
-      if (!storeName) {
-        return mostrarAviso("Nome da Empresa", "Informe o nome da sua empresa.", "⚠️");
-      }
+      if (storeCode !== CODIGO_SECRETO_LOJISTA) return mostrarAviso("Erro", "Código de parceiro incorreto.", "❌");
+      if (!storeName) return mostrarAviso("Atenção", "Informe o nome da empresa.", "⚠️");
       userRole = "lojista";
     }
 
     try {
       const res = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), pass);
       await setDoc(doc(db, "usuarios", res.user.uid), {
-        nome: nome,
-        email: email.trim().toLowerCase(),
-        funcao: userRole,
-        empresaNome: isMerchant ? storeName : null,
-        vip: false,
-        criadoEm: new Date().toISOString()
+        nome: nome, email: email.trim().toLowerCase(), funcao: userRole, empresaNome: isMerchant ? storeName : null, vip: false, criadoEm: new Date().toISOString()
       });
-
-      mostrarAviso("Sucesso! 🎉", isMerchant ? "Sua conta de Lojista foi criada!" : "Sua conta foi criada!", "🎉");
-    } catch (err) {
-      mostrarAviso("Erro no Cadastro", err.message, "❌");
-    }
+      mostrarAviso("Sucesso! 🎉", "Conta criada!", "🎉");
+    } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
   } else {
     const email = document.getElementById('reg-email').value;
     const pass = document.getElementById('reg-pass').value;
-
-    if (!email || !pass) return mostrarAviso("Atenção", "Preencha e-mail e senha para entrar!", "⚠️");
-
-    try {
-      await signInWithEmailAndPassword(auth, email, pass);
-    } catch (err) {
-      mostrarAviso("Erro ao Entrar", err.message, "❌");
-    }
+    if (!email || !pass) return mostrarAviso("Atenção", "Preencha e-mail e senha.", "⚠️");
+    try { await signInWithEmailAndPassword(auth, email, pass); } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
   }
 };
 
 window.recuperarSenha = async function() {
   const email = document.getElementById('reg-email').value;
-  if (!email || !email.includes('@')) {
-    return mostrarAviso("E-mail Necessário", "Digite seu e-mail para enviarmos o link.", "✉️");
-  }
-
+  if (!email || !email.includes('@')) return mostrarAviso("Atenção", "Digite seu e-mail.", "✉️");
   try {
     await sendPasswordResetEmail(auth, email.trim().toLowerCase());
-    mostrarAviso("E-mail Enviado!", "Verifique a caixa de entrada.", "📧");
-  } catch (err) {
-    mostrarAviso("Erro", err.message, "❌");
-  }
+    mostrarAviso("Enviado!", "Verifique seu e-mail.", "📧");
+  } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
 };
 
 window.deslogar = async function() {
   pararChecagemAutomatica();
-  if (auth.currentUser) {
-    await signOut(auth);
-  }
+  if (auth.currentUser) await signOut(auth);
 };
 
 window.gerarPixMercadoPago = async function() {
   const user = auth.currentUser;
   const emailPix = user ? user.email : "teste@clubprime.com";
-
   const btn = document.getElementById('btn-gerar-pix');
-  if (btn) {
-    btn.innerHTML = `<span class="spinner"></span> Gerando Pix...`;
-    btn.style.opacity = "0.7";
-    btn.style.pointerEvents = "none";
-  }
-
+  if (btn) { btn.innerHTML = `<span class="spinner"></span> Gerando Pix...`; btn.style.opacity = "0.7"; btn.style.pointerEvents = "none"; }
   try {
     const response = await fetch('https://webhook-clubprime.vercel.app/api/criar-pix', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: emailPix.toLowerCase(),
-        nome: window.currentUserData?.nome || 'Membro PRIME'
-      })
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: emailPix.toLowerCase(), nome: window.currentUserData?.nome || 'Membro' })
     });
-
     const data = await response.json();
-
     if (data.success && data.qrCodeBase64) {
       document.getElementById('pix-qr-img').src = data.qrCodeBase64;
       pixCopiaColaAtual = data.qrCodeCopiaCola;
       fecharModal('modal-coupon');
       document.getElementById('modal-pix').classList.add('active');
-
       iniciarChecagemAutomatica();
-    } else {
-      mostrarAviso("Erro", data.error || "Não foi possível gerar o Pix.", "❌");
-    }
-  } catch (err) {
-    mostrarAviso("Erro de Conexão", err.message, "❌");
-  } finally {
-    if (btn) {
-      btn.innerHTML = `⚡ Ativar VIP por R$ 19,90 via PIX`;
-      btn.style.opacity = "1";
-      btn.style.pointerEvents = "auto";
-    }
-  }
+    } else { mostrarAviso("Erro", data.error || "Não foi possível gerar o Pix.", "❌"); }
+  } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
+  finally { if (btn) { btn.innerHTML = `⚡ Ativar VIP por R$ 19,90 via PIX`; btn.style.opacity = "1"; btn.style.pointerEvents = "auto"; } }
 };
 
 window.copiarPixCode = function() {
@@ -613,28 +692,20 @@ window.copiarPixCode = function() {
 
 window.verificarStatusVipManual = async function() {
   const user = auth.currentUser;
-  if (!user || !user.email) return mostrarAviso("Atenção", "Faça login para verificar.", "⚠️");
-
+  if (!user || !user.email) return mostrarAviso("Atenção", "Faça login.", "⚠️");
   const btn = document.getElementById('btn-checar-vip');
   btn.innerHTML = `<span class="spinner"></span> Verificando...`;
-
   try {
     const response = await fetch(`https://webhook-clubprime.vercel.app/api/checar-pix?email=${encodeURIComponent(user.email)}&userId=${user.uid}`);
     const data = await response.json();
-
     if (data.success && data.vip) {
       pararChecagemAutomatica();
       fecharModal('modal-pix');
       dispararConfetes();
       mostrarAviso("VIP Ativado! 🎉", data.message, "👑");
-    } else {
-      mostrarAviso("Aguardando Pagamento ⏳", data.message || "Pagamento ainda não compensado.", "ℹ️");
-    }
-  } catch (err) {
-    mostrarAviso("Erro de Conexão", err.message, "❌");
-  } finally {
-    btn.innerHTML = `🔄 Já Paguei / Checar Agora`;
-  }
+    } else { mostrarAviso("Aguardando ⏳", data.message || "Pagamento não compensado.", "ℹ️"); }
+  } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
+  finally { btn.innerHTML = `🔄 Já Paguei / Checar Agora`; }
 };
 
 window.resgatarCupomReal = function(titulo, desconto, codigo, valorEconomia = 10.00, endereco = '', telefone = '', regras = '') {
@@ -642,7 +713,7 @@ window.resgatarCupomReal = function(titulo, desconto, codigo, valorEconomia = 10
   document.getElementById('modal-disc').innerText = desconto;
   document.getElementById('modal-address').innerText = endereco || 'Pelotas / RS';
   document.getElementById('modal-phone').innerText = telefone || 'Não informado';
-  document.getElementById('modal-rules').innerText = regras || 'Sem restrições adicionais';
+  document.getElementById('modal-rules').innerText = regras || 'Sem restrições';
   codigoCupomAtual = codigo;
 
   if (window.isVipUser) {
@@ -653,6 +724,16 @@ window.resgatarCupomReal = function(titulo, desconto, codigo, valorEconomia = 10
     economiaTotal += valorEconomia;
     localStorage.setItem('clube_econ', economiaTotal.toFixed(2));
     atualizarCarteiraUI();
+
+    try {
+      addDoc(collection(db, "logs_resgates"), {
+        usuarioEmail: auth.currentUser?.email || 'desconhecido',
+        usuarioNome: window.currentUserData?.nome || 'Membro',
+        cupomTitulo: titulo,
+        empresaNome: desconto,
+        dataHora: new Date().toISOString()
+      });
+    } catch(e) {}
   } else {
     document.getElementById('box-blocked').style.display = 'block';
     document.getElementById('box-unlocked').style.display = 'none';
@@ -664,9 +745,5 @@ window.resgatarCupomReal = function(titulo, desconto, codigo, valorEconomia = 10
 window.copiarCodigoCupom = function() {
   if (!codigoCupomAtual) return;
   navigator.clipboard.writeText(codigoCupomAtual);
-  mostrarAviso("Copiado!", "Código promocional copiado!", "📋");
-};
-
-window.abrirModalCriarOferta = function() {
-  document.getElementById('modal-add-offer').classList.add('active');
+  mostrarAviso("Copiado!", "Código copiado!", "📋");
 };
