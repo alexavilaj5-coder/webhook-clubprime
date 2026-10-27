@@ -1,10 +1,13 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>CLUBE PRIME - Pelotas / RS</title>
   
+  <!-- Biblioteca de Confetes para Celebração VIP -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap');
 
@@ -29,12 +32,31 @@
       --shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.05);
     }
 
+    [data-theme="dark"] {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-border: #334155;
+      --primary: #3b82f6;
+      --primary-glow: rgba(59, 130, 246, 0.25);
+      --primary-hover: #2563eb;
+      --accent: #fb923c;
+      --accent-light: rgba(251, 146, 60, 0.12);
+      --accent-border: #ea580c44;
+      --secondary: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --muted-light: #64748b;
+      --danger: #f87171;
+      --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
       -webkit-tap-highlight-color: transparent;
+      transition: background-color 0.3s, color 0.3s, border-color 0.3s;
     }
 
     body {
@@ -44,6 +66,10 @@
       justify-content: center;
       min-height: 100vh;
       overflow-x: hidden;
+    }
+
+    [data-theme="dark"] body {
+      background-color: #020617;
     }
 
     .app-shell {
@@ -63,7 +89,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 16px 20px;
-      background: rgba(255, 255, 255, 0.9);
+      background: var(--bg);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--card-border);
       position: sticky;
@@ -81,6 +107,26 @@
       color: var(--primary);
     }
 
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .theme-toggle-btn {
+      background: var(--secondary);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
     .location-badge {
       display: flex;
       align-items: center;
@@ -88,10 +134,10 @@
       font-size: 0.76rem;
       font-weight: 700;
       color: var(--primary);
-      background: #eff6ff;
+      background: var(--secondary);
       padding: 6px 14px;
       border-radius: 30px;
-      border: 1px solid #bfdbfe;
+      border: 1px solid var(--card-border);
     }
 
     .status-badge {
@@ -107,7 +153,7 @@
     .status-badge.vip {
       background: var(--accent-light);
       color: var(--accent);
-      border: 1px solid #fed7aa;
+      border: 1px solid var(--accent-border);
     }
 
     .status-badge.free {
@@ -116,7 +162,6 @@
       border: 1px solid var(--card-border);
     }
 
-    /* Oculta todas as telas por padrão e só mostra a que tiver a classe active */
     .screen {
       display: none;
       padding: 20px;
@@ -201,7 +246,7 @@
     }
 
     .auth-tab.active {
-      background: #ffffff;
+      background: var(--bg);
       color: var(--primary);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
@@ -229,7 +274,7 @@
 
     .form-control:focus {
       border-color: var(--primary);
-      background: #ffffff;
+      background: var(--bg);
       box-shadow: 0 0 0 3px var(--primary-glow);
     }
 
@@ -270,6 +315,7 @@
       padding: 20px;
       margin-bottom: 18px;
       box-shadow: var(--shadow-soft);
+      position: relative;
     }
 
     .company-header {
@@ -290,6 +336,22 @@
       border-radius: 14px;
       font-weight: 900;
       font-size: 0.88rem;
+    }
+
+    .favorite-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: var(--secondary);
+      border: 1px solid var(--card-border);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.9rem;
     }
 
     .btn {
@@ -316,7 +378,7 @@
     }
 
     .btn-google {
-      background: #ffffff;
+      background: var(--card);
       color: var(--text);
       border: 1px solid var(--card-border);
       font-weight: 700;
@@ -326,13 +388,6 @@
       background: transparent;
       border: 1px solid var(--card-border);
       color: var(--text);
-    }
-
-    .btn-small-test {
-      padding: 8px 12px;
-      font-size: 0.72rem;
-      border-radius: 10px;
-      font-weight: 700;
     }
 
     .profile-avatar-container {
@@ -375,7 +430,7 @@
       bottom: 0;
       width: 100%;
       max-width: 480px;
-      background: rgba(255, 255, 255, 0.95);
+      background: var(--bg);
       backdrop-filter: blur(20px);
       border-top: 1px solid var(--card-border);
       display: flex;
@@ -407,7 +462,7 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.4);
+      background: rgba(15, 23, 42, 0.6);
       backdrop-filter: blur(8px);
       z-index: 1000;
       justify-content: center;
@@ -424,14 +479,14 @@
     }
 
     .modal-content {
-      background: #ffffff;
+      background: var(--bg);
       border: 1px solid var(--card-border);
       border-radius: 24px;
       padding: 24px;
       width: 100%;
       max-width: 380px;
       text-align: center;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
     }
 
     .qr-box {
@@ -493,39 +548,10 @@
 
     let unsubscribeUser = null;
 
-    window.entrarComoVipTeste = async function() {
-      const user = auth.currentUser;
-      const dataExpiracao = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      
-      if (user) {
-        const userDocRef = doc(db, "usuarios", user.uid);
-        await updateDoc(userDocRef, { vip: true, vipExpiraEm: dataExpiracao });
-        alert("Modo VIP ativado e salvo no seu perfil com sucesso!");
-      } else {
-        localStorage.setItem("clube_prime_demo_vip", "true");
-        localStorage.setItem("clube_prime_demo_exp", dataExpiracao);
-        window.location.reload();
-      }
-    };
-
-    window.entrarComoGratuitoTeste = async function() {
-      const user = auth.currentUser;
-      if (user) {
-        const userDocRef = doc(db, "usuarios", user.uid);
-        await updateDoc(userDocRef, { vip: false, vipExpiraEm: null });
-        alert("Alterado para Plano Gratuito.");
-      } else {
-        localStorage.removeItem("clube_prime_demo_vip");
-        localStorage.removeItem("clube_prime_demo_exp");
-        window.location.reload();
-      }
-    };
-
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userDocRef = doc(db, "usuarios", user.uid);
         
-        // ⚡ CHECAGEM AUTOMÁTICA AO ABRIR O APLICATIVO
         try {
           const resCheck = await fetch(`https://webhook-clubprime.vercel.app/api/checar-pix?email=${encodeURIComponent(user.email)}&userId=${user.uid}`);
           const dataCheck = await resCheck.json();
@@ -564,10 +590,11 @@
           document.getElementById('profile-email').innerText = data.email || user.email;
           
           const avatarImg = document.getElementById('profile-avatar');
-          if (user.photoURL || data.fotoUrl) {
-            avatarImg.src = user.photoURL || data.fotoUrl;
+          const fotoFinal = user.photoURL || data.fotoUrl;
+          if (fotoFinal) {
+            avatarImg.src = fotoFinal;
           } else {
-            avatarImg.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(data.nome || 'User') + "&background=2563eb&color=fff";
+            avatarImg.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(data.nome || user.displayName || 'User') + "&background=2563eb&color=fff";
           }
 
           const dataCriado = data.criadoEm ? new Date(data.criadoEm).toLocaleDateString('pt-BR') : 'Hoje';
@@ -604,23 +631,6 @@
       } else {
         if (unsubscribeUser) unsubscribeUser();
 
-        const demoVip = localStorage.getItem("clube_prime_demo_vip");
-        if (demoVip === "true") {
-          window.isVipUser = true;
-          document.querySelectorAll('.status-badge').forEach(b => {
-            b.innerText = "ASSINANTE VIP (DEMO)";
-            b.className = "status-badge vip";
-          });
-          document.getElementById('screen-auth').classList.remove('active');
-          document.getElementById('screen-home').classList.add('active');
-          document.querySelector('.bottom-nav').style.display = 'flex';
-          document.getElementById('user-name-display').innerText = "Alex (Demo VIP)";
-          document.getElementById('profile-name').innerText = "Alex (Demo VIP)";
-          document.getElementById('profile-email').innerText = "demo@clubeprime.rs";
-          document.getElementById('profile-avatar').src = "https://ui-avatars.com/api/?name=Alex+Demo&background=2563eb&color=fff";
-          return;
-        }
-
         window.isVipUser = false;
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('screen-auth').classList.add('active');
@@ -637,7 +647,10 @@
       <div class="brand-title">
         <span>⚡ CLUBE PRIME</span>
       </div>
-      <div class="location-badge">📍 Pelotas, RS</div>
+      <div class="header-actions">
+        <button class="theme-toggle-btn" onclick="toggleTheme()" title="Alternar Modo Escuro">🌙</button>
+        <div class="location-badge">📍 Pelotas, RS</div>
+      </div>
     </div>
 
     <!-- TELA LOGIN/CADASTRO -->
@@ -689,18 +702,9 @@
         Entrar com o Google
       </button>
 
-      <div style="border-top:1px dashed var(--card-border); padding-top:16px; text-align:center;">
-        <p style="font-size:0.7rem; color:var(--muted); font-weight:800; margin-bottom:10px;">TESTAR MODO DEMO:</p>
-        
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-cyan btn-small-test" style="flex:1;" onclick="entrarComoVipTeste()">👑 Testar VIP</button>
-          <button class="btn btn-outline btn-small-test" style="flex:1;" onclick="entrarComoGratuitoTeste()">👀 Testar Grátis</button>
-        </div>
-
-        <div class="dev-credits">
-          🛠️ Devs: <strong>Alex Ávila</strong> & <strong>Tiago Nunes</strong><br>
-          📌 <em>Versão Pro v1.0.6</em>
-        </div>
+      <div class="dev-credits">
+        🛠️ Devs: <strong>Alex Ávila</strong> & <strong>Tiago Nunes</strong><br>
+        📌 <em>Versão Pro v1.0.7</em>
       </div>
     </div>
 
@@ -747,14 +751,15 @@
 
       <div class="categories-bar">
         <div class="category-pill active" onclick="filterCat('all', this)">Todos Os Cupons</div>
+        <div class="category-pill" onclick="filterCat('favoritos', this)">❤️ Favoritos</div>
         <div class="category-pill" onclick="filterCat('gastronomia', this)">🍔 Gastronomia & Delivery</div>
         <div class="category-pill" onclick="filterCat('compras', this)">🛍️ Lojas & Compras</div>
         <div class="category-pill" onclick="filterCat('automotivo', this)">🔧 Automotivo</div>
-        <div class="category-pill" onclick="filterCat('beleza', this)">💇 Saúde & Beleza</div>
       </div>
 
       <div id="stores-list">
-        <div class="company-card" data-cat="gastronomia" data-name="ifood delivery alimentacao cupom pelotas">
+        <div class="company-card" data-cat="gastronomia" data-name="ifood delivery alimentacao cupom pelotas" data-id="ifood1">
+          <div class="favorite-btn" onclick="toggleFavorite('ifood1', this)">🤍</div>
           <div class="company-header">
             <div>
               <div class="company-title">iFood Delivery</div>
@@ -766,12 +771,13 @@
             <div class="discount-badge">R$ 15 OFF</div>
           </div>
           <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Cupom de R$ 15 em pedidos elegíveis de delivery em Pelotas.</p>
-          <button class="btn btn-cyan" onclick="resgatarCupomReal('iFood Delivery', 'R$ 15 OFF no Pedido', 'NOVOS15')">
+          <button class="btn btn-cyan" onclick="resgatarCupomReal('iFood Delivery', 'R$ 15 OFF no Pedido', 'NOVOS15', 15.00)">
             🎟️ Resgatar Cupom
           </button>
         </div>
 
-        <div class="company-card" data-cat="compras" data-name="shopee compras frete gratis cupom entrega pelotas">
+        <div class="company-card" data-cat="compras" data-name="shopee compras frete gratis cupom entrega pelotas" data-id="shopee1">
+          <div class="favorite-btn" onclick="toggleFavorite('shopee1', this)">🤍</div>
           <div class="company-header">
             <div>
               <div class="company-title">Shopee Brasil</div>
@@ -783,7 +789,7 @@
             <div class="discount-badge">FRETE GRÁTIS</div>
           </div>
           <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Cupom oficial de Frete Grátis + R$ 10 OFF em compras pelo app.</p>
-          <button class="btn btn-cyan" onclick="resgatarCupomReal('Shopee Brasil', 'Frete Grátis + R$ 10 OFF', 'SHOPEE10OFF')">
+          <button class="btn btn-cyan" onclick="resgatarCupomReal('Shopee Brasil', 'Frete Grátis + R$ 10 OFF', 'SHOPEE10OFF', 10.00)">
             🎟️ Resgatar Cupom
           </button>
         </div>
@@ -807,12 +813,12 @@
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px;">
         <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; text-align:center;">
-          <span style="font-size:0.72rem; color:var(--muted); font-weight:700;">ECONOMIA TOTAL</span>
-          <div style="font-size:1.4rem; font-weight:900; color:var(--primary); margin-top:4px;">R$ 114,50</div>
+          <span style="font-size:0.72rem; color:var(--muted); font-weight:700;">ECONOMIA REAL</span>
+          <div id="wallet-economy" style="font-size:1.4rem; font-weight:900; color:var(--primary); margin-top:4px;">R$ 0,00</div>
         </div>
         <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; text-align:center;">
           <span style="font-size:0.72rem; color:var(--muted); font-weight:700;">CUSTO DO APP</span>
-          <div style="font-size:1.4rem; font-weight:900; color:var(--accent); margin-top:4px;">R$ 1,20</div>
+          <div style="font-size:1.4rem; font-weight:900; color:var(--accent); margin-top:4px;">R$ 19,90</div>
         </div>
       </div>
     </div>
@@ -856,7 +862,7 @@
 
       <div class="dev-credits">
         🛠️ Desenvolvido por: <strong>Alex Ávila</strong> & <strong>Tiago Nunes</strong><br>
-        📌 <em>Versão Pro v1.0.6</em>
+        📌 <em>Versão Pro v1.0.7</em>
       </div>
     </div>
 
@@ -923,8 +929,8 @@
       <div id="box-blocked" style="display:none; margin-top:16px; background:var(--accent-light); border:1px solid var(--accent-border); padding:16px; border-radius:18px;">
         <span style="font-size:2rem;">🔒</span>
         <h4 style="font-size:0.92rem; font-weight:800; color:var(--accent); margin-top:4px;">Código VIP Bloqueado!</h4>
-        <p style="font-size:0.78rem; color:var(--muted); margin-top:4px; line-height:1.3;">Seja membro VIP por apenas R$ 1,20 para desbloquear este e todos os cupons de Pelotas.</p>
-        <button class="btn btn-cyan" style="margin-top:12px;" onclick="gerarPixMercadoPago()">⚡ Desbloquear Cupons (R$ 1,20)</button>
+        <p style="font-size:0.78rem; color:var(--muted); margin-top:4px; line-height:1.3;">Seja membro VIP por apenas R$ 19,90 para desbloquear este e todos os cupons de Pelotas.</p>
+        <button class="btn btn-cyan" style="margin-top:12px;" onclick="gerarPixMercadoPago()">⚡ Desbloquear Cupons (R$ 19,90)</button>
       </div>
 
       <div id="box-unlocked" style="display:none; margin-top:16px;">
@@ -942,6 +948,60 @@
     let codigoCupomAtual = "";
     let currentAuthTab = "login";
     let intervalPixCheck = null;
+    let favoritos = JSON.parse(localStorage.getItem('clube_favs') || '[]');
+    let economiaTotal = parseFloat(localStorage.getItem('clube_econ') || '0.00');
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('clube_theme') || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      document.querySelector('.theme-toggle-btn').innerText = savedTheme === 'dark' ? '☀️' : '🌙';
+      atualizarCarteiraUI();
+      atualizarFavoritosUI();
+    });
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('clube_theme', next);
+      document.querySelector('.theme-toggle-btn').innerText = next === 'dark' ? '☀️' : '🌙';
+    }
+
+    function dispararConfetes() {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
+      }
+    }
+
+    function atualizarCarteiraUI() {
+      document.getElementById('wallet-economy').innerText = `R$ ${economiaTotal.toFixed(2).replace('.', ',')}`;
+    }
+
+    function toggleFavorite(id, btn) {
+      const index = favoritos.indexOf(id);
+      if (index > -1) {
+        favoritos.splice(index, 1);
+        btn.innerText = '🤍';
+      } else {
+        favoritos.push(id);
+        btn.innerText = '❤️';
+      }
+      localStorage.setItem('clube_favs', JSON.stringify(favoritos));
+    }
+
+    function atualizarFavoritosUI() {
+      document.querySelectorAll('.company-card').forEach(card => {
+        const id = card.dataset.id;
+        const btn = card.querySelector('.favorite-btn');
+        if (favoritos.includes(id)) {
+          btn.innerText = '❤️';
+        }
+      });
+    }
 
     function mostrarAviso(titulo, mensagem, icone = "⚡") {
       document.getElementById('alert-icon').innerText = icone;
@@ -982,6 +1042,7 @@
         if (data.success && data.vip) {
           pararChecagemAutomatica();
           fecharModal('modal-pix');
+          dispararConfetes();
           mostrarAviso("VIP Ativado! 🎉", data.message, "👑");
           
           window.isVipUser = true;
@@ -1020,7 +1081,13 @@
       btn.classList.add('active');
       const cards = document.querySelectorAll('.company-card');
       cards.forEach(card => {
-        card.style.display = (cat === 'all' || card.dataset.cat === cat) ? 'block' : 'none';
+        if (cat === 'all') {
+          card.style.display = 'block';
+        } else if (cat === 'favoritos') {
+          card.style.display = favoritos.includes(card.dataset.id) ? 'block' : 'none';
+        } else {
+          card.style.display = card.dataset.cat === cat ? 'block' : 'none';
+        }
       });
     }
 
@@ -1097,9 +1164,6 @@
       pararChecagemAutomatica();
       if (window.firebaseAuth.currentUser) {
         await window.dbMethods.signOut(window.firebaseAuth);
-      } else {
-        localStorage.clear();
-        location.reload();
       }
     }
 
@@ -1169,6 +1233,7 @@
         if (data.success && data.vip) {
           pararChecagemAutomatica();
           fecharModal('modal-pix');
+          dispararConfetes();
           mostrarAviso("VIP Ativado! 🎉", data.message, "👑");
           
           window.isVipUser = true;
@@ -1188,7 +1253,7 @@
       }
     }
 
-    function resgatarCupomReal(titulo, desconto, codigo) {
+    function resgatarCupomReal(titulo, desconto, codigo, valorEconomia = 10.00) {
       document.getElementById('modal-title').innerText = titulo;
       document.getElementById('modal-disc').innerText = desconto;
       codigoCupomAtual = codigo;
@@ -1197,6 +1262,11 @@
         document.getElementById('box-blocked').style.display = 'none';
         document.getElementById('box-unlocked').style.display = 'block';
         document.getElementById('modal-code').innerText = codigo;
+
+        // Soma na economia real do utilizador
+        economiaTotal += valorEconomia;
+        localStorage.setItem('clube_econ', economiaTotal.toFixed(2));
+        atualizarCarteiraUI();
       } else {
         document.getElementById('box-blocked').style.display = 'block';
         document.getElementById('box-unlocked').style.display = 'none';
