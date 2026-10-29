@@ -1,3 +1,10 @@
+import { somCliqueLeve, somSucesso, somAtivacaoVip, vibrar } from './sounds.js';
+
+somSucesso();
+vibrar('sucesso');
+somAtivacaoVip();
+vibrar('vip');
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -19,12 +26,17 @@ const googleProvider = new GoogleAuthProvider();
 window.firebaseAuth = auth;
 window.firebaseDb = db;
 
-const CODIGO_SECRETO_LOJISTA = "PRIME.PARCEIRO20";
+const CODIGOS_SECRETOS_LOJISTA = [
+  "PRIME.PARCEIRO20",
+  "PARCEIRO.PELOTAS",
+  "CLUBE.LOJA2026",
+  "PRIME.VIP2026"
+];
+
 let pixCopiaColaAtual = "";
 let codigoCupomAtual = "";
 let currentAuthTab = "login";
 let intervalPixCheck = null;
-let economiaTotal = parseFloat(localStorage.getItem('clube_econ') || '0.00');
 
 let unsubscribeUser = null;
 let unsubscribeCupons = null;
@@ -35,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.documentElement.setAttribute('data-theme', savedTheme);
   const themeBtn = document.querySelector('.theme-toggle-btn');
   if (themeBtn) themeBtn.innerText = savedTheme === 'dark' ? '☀️' : '🌙';
-  atualizarCarteiraUI();
   escutarBannerGlobal();
   escutarBannerLojista();
 });
@@ -87,6 +98,7 @@ onAuthStateChanged(auth, async (user) => {
 
         carregarEstatisticasLojista(user.uid);
         carregarCuponsDoLojista(user.uid);
+        carregarLogsDoLojista(user.uid);
         return;
       }
 
@@ -116,6 +128,8 @@ onAuthStateChanged(auth, async (user) => {
 
       const dataCriado = data.criadoEm ? new Date(data.criadoEm).toLocaleDateString('pt-BR') : 'Hoje';
       document.getElementById('profile-joined-date').innerText = dataCriado;
+
+      calcularEconomiaUsuario(user.uid);
 
       if (data.vip) {
         window.isVipUser = true;
@@ -158,6 +172,36 @@ onAuthStateChanged(auth, async (user) => {
     document.querySelector('.bottom-nav').style.display = 'none';
   }
 });
+
+async function calcularEconomiaUsuario(uid) {
+  try {
+    const qLogs = query(collection(db, "logs_resgates"), where("usuarioUid", "==", uid));
+    const snapLogs = await getDocs(qLogs);
+    let totalEcon = 0;
+    
+    for (let logDoc of snapLogs.docs) {
+      const dataLog = logDoc.data();
+      if (dataLog.cupomId && dataLog.cupomId !== 'manual') {
+        const cupomRef = doc(db, "cupons", dataLog.cupomId);
+        const cupomSnap = await getDoc(cupomRef);
+        if (cupomSnap.exists()) {
+          totalEcon += (cupomSnap.data().valorEconomia || 10.00);
+        } else {
+          totalEcon += 10.00;
+        }
+      } else {
+        totalEcon += 10.00;
+      }
+    }
+    const elEcon = document.getElementById('user-economy-display');
+    if (elEcon) {
+      elEcon.innerText = `R$ ${totalEcon.toFixed(2).replace('.', ',')}`;
+    }
+  } catch (e) {
+    const elEcon = document.getElementById('user-economy-display');
+    if (elEcon) elEcon.innerText = "R$ 0,00";
+  }
+}
 
 function escutarBannerGlobal() {
   const bannerRef = doc(db, "configuracoes", "banner_global");
@@ -231,6 +275,11 @@ function carregarCuponsVitrine() {
     });
 
     cuponsArray.sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+
+    const countOffersEl = document.getElementById('active-offers-count');
+    if (countOffersEl) {
+      countOffersEl.innerText = `${cuponsArray.length}+`;
+    }
 
     let html = '';
     cuponsArray.forEach((cupom) => {
@@ -363,7 +412,32 @@ function carregarCuponsDoLojista(empresaUid) {
   });
 }
 
-// ABAS DO PAINEL ADMIN
+function carregarLogsDoLojista(empresaUid) {
+  const q = query(collection(db, "logs_resgates"), where("empresaId", "==", empresaUid));
+  onSnapshot(q, (snapshot) => {
+    const container = document.getElementById('merchant-logs-list');
+    if (!container) return;
+
+    if (snapshot.empty) {
+      container.innerHTML = `<p style="font-size:0.8rem; color:var(--muted); text-align:center; padding:10px;">Sem resgates registrados.</p>`;
+      return;
+    }
+
+    let logsHtml = '';
+    snapshot.forEach(logSnap => {
+      const l = logSnap.data();
+      const statusColor = l.status === "usado" ? "#10b981" : "#f59e0b";
+      logsHtml += `
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:10px 12px; border-radius:10px; margin-bottom:6px; font-size:0.75rem;">
+          <div><strong>${l.usuarioNome || 'Cliente'}</strong> [${l.codigoGerado}] - <span style="color:${statusColor}; font-weight:800;">${(l.status || 'gerado').toUpperCase()}</span></div>
+          <div style="color:var(--muted); font-size:0.68rem; margin-top:2px;">${l.cupomTitulo} • ${new Date(l.dataHora).toLocaleString('pt-BR')}</div>
+        </div>
+      `;
+    });
+    container.innerHTML = logsHtml;
+  });
+}
+
 window.switchAdminTab = function(tabName) {
   document.getElementById('adm-tab-cupons').classList.toggle('active', tabName === 'cupons');
   document.getElementById('adm-tab-clientes').classList.toggle('active', tabName === 'clientes');
@@ -374,6 +448,9 @@ window.switchAdminTab = function(tabName) {
   document.getElementById('adm-section-empresas').style.display = tabName === 'empresas' ? 'block' : 'none';
 };
 
+let cacheLogsAdmin = [];
+let cacheEmpresasAdmin = [];
+
 async function carregarPainelAdmin() {
   try {
     const snapUsers = await getDocs(collection(db, "usuarios"));
@@ -382,13 +459,17 @@ async function carregarPainelAdmin() {
     let totalMerchants = 0;
     let listUsersHtml = '';
     let listMerchantsHtml = '';
+    cacheEmpresasAdmin = [];
 
     snapUsers.forEach(docSnap => {
       totalUsers++;
       const u = docSnap.data();
       const uid = docSnap.id;
       if (u.vip) totalVips++;
-      if (u.funcao === "lojista") totalMerchants++;
+      if (u.funcao === "lojista") {
+        totalMerchants++;
+        cacheEmpresasAdmin.push({ id: uid, nome: u.empresaNome || 'Empresa' });
+      }
 
       const badgeVipTxt = u.vip ? "👑 VIP" : "👤 Free";
       const btnVipActionText = u.vip ? "Remover VIP" : "Tornar VIP";
@@ -415,6 +496,7 @@ async function carregarPainelAdmin() {
       `;
 
       if (u.funcao === "lojista") {
+        const empresaCadastradaEm = u.criadoEm ? new Date(u.criadoEm).toLocaleDateString('pt-BR') : 'Não registrada';
         listMerchantsHtml += `
           <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:12px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -423,11 +505,14 @@ async function carregarPainelAdmin() {
             </div>
             <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">👤 <strong>Responsável:</strong> ${u.nome || '-'}</p>
             <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📍 <strong>Endereço:</strong> ${u.empresaEndereco || 'Pelotas / RS'}</p>
-            <p style="font-size:0.78rem; color:var(--muted);">📞 <strong>Contato:</strong> ${u.empresaTelefone || 'Não informado'}</p>
+            <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📞 <strong>Contato:</strong> ${u.empresaTelefone || 'Não informado'}</p>
+            <p style="font-size:0.78rem; color:var(--muted);">📅 <strong>Cadastrado em:</strong> <span style="color:var(--primary); font-weight:700;">${empresaCadastradaEm}</span></p>
           </div>
         `;
       }
     });
+
+    atualizarSelectFiltroEmpresas();
 
     const snapCuponsAll = await getDocs(collection(db, "cupons"));
     let allCuponsHtml = '';
@@ -457,31 +542,105 @@ async function carregarPainelAdmin() {
     });
 
     const snapLogs = await getDocs(collection(db, "logs_resgates"));
-    let logsHtml = '';
+    cacheLogsAdmin = [];
     snapLogs.forEach(logSnap => {
-      const l = logSnap.data();
-      const statusColor = l.status === "usado" ? "#10b981" : "#f59e0b";
-      logsHtml += `
-        <div style="background:var(--card); border:1px solid var(--card-border); padding:10px 12px; border-radius:10px; margin-bottom:6px; font-size:0.75rem;">
-          <div><strong>${l.usuarioNome || 'Cliente'}</strong> [${l.codigoGerado}] - <span style="color:${statusColor}; font-weight:800;">${(l.status || 'gerado').toUpperCase()}</span></div>
-          <div style="color:var(--muted); font-size:0.68rem; margin-top:2px;">${l.cupomTitulo} em <em>${l.empresaNome}</em> • ${new Date(l.dataHora).toLocaleString('pt-BR')}</div>
-        </div>
-      `;
+      cacheLogsAdmin.push({ id: logSnap.id, ...logSnap.data() });
     });
+
+    renderizarLogsAdminFiltrados();
 
     document.getElementById('admin-count-users').innerText = totalUsers;
     document.getElementById('admin-count-vips').innerText = totalVips;
     document.getElementById('admin-count-merchants').innerText = totalMerchants;
     document.getElementById('admin-count-offers').innerText = totalCuponsAtivos;
 
-    document.getElementById('admin-all-coupons-list').innerHTML = allCuponsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum cupom registado.</p>';
+    document.getElementById('admin-all-coupons-list').innerHTML = allCuponsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum cupom registrado.</p>';
     document.getElementById('admin-users-list').innerHTML = listUsersHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum utilizador encontrado.</p>';
     document.getElementById('admin-merchants-list').innerHTML = listMerchantsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhuma empresa parceira registrada.</p>';
-    document.getElementById('admin-logs-list').innerHTML = logsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Ainda não há resgates registados.</p>';
   } catch (err) {
     console.error("Erro admin:", err);
   }
 }
+
+function atualizarSelectFiltroEmpresas() {
+  const selectEl = document.getElementById('admin-filter-empresa');
+  if (!selectEl) return;
+  let html = `<option value="all">Todas as Empresas</option>`;
+  cacheEmpresasAdmin.forEach(emp => {
+    html += `<option value="${emp.id}">${emp.nome}</option>`;
+  });
+  selectEl.innerHTML = html;
+}
+
+window.filtrarLogsAdminPorEmpresa = function() {
+  renderizarLogsAdminFiltrados();
+};
+
+function renderizarLogsAdminFiltrados() {
+  const selectEl = document.getElementById('admin-filter-empresa');
+  const empresaIdFiltro = selectEl ? selectEl.value : 'all';
+  const container = document.getElementById('admin-logs-list');
+  if (!container) return;
+
+  let logsFiltrados = cacheLogsAdmin;
+  if (empresaIdFiltro !== 'all') {
+    logsFiltrados = cacheLogsAdmin.filter(l => l.empresaId === empresaIdFiltro);
+  }
+
+  if (logsFiltrados.length === 0) {
+    container.innerHTML = `<p style="font-size:0.8rem; color:var(--muted); text-align:center; padding:10px;">Ainda não há resgates registrados para esta empresa.</p>`;
+    return;
+  }
+
+  let logsGrouped = {};
+  logsFiltrados.forEach(l => {
+    const empNome = l.empresaNome || "Empresa Não Informada";
+    if (!logsGrouped[empNome]) {
+      logsGrouped[empNome] = { empresaId: l.empresaId, logs: [] };
+    }
+    logsGrouped[empNome].logs.push(l);
+  });
+
+  let logsHtml = '';
+  for (const [empresa, dataObj] of Object.entries(logsGrouped)) {
+    logsHtml += `
+      <div style="margin-bottom:12px; background:var(--secondary); border:1px solid var(--card-border); padding:10px; border-radius:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <h4 style="font-size:0.85rem; font-weight:900; color:var(--primary);">🏢 ${empresa} (${dataObj.logs.length})</h4>
+          <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455; padding:4px 8px; font-size:0.68rem;" onclick="limparLogsEmpresaAdmin('${dataObj.empresaId}', '${empresa}')">🗑️ Limpar Logs</button>
+        </div>
+    `;
+    dataObj.logs.forEach(l => {
+      const statusColor = l.status === "usado" ? "#10b981" : "#f59e0b";
+      logsHtml += `
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:8px 10px; border-radius:8px; margin-bottom:4px; font-size:0.75rem;">
+          <div><strong>${l.usuarioNome || 'Cliente'}</strong> [${l.codigoGerado}] - <span style="color:${statusColor}; font-weight:800;">${(l.status || 'gerado').toUpperCase()}</span></div>
+          <div style="color:var(--muted); font-size:0.68rem; margin-top:2px;">${l.cupomTitulo} • ${new Date(l.dataHora).toLocaleString('pt-BR')}</div>
+        </div>
+      `;
+    });
+    logsHtml += `</div>`;
+  }
+  container.innerHTML = logsHtml;
+}
+
+window.limparLogsEmpresaAdmin = async function(empresaId, empresaNome) {
+  if (confirm(`Deseja realmente excluir/limpar todos os logs de resgate da empresa "${empresaNome}"?`)) {
+    try {
+      const qLogs = query(collection(db, "logs_resgates"), where("empresaId", "==", empresaId));
+      const snap = await getDocs(qLogs);
+      const promessas = [];
+      snap.forEach(docSnap => {
+        promessas.push(deleteDoc(doc(db, "logs_resgates", docSnap.id)));
+      });
+      await Promise.all(promessas);
+      mostrarAviso("Limpeza Concluída 🗑️", `Os logs da empresa ${empresaNome} foram removidos.`, "✅");
+      carregarPainelAdmin();
+    } catch (err) {
+      mostrarAviso("Erro ao limpar", err.message, "❌");
+    }
+  }
+};
 
 window.toggleStatusCupom = async function(docId, estadoAtual) {
   try {
@@ -685,26 +844,46 @@ window.validarCupomTextoLojista = async function() {
     mostrarAviso("✅ DESCONTO APLICADO!", `O cupom "${codigoDigitado}" foi validado e marcado como UTILIZADO!`, "🎉");
     document.getElementById('input-validar-codigo').value = '';
     carregarEstatisticasLojista(user.uid);
+    carregarLogsDoLojista(user.uid);
   } catch (err) {
     mostrarAviso("Erro na validação", err.message, "❌");
   }
 };
 
 window.toggleTheme = function() {
-  const current = document.documentElement.getAttribute('data-theme');
-  const next = current === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('clube_theme', next);
-  document.querySelector('.theme-toggle-btn').innerText = next === 'dark' ? '☀️' : '🌙';
+  // Lista com todos os temas disponíveis no style.css
+  const temas = ['light', 'dark', 'emerald', 'purple', 'sunset', 'midnight'];
+  
+  // Pega o tema atual
+  const atual = document.documentElement.getAttribute('data-theme') || 'light';
+  
+  // Descobre qual é o próximo tema na lista
+  const proximoIndice = (temas.indexOf(atual) + 1) % temas.length;
+  const proximoTema = temas[proximoIndice];
+  
+  // Aplica o novo tema no HTML e guarda a preferência
+  document.documentElement.setAttribute('data-theme', proximoTema);
+  localStorage.setItem('clube_theme', proximoTema);
+  
+  // Ícones representativos para cada tema no botão
+  const icones = {
+    light: '🌙',
+    dark: '🌿',
+    emerald: '🔮',
+    purple: '🌅',
+    sunset: '🌌',
+    midnight: '☀️'
+  };
+  
+  const themeBtn = document.querySelector('.theme-toggle-btn');
+  if (themeBtn) {
+    themeBtn.innerText = icones[proximoTema] || '🎨';
+  }
 };
+
 
 window.dispararConfetes = function() {
   if (typeof confetti === 'function') confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
-};
-
-window.atualizarCarteiraUI = function() {
-  const el = document.getElementById('wallet-economy');
-  if (el) el.innerText = `R$ ${economiaTotal.toFixed(2).replace('.', ',')}`;
 };
 
 window.toggleMerchantFields = function(checked) {
@@ -757,6 +936,7 @@ window.switchAuthTab = function(type) {
   document.getElementById('tab-signup').classList.toggle('active', type === 'signup');
   document.getElementById('group-name').style.display = type === 'signup' ? 'block' : 'none';
   document.getElementById('box-merchant-options').style.display = type === 'signup' ? 'block' : 'none';
+  document.getElementById('box-privacy-terms').style.display = type === 'signup' ? 'block' : 'none';
   document.getElementById('box-esqueci').style.display = type === 'login' ? 'block' : 'none';
   document.getElementById('btn-auth-submit').innerText = type === 'login' ? 'Entrar na Conta' : 'Criar Conta';
 };
@@ -798,16 +978,21 @@ window.executarAuth = async function() {
     const nome = document.getElementById('reg-name').value;
     const email = document.getElementById('reg-email').value;
     const pass = document.getElementById('reg-pass').value;
+    const acceptTerms = document.getElementById('chk-privacy-terms').checked;
     const isMerchant = document.getElementById('chk-is-merchant').checked;
     const storeName = document.getElementById('reg-store-name')?.value;
     const storeAddress = document.getElementById('reg-store-address')?.value || 'Pelotas / RS';
     const storePhone = document.getElementById('reg-store-phone')?.value || '';
-    const storeCode = document.getElementById('reg-store-code')?.value;
+    const storeCode = document.getElementById('reg-store-code')?.value.trim().toUpperCase();
 
     if (!email || !pass || !nome) return mostrarAviso("Atenção", "Preencha todos os campos.", "⚠️");
+    if (!acceptTerms) return mostrarAviso("Atenção", "Você precisa aceitar os Termos de Privacidade.", "📜");
+
     let userRole = "cliente";
     if (isMerchant) {
-      if (storeCode !== CODIGO_SECRETO_LOJISTA) return mostrarAviso("Erro", "Código de parceiro incorreto.", "❌");
+      if (!CODIGOS_SECRETOS_LOJISTA.includes(storeCode)) {
+        return mostrarAviso("Erro", "Código de ativação de parceiro incorreto.", "❌");
+      }
       if (!storeName) return mostrarAviso("Atenção", "Informe o nome da empresa.", "⚠️");
       userRole = "lojista";
     }
@@ -837,6 +1022,10 @@ window.executarAuth = async function() {
     if (!email || !pass) return mostrarAviso("Atenção", "Preencha e-mail e senha.", "⚠️");
     try { await signInWithEmailAndPassword(auth, email, pass); } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
   }
+};
+
+window.abrirTermosPrivacidade = function() {
+  document.getElementById('modal-terms').classList.add('active');
 };
 
 window.recuperarSenha = async function() {
@@ -902,7 +1091,15 @@ window.resgatarCupomReal = async function(cupomId, empresaId, empresaNome, titul
   document.getElementById('modal-title').innerText = titulo;
   document.getElementById('modal-disc').innerText = empresaNome;
   document.getElementById('modal-address').innerText = endereco || 'Pelotas / RS';
-  document.getElementById('modal-phone').innerText = telefone || 'Não informado';
+  
+  const phoneContainer = document.getElementById('modal-phone');
+  if (telefone) {
+    const foneLimpo = telefone.replace(/\D/g, '');
+    phoneContainer.innerHTML = `<a href="https://wa.me/55${foneLimpo}?text=Olá,%20vi%20sua%20oferta%20no%20Clube%20Prime!" target="_blank" style="color:var(--primary); text-decoration:underline; font-weight:700;">${telefone} 📱 (Chamar no Zap)</a>`;
+  } else {
+    phoneContainer.innerText = 'Não informado';
+  }
+
   document.getElementById('modal-rules').innerText = regras || 'Sem restrições';
 
   if (window.isVipUser) {
@@ -916,9 +1113,8 @@ window.resgatarCupomReal = async function(cupomId, empresaId, empresaNome, titul
     codigoCupomAtual = codigoUnico;
     document.getElementById('modal-code').innerText = codigoUnico;
 
-    economiaTotal += valorEconomia;
-    localStorage.setItem('clube_econ', economiaTotal.toFixed(2));
-    atualizarCarteiraUI();
+    const user = auth.currentUser;
+    if (user) calcularEconomiaUsuario(user.uid);
 
     try {
       await addDoc(collection(db, "logs_resgates"), {
