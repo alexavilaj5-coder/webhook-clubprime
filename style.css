@@ -39,78 +39,6 @@
   --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
-[data-theme="emerald"] {
-  --bg: #090d16;
-  --card: #111827;
-  --card-border: #1f2937;
-  --primary: #10b981;
-  --primary-glow: rgba(16, 185, 129, 0.2);
-  --primary-hover: #059669;
-  --accent: #3b82f6;
-  --accent-light: rgba(59, 130, 246, 0.12);
-  --accent-border: #1d4ed844;
-  --secondary: #1f2937;
-  --text: #f3f4f6;
-  --muted: #9ca3af;
-  --muted-light: #6b7280;
-  --danger: #ef4444;
-  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.4);
-}
-
-[data-theme="purple"] {
-  --bg: #0d0614;
-  --card: #181026;
-  --card-border: #2a1b42;
-  --primary: #8b5cf6;
-  --primary-glow: rgba(139, 92, 246, 0.25);
-  --primary-hover: #7c3aed;
-  --accent: #ec4899;
-  --accent-light: rgba(236, 72, 153, 0.12);
-  --accent-border: #be185d44;
-  --secondary: #221538;
-  --text: #f5f3ff;
-  --muted: #a78bfa;
-  --muted-light: #7c3aed;
-  --danger: #f43f5e;
-  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.5);
-}
-
-[data-theme="sunset"] {
-  --bg: #180c06;
-  --card: #27140a;
-  --card-border: #3d2010;
-  --primary: #f97316;
-  --primary-glow: rgba(249, 115, 22, 0.25);
-  --primary-hover: #ea580c;
-  --accent: #eab308;
-  --accent-light: rgba(234, 179, 8, 0.12);
-  --accent-border: #ca8a0444;
-  --secondary: #331b0e;
-  --text: #fff7ed;
-  --muted: #fdba74;
-  --muted-light: #f97316;
-  --danger: #ef4444;
-  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.5);
-}
-
-[data-theme="midnight"] {
-  --bg: #000000;
-  --card: #0a0a0a;
-  --card-border: #1a1a1a;
-  --primary: #00f0ff;
-  --primary-glow: rgba(0, 240, 255, 0.25);
-  --primary-hover: #00c2ff;
-  --accent: #ff0055;
-  --accent-light: rgba(255, 0, 85, 0.12);
-  --accent-border: #cc004444;
-  --secondary: #121212;
-  --text: #ffffff;
-  --muted: #707070;
-  --muted-light: #404040;
-  --danger: #ff3333;
-  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.8);
-}
-
 * {
   box-sizing: border-box;
   margin: 0;
@@ -129,11 +57,7 @@ body {
   overflow-x: hidden;
 }
 
-[data-theme="dark"] body,
-[data-theme="emerald"] body,
-[data-theme="purple"] body,
-[data-theme="sunset"] body,
-[data-theme="midnight"] body {
+[data-theme="dark"] body {
   background-color: #020617;
 }
 
@@ -245,70 +169,52 @@ body {
   animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.screen.active {
-  display: block !important;
+.screen.active { 
+  display: block !important; 
 }
 
 @keyframes fadeInUp {
-  0% {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .hero-card {
   background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
-  border-radius: var(--radius-md);
-  padding: 16px 18px;
-  margin-bottom: 16px;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 20px;
   color: #ffffff;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 8px 24px var(--primary-glow);
+  box-shadow: 0 12px 30px var(--primary-glow);
 }
 
 .hero-welcome {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   font-weight: 800;
-  letter-spacing: 0.8px;
+  letter-spacing: 1px;
   color: #93c5fd;
 }
 
 .hero-name {
-  font-size: 1.25rem;
+  font-size: 1.6rem;
   font-weight: 900;
-  margin-top: 1px;
+  margin-top: 2px;
   color: #ffffff;
 }
 
 .hero-stats {
   display: flex;
-  gap: 12px;
-  margin-top: 12px;
-  padding-top: 10px;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-.stat-item {
-  flex: 1;
-}
-
-.stat-val {
-  font-size: 1rem;
-  font-weight: 900;
-  color: #ffffff;
-}
-
-.stat-lbl {
-  font-size: 0.68rem;
-  color: #bfdbfe;
-  margin-top: 1px;
-}
+.stat-item { flex: 1; }
+.stat-val { font-size: 1.15rem; font-weight: 900; color: #ffffff; }
+.stat-lbl { font-size: 0.7rem; color: #bfdbfe; margin-top: 2px; }
 
 .card-vip-banner {
   background: var(--accent-light);
@@ -346,10 +252,7 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.form-group {
-  margin-bottom: 14px;
-}
-
+.form-group { margin-bottom: 14px; }
 .form-group label {
   font-size: 0.72rem;
   color: var(--muted);
@@ -384,10 +287,7 @@ body {
   margin-bottom: 20px;
   scrollbar-width: none;
 }
-
-.categories-bar::-webkit-scrollbar {
-  display: none;
-}
+.categories-bar::-webkit-scrollbar { display: none; }
 
 .category-pill {
   background: var(--card);
@@ -426,20 +326,8 @@ body {
   margin-bottom: 10px;
 }
 
-.company-title {
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: var(--text);
-}
-
-.company-meta {
-  font-size: 0.78rem;
-  color: var(--muted);
-  margin-top: 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
+.company-title { font-size: 1.1rem; font-weight: 800; color: var(--text); }
+.company-meta { font-size: 0.78rem; color: var(--muted); margin-top: 4px; display: flex; flex-direction: column; gap: 4px; }
 
 .discount-badge {
   background: var(--accent-light);
@@ -449,6 +337,22 @@ body {
   border-radius: 14px;
   font-weight: 900;
   font-size: 0.88rem;
+}
+
+.favorite-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: var(--secondary);
+  border: 1px solid var(--card-border);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.9rem;
 }
 
 .btn {
@@ -552,7 +456,7 @@ body {
   font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
-  width: 33%;
+  width: 25%;
 }
 
 .nav-item.active {
@@ -560,9 +464,7 @@ body {
   font-weight: 800;
 }
 
-.nav-icon {
-  font-size: 1.3rem;
-}
+.nav-icon { font-size: 1.3rem; }
 
 .modal {
   display: none;
@@ -576,9 +478,7 @@ body {
   padding: 20px;
 }
 
-.modal.active {
-  display: flex;
-}
+.modal.active { display: flex; }
 
 .modal-top {
   align-items: flex-start !important;
@@ -594,20 +494,15 @@ body {
   width: 100%;
   max-width: 380px;
   text-align: center;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
   max-height: 90vh;
   overflow-y: auto;
 }
 
 @keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
-
 .spinner {
   display: inline-block;
   width: 16px;
