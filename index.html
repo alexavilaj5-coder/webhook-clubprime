@@ -50,15 +50,6 @@
         <input type="password" id="reg-pass" class="form-control" placeholder="******">
       </div>
 
-            <!-- TERMO DE PRIVACIDADE NO CADASTRO -->
-      <div id="box-privacy-terms" style="display:none; margin:10px 0;">
-        <label style="display:flex; align-items:center; gap:8px; font-size:0.75rem; color:var(--muted); cursor:pointer;">
-          <input type="checkbox" id="chk-privacy-terms">
-          Li e aceito os <a href="#" onclick="abrirTermosPrivacidade()" style="color:var(--primary); text-decoration:underline;">Termos de Privacidade</a>.
-        </label>
-      </div>
-
-
       <div id="box-merchant-options" style="display:none; margin:14px 0; padding:12px; background:var(--secondary); border:1px dashed var(--card-border); border-radius:14px;">
         <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; font-weight:800; cursor:pointer;">
           <input type="checkbox" id="chk-is-merchant" onchange="toggleMerchantFields(this.checked)">
@@ -80,7 +71,7 @@
           </div>
           <div class="form-group">
             <label>CÓDIGO DE ATIVAÇÃO DE PARCEIRO</label>
-            <input type="text" id="reg-store-code" class="form-control" placeholder="Digite a chave secreta" style="text-transform:uppercase;">
+            <input type="text" id="reg-store-code" class="form-control" placeholder="Digite a chave secreta">
           </div>
         </div>
       </div>
@@ -155,17 +146,6 @@
           <div id="merchant-stat-validations" class="admin-stat-val">0</div>
         </div>
       </div>
-
-      <!-- HISTÓRICO DE LOGS DA LOJA -->
-      <details style="background:var(--card); border:1px solid var(--card-border); border-radius:18px; margin-bottom:16px; overflow:hidden;">
-        <summary style="padding:14px 16px; font-weight:800; font-size:0.95rem; cursor:pointer; background:var(--card); list-style:none; display:flex; justify-content:space-between; align-items:center;">
-          <span>📋 Logs de Resgate Recentes</span>
-          <span style="font-size:0.8rem; color:var(--muted);">▼</span>
-        </summary>
-        <div id="merchant-logs-list" style="padding:12px; border-top:1px solid var(--card-border); max-height:200px; overflow-y:auto;">
-          <p style="font-size:0.8rem; color:var(--muted);">Sem resgates registrados.</p>
-        </div>
-      </details>
 
       <!-- EDITAR DADOS DA EMPRESA (ESCONDIDO/EXPANSÍVEL) -->
       <details style="background:var(--card); border:1px solid var(--card-border); border-radius:18px; margin-bottom:16px; overflow:hidden;">
@@ -271,20 +251,8 @@
         <div id="admin-all-coupons-list" style="margin-bottom:20px; max-height:260px; overflow-y:auto; padding-right:4px;">
           <p style="font-size:0.8rem; color:var(--muted);">Carregando todos os cupons...</p>
         </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <h3 style="font-size:1.1rem; font-weight:800;">Logs de Resgate por Empresa</h3>
-        </div>
-        
-        <!-- BOTÃO FILTRO DE LOGS POR EMPRESA -->
-        <div class="form-group" style="margin-bottom:12px;">
-          <label>FILTRAR LOGS POR EMPRESA</label>
-          <select id="admin-filter-empresa" class="form-control" onchange="filtrarLogsAdminPorEmpresa()">
-            <option value="all">Todas as Empresas</option>
-          </select>
-        </div>
-
-        <div id="admin-logs-list" style="margin-bottom:20px; max-height:200px; overflow-y:auto; padding-right:4px;">
+        <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:12px;">Logs de Resgates Recentes</h3>
+        <div id="admin-logs-list" style="margin-bottom:20px; max-height:160px; overflow-y:auto; padding-right:4px;">
           <p style="font-size:0.8rem; color:var(--muted);">A aguardar resgates...</p>
         </div>
       </div>
@@ -314,9 +282,8 @@
         📢 <span id="client-global-banner-content">-</span>
       </div>
 
-      <!-- CARD COMPACTADO -->
       <div class="hero-card">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
           <div>
             <span class="hero-welcome">Painel do Membro</span>
             <h2 class="hero-name">Olá, <span id="user-name-display">Cliente</span> 👋</h2>
@@ -326,11 +293,11 @@
 
         <div class="hero-stats">
           <div class="stat-item">
-            <div id="user-economy-display" class="stat-val">R$ 0,00</div>
+            <div class="stat-val">R$ 150,00</div>
             <div class="stat-lbl">Economia Média/mês</div>
           </div>
           <div class="stat-item">
-            <div id="active-offers-count" class="stat-val">0+</div>
+            <div class="stat-val">10+</div>
             <div class="stat-lbl">Ofertas Ativas</div>
           </div>
         </div>
@@ -373,6 +340,23 @@
         <span style="font-size:2.5rem;">🗺️</span>
         <h3 style="font-size:1.1rem; margin-top:8px; font-weight:800;">Pelotas / RS</h3>
         <p style="font-size:0.8rem; color:var(--muted); margin-top:4px;">Estabelecimentos parceiros aceitando cupons hoje.</p>
+      </div>
+    </div>
+
+    <!-- TELA CARTEIRA -->
+    <div id="screen-wallet" class="screen">
+      <h2 style="margin-bottom:4px; font-weight:900;">Sua Carteira</h2>
+      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:18px;">Economia acumulada com o seu clube.</p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px;">
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; text-align:center;">
+          <span style="font-size:0.72rem; color:var(--muted); font-weight:700;">ECONOMIA REAL</span>
+          <div id="wallet-economy" style="font-size:1.4rem; font-weight:900; color:var(--primary); margin-top:4px;">R$ 0,00</div>
+        </div>
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; text-align:center;">
+          <span style="font-size:0.72rem; color:var(--muted); font-weight:700;">CUSTO DO APP</span>
+          <div style="font-size:1.4rem; font-weight:900; color:var(--accent); margin-top:4px;">R$ 19,90</div>
+        </div>
       </div>
     </div>
 
@@ -421,7 +405,7 @@
       </div>
     </div>
 
-    <!-- NAVEGAÇÃO INFERIOR (SEM A ABA CARTEIRA) -->
+    <!-- NAVEGAÇÃO INFERIOR -->
     <div class="bottom-nav" style="display:none;">
       <div class="nav-item active" onclick="navTo('home', this)">
         <span class="nav-icon">🏠</span>
@@ -431,26 +415,16 @@
         <span class="nav-icon">🔍</span>
         <span>Parceiros</span>
       </div>
+      <div class="nav-item" onclick="navTo('wallet', this)">
+        <span class="nav-icon">👛</span>
+        <span>Carteira</span>
+      </div>
       <div class="nav-item" onclick="navTo('profile', this)">
         <span class="nav-icon">👤</span>
         <span>Perfil</span>
       </div>
     </div>
 
-  </div>
-
-  <!-- MODAL DE TERMOS DE PRIVACIDADE -->
-  <div id="modal-terms" class="modal">
-    <div class="modal-content" style="text-align:left;">
-      <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:10px;">📜 Termos e Privacidade</h3>
-      <div style="font-size:0.78rem; color:var(--muted); max-height:220px; overflow-y:auto; line-height:1.4; margin-bottom:14px;">
-        <p style="margin-bottom:8px;">O <strong>Clube Prime Pelotas</strong> se compromete com a segurança dos seus dados pessoais. Coletamos apenas informações estritamente necessárias para a gestão do serviço e validação dos cupons.</p>
-        <p style="margin-bottom:8px;">1. Os dados de login são armazenados de forma criptografada pelo serviço Firebase Auth.</p>
-        <p style="margin-bottom:8px;">2. Não compartilhamos informações pessoais com terceiros sem consentimento.</p>
-        <p>3. Os cupons e ofertas podem possuir limitações configuradas pelos próprios estabelecimentos parceiros.</p>
-      </div>
-      <button class="btn" onclick="fecharModal('modal-terms')">Entendido</button>
-    </div>
   </div>
 
   <!-- MODAL DE NOTIFICAÇÕES -->
