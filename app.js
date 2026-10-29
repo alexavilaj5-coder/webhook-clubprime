@@ -46,7 +46,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedTheme = localStorage.getItem('clube_theme') || 'light';
   document.documentElement.setAttribute('data-theme', savedTheme);
   const themeBtn = document.querySelector('.theme-toggle-btn');
-  if (themeBtn) themeBtn.innerText = savedTheme === 'dark' ? '☀️' : '🌙';
+  if (themeBtn) {
+    const icones = { light: '🌙', dark: '🌿', emerald: '🔮', purple: '🌅', sunset: '🌌', midnight: '☀️' };
+    themeBtn.innerText = icones[savedTheme] || '🌙';
+  }
   escutarBannerGlobal();
   escutarBannerLojista();
 });
@@ -74,6 +77,7 @@ onAuthStateChanged(auth, async (user) => {
 
       window.currentUserData = data;
       
+      // FORÇA A ENTRADA DIRETA NO PAINEL ADMIN SE A FUNÇÃO FOR ADMIN
       if (data.funcao === "admin") {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('screen-admin').classList.add('active');
@@ -172,6 +176,26 @@ onAuthStateChanged(auth, async (user) => {
     document.querySelector('.bottom-nav').style.display = 'none';
   }
 });
+
+// ALTERNAR DO ADMIN PARA A VISÃO DO CLIENTE
+window.alternarVisaoCliente = function() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-home').classList.add('active');
+  document.querySelector('.bottom-nav').style.display = 'flex';
+  
+  const boxVoltar = document.getElementById('box-voltar-admin');
+  if (boxVoltar) boxVoltar.style.display = 'block';
+};
+
+// VOLTAR DO MODO CLIENTE PARA O PAINEL DE ADM
+window.voltarAoAdminDesdeCliente = function() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-admin').classList.add('active');
+  document.querySelector('.bottom-nav').style.display = 'none';
+  
+  const boxVoltar = document.getElementById('box-voltar-admin');
+  if (boxVoltar) boxVoltar.style.display = 'none';
+};
 
 async function calcularEconomiaUsuario(uid) {
   try {
@@ -851,21 +875,14 @@ window.validarCupomTextoLojista = async function() {
 };
 
 window.toggleTheme = function() {
-  // Lista com todos os temas disponíveis no style.css
   const temas = ['light', 'dark', 'emerald', 'purple', 'sunset', 'midnight'];
-  
-  // Pega o tema atual
   const atual = document.documentElement.getAttribute('data-theme') || 'light';
-  
-  // Descobre qual é o próximo tema na lista
   const proximoIndice = (temas.indexOf(atual) + 1) % temas.length;
   const proximoTema = temas[proximoIndice];
   
-  // Aplica o novo tema no HTML e guarda a preferência
   document.documentElement.setAttribute('data-theme', proximoTema);
   localStorage.setItem('clube_theme', proximoTema);
   
-  // Ícones representativos para cada tema no botão
   const icones = {
     light: '🌙',
     dark: '🌿',
@@ -880,7 +897,6 @@ window.toggleTheme = function() {
     themeBtn.innerText = icones[proximoTema] || '🎨';
   }
 };
-
 
 window.dispararConfetes = function() {
   if (typeof confetti === 'function') confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });

@@ -50,14 +50,13 @@
         <input type="password" id="reg-pass" class="form-control" placeholder="******">
       </div>
 
-            <!-- TERMO DE PRIVACIDADE NO CADASTRO -->
+      <!-- TERMO DE PRIVACIDADE NO CADASTRO -->
       <div id="box-privacy-terms" style="display:none; margin:10px 0;">
         <label style="display:flex; align-items:center; gap:8px; font-size:0.75rem; color:var(--muted); cursor:pointer;">
           <input type="checkbox" id="chk-privacy-terms">
           Li e aceito os <a href="#" onclick="abrirTermosPrivacidade()" style="color:var(--primary); text-decoration:underline;">Termos de Privacidade</a>.
         </label>
       </div>
-
 
       <div id="box-merchant-options" style="display:none; margin:14px 0; padding:12px; background:var(--secondary); border:1px dashed var(--card-border); border-radius:14px;">
         <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; font-weight:800; cursor:pointer;">
@@ -167,7 +166,7 @@
         </div>
       </details>
 
-      <!-- EDITAR DADOS DA EMPRESA (ESCONDIDO/EXPANSÍVEL) -->
+      <!-- EDITAR DADOS DA EMPRESA -->
       <details style="background:var(--card); border:1px solid var(--card-border); border-radius:18px; margin-bottom:16px; overflow:hidden;">
         <summary style="padding:14px 16px; font-weight:800; font-size:0.95rem; cursor:pointer; background:var(--card); list-style:none; display:flex; justify-content:space-between; align-items:center;">
           <span>⚙️ Editar Informações da Empresa</span>
@@ -216,6 +215,11 @@
         </div>
         <div class="status-badge admin">ADMINISTRADOR</div>
       </div>
+
+      <!-- BOTÃO DE ALTERNAR PARA VISÃO DO CLIENTE -->
+      <button class="btn btn-cyan" style="margin-bottom:16px; padding:12px; font-size:0.9rem; font-weight:900;" onclick="alternarVisaoCliente()">
+        Modo Cliente
+      </button>
 
       <div class="admin-grid">
         <div class="admin-stat-card">
@@ -310,6 +314,14 @@
 
     <!-- TELA HOME (CLIENTE) -->
     <div id="screen-home" class="screen">
+
+      <!-- BOTÃO FIXO PARA VOLTAR AO ADMIN QUANDO ESTIVER TESTANDO -->
+      <div id="box-voltar-admin" style="display:none; margin-bottom:14px;">
+        <button class="btn" style="background:#ef4444; color:#ffffff; font-weight:900;" onclick="voltarAoAdminDesdeCliente()">
+          ⚡ Administrador
+        </button>
+      </div>
+
       <div id="client-global-banner" style="display:none; background:linear-gradient(135deg, #f97316 0%, #ea580c 100%); color:#ffffff; padding:12px 16px; border-radius:16px; margin-bottom:16px; font-size:0.82rem; font-weight:800; text-align:center; box-shadow:0 6px 16px rgba(249,115,22,0.2);">
         📢 <span id="client-global-banner-content">-</span>
       </div>
@@ -421,7 +433,7 @@
       </div>
     </div>
 
-    <!-- NAVEGAÇÃO INFERIOR (SEM A ABA CARTEIRA) -->
+    <!-- NAVEGAÇÃO INFERIOR -->
     <div class="bottom-nav" style="display:none;">
       <div class="nav-item active" onclick="navTo('home', this)">
         <span class="nav-icon">🏠</span>
