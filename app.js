@@ -37,6 +37,7 @@ let pixCopiaColaAtual = "";
 let codigoCupomAtual = "";
 let currentAuthTab = "login";
 let intervalPixCheck = null;
+let html5QrCodeScanner = null;
 
 let unsubscribeUser = null;
 let unsubscribeCupons = null;
@@ -77,7 +78,6 @@ onAuthStateChanged(auth, async (user) => {
 
       window.currentUserData = data;
       
-      // FORÇA A ENTRADA DIRETA NO PAINEL ADMIN SE A FUNÇÃO FOR ADMIN
       if (data.funcao === "admin") {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('screen-admin').classList.add('active');
@@ -133,7 +133,7 @@ onAuthStateChanged(auth, async (user) => {
       const dataCriado = data.criadoEm ? new Date(data.criadoEm).toLocaleDateString('pt-BR') : 'Hoje';
       document.getElementById('profile-joined-date').innerText = dataCriado;
 
-      calcularEconomiaUsuario(user.uid);
+      calcularEconomiaNivelUsuario(user.uid);
 
       if (data.vip) {
         window.isVipUser = true;
@@ -177,7 +177,69 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// ALTERNAR DO ADMIN PARA A VISÃO DO CLIENTE
+async function calcularEconomiaNivelUsuario(uid) {
+  try {
+    const qLogs = query(collection(db, "logs_resgates"), where("usuarioUid", "==", uid), where("status", "==", "usado"));
+    const snapLogs = await getDocs(qLogs);
+    let totalEcon = 0;
+    const totalUsados = snapLogs.size;
+
+    snapLogs.forEach(docSnap => {
+      totalEcon += 12.00;
+    });
+
+    const elEcon = document.getElementById('user-economy-display');
+    if (elEcon) elEcon.innerText = `R$ ${totalEcon.toFixed(2).replace('.', ',')}`;
+
+    let nivelTxt = "🥉 Bronze";
+    let nivelIcon = "🥉";
+    let nivelName = "Bronze";
+
+    if (totalUsados >= 10) {
+      nivelTxt = "🥇 Ouro"; nivelIcon = "🥇"; nivelName = "Ouro";
+    } else if (totalUsados >= 4) {
+      nivelTxt = "🥈 Prata"; nivelIcon = "🥈"; nivelName = "Prata";
+    }
+
+    const elLvl = document.getElementById('user-level-display');
+    if (elLvl) elLvl.innerText = nivelTxt;
+
+    const badgeCount = document.getElementById('badge-resgates-count');
+    if (badgeCount) badgeCount.innerText = totalUsados;
+
+    const badgeIcon = document.getElementById('badge-level-icon');
+    if (badgeIcon) badgeIcon.innerText = nivelIcon;
+
+    const badgeTitle = document.getElementById('badge-level-title');
+    if (badgeTitle) badgeTitle.innerText = nivelName;
+
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+window.abrirLeitorQrCode = function() {
+  const container = document.getElementById('reader-container');
+  container.style.display = 'block';
+
+  if (!html5QrCodeScanner) {
+    html5QrCodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
+  }
+
+  html5QrCodeScanner.render((decodedText) => {
+    document.getElementById('input-validar-codigo').value = decodedText.trim().toUpperCase();
+    fecharLeitorQrCode();
+    mostrarAviso("Lido com Sucesso! 📷", `Código lido: ${decodedText}`, "✅");
+  }, (error) => {});
+};
+
+window.fecharLeitorQrCode = function() {
+  if (html5QrCodeScanner) {
+    html5QrCodeScanner.clear().catch(e => {});
+  }
+  document.getElementById('reader-container').style.display = 'none';
+};
+
 window.alternarVisaoCliente = function() {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-home').classList.add('active');
@@ -187,7 +249,6 @@ window.alternarVisaoCliente = function() {
   if (boxVoltar) boxVoltar.style.display = 'block';
 };
 
-// VOLTAR DO MODO CLIENTE PARA O PAINEL DE ADM
 window.voltarAoAdminDesdeCliente = function() {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-admin').classList.add('active');
@@ -196,36 +257,6 @@ window.voltarAoAdminDesdeCliente = function() {
   const boxVoltar = document.getElementById('box-voltar-admin');
   if (boxVoltar) boxVoltar.style.display = 'none';
 };
-
-async function calcularEconomiaUsuario(uid) {
-  try {
-    const qLogs = query(collection(db, "logs_resgates"), where("usuarioUid", "==", uid));
-    const snapLogs = await getDocs(qLogs);
-    let totalEcon = 0;
-    
-    for (let logDoc of snapLogs.docs) {
-      const dataLog = logDoc.data();
-      if (dataLog.cupomId && dataLog.cupomId !== 'manual') {
-        const cupomRef = doc(db, "cupons", dataLog.cupomId);
-        const cupomSnap = await getDoc(cupomRef);
-        if (cupomSnap.exists()) {
-          totalEcon += (cupomSnap.data().valorEconomia || 10.00);
-        } else {
-          totalEcon += 10.00;
-        }
-      } else {
-        totalEcon += 10.00;
-      }
-    }
-    const elEcon = document.getElementById('user-economy-display');
-    if (elEcon) {
-      elEcon.innerText = `R$ ${totalEcon.toFixed(2).replace('.', ',')}`;
-    }
-  } catch (e) {
-    const elEcon = document.getElementById('user-economy-display');
-    if (elEcon) elEcon.innerText = "R$ 0,00";
-  }
-}
 
 function escutarBannerGlobal() {
   const bannerRef = doc(db, "configuracoes", "banner_global");
@@ -312,13 +343,13 @@ function carregarCuponsVitrine() {
 
       html += `
         <div class="company-card" data-cat="${cupom.categoria}" data-name="${cupom.titulo.toLowerCase()} ${cupom.empresaNome.toLowerCase()}" data-id="${cupom.id}">
-          ${imgHtml}
+          ${imgHtml ? `<div>${imgHtml}</div>` : ''}
           <div class="company-header">
             <div>
               <div class="company-title">${cupom.empresaNome}</div>
               <div class="company-meta">
                 <span>📍 ${cupom.endereco || 'Pelotas / RS'}</span>
-                <span style="color:var(--accent);">⭐ 5.0</span>
+                <span style="color:var(--accent);">⭐ 5.0 • Economia ~R$ ${cupom.valorEconomia || 10}</span>
               </div>
             </div>
             <div class="discount-badge">${cupom.descontoBadge || 'OFERTA'}</div>
@@ -581,9 +612,70 @@ async function carregarPainelAdmin() {
     document.getElementById('admin-all-coupons-list').innerHTML = allCuponsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum cupom registrado.</p>';
     document.getElementById('admin-users-list').innerHTML = listUsersHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum utilizador encontrado.</p>';
     document.getElementById('admin-merchants-list').innerHTML = listMerchantsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhuma empresa parceira registrada.</p>';
+
+    renderizarGraficosAdmin(totalUsers - totalVips, totalVips);
+
   } catch (err) {
     console.error("Erro admin:", err);
   }
+}
+
+function renderizarGraficosAdmin(freeUsers, vipUsers) {
+  const ctx = document.getElementById('chartUsersVip');
+  if (!ctx) return;
+  if (window.myAdminChart) window.myAdminChart.destroy();
+
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+  const gridColor = isDark ? '#1e293b' : '#f1f5f9';
+
+  window.myAdminChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Membros Free', 'Membros VIP'],
+      datasets: [{
+        label: 'Quantidade de Usuários',
+        data: [freeUsers, vipUsers],
+        backgroundColor: [
+          'rgba(100, 116, 139, 0.85)',
+          'rgba(249, 115, 22, 0.85)'
+        ],
+        borderColor: [
+          '#64748b',
+          '#f97316'
+        ],
+        borderWidth: 2,
+        borderRadius: 10,
+        borderSkipped: false,
+        barThickness: 45
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0f172a',
+          titleFont: { size: 13, weight: 'bold' },
+          bodyFont: { size: 12 },
+          padding: 10,
+          cornerRadius: 8
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: textColor, font: { weight: '600' } }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: gridColor },
+          ticks: { color: textColor, precision: 0 }
+        }
+      }
+    }
+  });
 }
 
 function atualizarSelectFiltroEmpresas() {
@@ -971,8 +1063,11 @@ window.filterCat = function(cat, btn) {
   btn.classList.add('active');
   const cards = document.querySelectorAll('.company-card');
   cards.forEach(card => {
-    if (cat === 'all') card.style.display = 'block';
-    else card.style.display = card.dataset.cat === cat ? 'block' : 'none';
+    if (cat === 'all') {
+      card.style.display = 'block';
+    } else {
+      card.style.display = card.dataset.cat === cat ? 'block' : 'none';
+    }
   });
 };
 
@@ -1129,8 +1224,14 @@ window.resgatarCupomReal = async function(cupomId, empresaId, empresaNome, titul
     codigoCupomAtual = codigoUnico;
     document.getElementById('modal-code').innerText = codigoUnico;
 
+    const qrContainer = document.getElementById('qrcode-canvas');
+    if (qrContainer) {
+      qrContainer.innerHTML = "";
+      new QRCode(qrContainer, { text: codigoUnico, width: 130, height: 130 });
+    }
+
     const user = auth.currentUser;
-    if (user) calcularEconomiaUsuario(user.uid);
+    if (user) calcularEconomiaNivelUsuario(user.uid);
 
     try {
       await addDoc(collection(db, "logs_resgates"), {

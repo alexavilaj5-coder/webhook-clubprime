@@ -148,7 +148,6 @@ body {
   box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
 }
 
-/* Header limpo, sem barra de LED incômoda em cima */
 .top-header {
   display: flex;
   justify-content: space-between;
@@ -189,6 +188,31 @@ body {
   justify-content: center;
   cursor: pointer;
   font-size: 0.95rem;
+}
+
+.icon-btn {
+  background: var(--secondary);
+  border: 1px solid var(--card-border);
+  color: var(--text);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.95rem;
+  position: relative;
+}
+
+.badge-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background-color: var(--accent);
+  border-radius: 50%;
 }
 
 .location-badge {
@@ -246,7 +270,6 @@ body {
   display: block !important;
 }
 
-/* Card principal mantendo o estilo moderno e o efeito desejado no nome */
 .hero-card {
   background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
   border-radius: 24px;
@@ -663,4 +686,388 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ───────────── MEMBER / VIP BOX: NEON PREMIUM ───────────── */
+/* Visual upgrade scoped only to the member/VIP banner. */
+.card-vip-banner {
+  --member-neon: var(--accent, #f97316);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--member-neon) 65%, transparent);
+  border-radius: 24px;
+  padding: 22px;
+  background:
+    radial-gradient(ellipse at 12% 0%, color-mix(in srgb, var(--member-neon) 23%, transparent), transparent 48%),
+    linear-gradient(135deg, #090b14 0%, #111827 48%, #070a12 100%);
+  color: #f8fafc;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--member-neon) 15%, transparent),
+    0 12px 34px color-mix(in srgb, var(--member-neon) 18%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.10);
+  transform: translateZ(0);
+  animation: memberBoxEnter .75s cubic-bezier(.2,.8,.2,1) both,
+             memberBoxGlow 4s ease-in-out 1s infinite;
+}
+
+/* Animated neon border sweep */
+.card-vip-banner::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 12%,
+    var(--member-neon) 18%,
+    #ffffff 21%,
+    transparent 28% 48%,
+    color-mix(in srgb, var(--member-neon) 75%, #8b5cf6) 56%,
+    transparent 64% 82%,
+    var(--member-neon) 90%,
+    transparent 100%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: memberBorderSpin 7s linear infinite;
+  pointer-events: none;
+}
+
+/* Light beam passing across the card */
+.card-vip-banner::after {
+  content: "";
+  position: absolute;
+  top: -40%;
+  left: -75%;
+  width: 45%;
+  height: 180%;
+  transform: rotate(22deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.13), transparent);
+  filter: blur(2px);
+  animation: memberLightSweep 6s ease-in-out 1.2s infinite;
+  pointer-events: none;
+}
+
+.card-vip-banner > * {
+  position: relative;
+  z-index: 1;
+}
+
+.card-vip-banner:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--member-neon) 25%, transparent),
+    0 18px 44px color-mix(in srgb, var(--member-neon) 28%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.14);
+}
+
+/* VIP label, if present inside the member box */
+.card-vip-banner .status-badge.vip,
+.card-vip-banner .vip,
+.card-vip-banner [class*="member-badge"] {
+  background: color-mix(in srgb, var(--member-neon) 15%, #080b13);
+  color: color-mix(in srgb, var(--member-neon) 70%, white);
+  border: 1px solid color-mix(in srgb, var(--member-neon) 60%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--member-neon) 20%, transparent);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--member-neon) 40%, transparent);
+}
+
+/* Keep existing card text readable without changing layout */
+.card-vip-banner h1,
+.card-vip-banner h2,
+.card-vip-banner h3,
+.card-vip-banner strong {
+  color: #fff;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--member-neon) 20%, transparent);
+}
+
+@keyframes memberBoxEnter {
+  from { opacity: 0; transform: translateY(18px) scale(.97); filter: blur(5px); }
+  to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes memberBoxGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--member-neon) 15%, transparent),
+      0 12px 34px color-mix(in srgb, var(--member-neon) 16%, transparent),
+      inset 0 1px 0 rgba(255,255,255,.10);
+  }
+  50% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--member-neon) 35%, transparent),
+      0 14px 42px color-mix(in srgb, var(--member-neon) 32%, transparent),
+      inset 0 1px 0 rgba(255,255,255,.16);
+  }
+}
+
+@keyframes memberBorderSpin { to { transform: rotate(360deg); } }
+
+@keyframes memberLightSweep {
+  0%, 18% { left: -75%; opacity: 0; }
+  28% { opacity: 1; }
+  55%, 100% { left: 140%; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-vip-banner,
+  .card-vip-banner::before,
+  .card-vip-banner::after {
+    animation: none !important;
+  }
+}
+
+/* === PAINEL DO MEMBRO: BLUE NEON / PREMIUM === */
+.hero-card {
+  isolation: isolate;
+  background: linear-gradient(135deg, #123a9c 0%, #205be0 42%, #1746b8 72%, #102f82 100%);
+  border: 1px solid rgba(125, 190, 255, .72);
+  border-radius: 30px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(69, 142, 255, .22),
+    0 12px 35px rgba(0, 79, 255, .28),
+    0 0 55px rgba(28, 103, 255, .18),
+    inset 0 1px 0 rgba(255,255,255,.28);
+  animation: memberCardEnter .85s cubic-bezier(.2,.8,.2,1) both,
+             memberCardGlow 4.5s ease-in-out 1s infinite;
+  transform: translateZ(0);
+}
+
+
+/* Animated luminous frame */
+.hero-card::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(from var(--member-angle, 0deg),
+    transparent 0deg, rgba(79, 220, 255, .15) 55deg,
+    #8deaff 105deg, #ffffff 125deg,
+    #3b82ff 165deg, transparent 220deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+  animation: memberBorderSpin 6s linear infinite;
+}
+
+
+/* Moving glass shine */
+.hero-card::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -70%;
+  left: -65%;
+  width: 55%;
+  height: 240%;
+  transform: rotate(24deg);
+  background: linear-gradient(90deg,
+    transparent 0%, rgba(255,255,255,.025) 25%,
+    rgba(170,235,255,.22) 50%, rgba(255,255,255,.035) 75%, transparent 100%);
+  filter: blur(1px);
+  animation: memberShine 7s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.hero-card .hero-welcome {
+  color: #a9ddff;
+  text-shadow: 0 0 12px rgba(105, 205, 255, .22);
+  letter-spacing: 1.8px;
+}
+.hero-card .hero-name {
+  text-shadow: 0 2px 18px rgba(0, 12, 70, .24);
+}
+.hero-card .hero-stats {
+  border-top-color: rgba(205, 235, 255, .24);
+  position: relative;
+}
+.hero-card .stat-val {
+  text-shadow: 0 0 16px rgba(160, 225, 255, .15);
+}
+.hero-card .stat-lbl {
+  color: #c7e5ff;
+}
+
+@keyframes memberCardEnter {
+  0% { opacity: 0; transform: translateY(22px) scale(.97); filter: brightness(.75); }
+  65% { opacity: 1; transform: translateY(-3px) scale(1.005); filter: brightness(1.12); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: brightness(1); }
+}
+@keyframes memberCardGlow {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(69,142,255,.22), 0 12px 35px rgba(0,79,255,.28), 0 0 48px rgba(28,103,255,.16), inset 0 1px 0 rgba(255,255,255,.28); }
+  50% { box-shadow: 0 0 0 1px rgba(115,210,255,.4), 0 14px 42px rgba(0,105,255,.38), 0 0 68px rgba(28,145,255,.24), inset 0 1px 0 rgba(255,255,255,.36); }
+}
+@keyframes memberBorderSpin {
+  to { --member-angle: 360deg; }
+}
+@keyframes memberShine {
+  0%, 12% { left: -75%; opacity: 0; }
+  20% { opacity: .8; }
+  48% { left: 130%; opacity: .55; }
+  49%, 100% { left: 130%; opacity: 0; }
+}
+@property --member-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-card, .hero-card::before, .hero-card::after {
+    animation: none !important;
+  }
+}
+\n\n/* EXTRA: restore bold rotating light trails inside BOTH highlighted boxes */
+.card-vip-banner::before {
+  animation: vipOrbitSpin 5.5s linear infinite !important;
+}
+.hero-card::before {
+  animation: memberOrbitSpin 4.8s linear infinite !important;
+}
+/* Rotating ambient rings and luminous trails, clipped inside each card */
+.card-vip-banner,
+.hero-card {
+  background-size: 100% 100%, 220% 220%, 100% 100%;
+  background-position: center, 0% 50%, center;
+}
+.card-vip-banner {
+  background-image:
+    radial-gradient(ellipse at 12% 0%, color-mix(in srgb, var(--member-neon) 23%, transparent), transparent 48%),
+    conic-gradient(from 0deg at 50% 50%, transparent 0deg, color-mix(in srgb, var(--member-neon) 10%, transparent) 60deg, transparent 115deg, color-mix(in srgb, var(--member-neon) 18%, transparent) 190deg, transparent 260deg, color-mix(in srgb, var(--member-neon) 9%, transparent) 320deg, transparent 360deg),
+    linear-gradient(135deg, #090b14 0%, #111827 48%, #070a12 100%);
+  animation: memberBoxEnter .75s cubic-bezier(.2,.8,.2,1) both,
+             memberBoxGlow 4s ease-in-out 1s infinite,
+             vipAmbientRotate 14s linear infinite;
+}
+.hero-card {
+  background-image:
+    conic-gradient(from 0deg at 50% 50%, rgba(76,195,255,.08), transparent 80deg, rgba(255,255,255,.05) 145deg, transparent 220deg, rgba(50,150,255,.12) 300deg, transparent 360deg),
+    linear-gradient(135deg, #123a9c 0%, #205be0 42%, #1746b8 72%, #102f82 100%);
+  background-size: 220% 220%, 100% 100%;
+  animation: memberCardEnter .85s cubic-bezier(.2,.8,.2,1) both,
+             memberCardGlow 4.5s ease-in-out 1s infinite,
+             memberAmbientRotate 12s linear infinite;
+}
+@keyframes vipOrbitSpin { to { transform: rotate(360deg); } }
+@keyframes memberOrbitSpin { to { transform: rotate(360deg); } }
+@keyframes vipAmbientRotate {
+  0% { background-position: center, 0% 50%, center; }
+  100% { background-position: center, 100% 50%, center; }
+}
+@keyframes memberAmbientRotate {
+  0% { background-position: 0% 50%, center; }
+  100% { background-position: 100% 50%, center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-vip-banner, .card-vip-banner::before,
+  .hero-card, .hero-card::before {
+    animation: none !important;
+  }
+}
+
+/* ===== ULTRA PREMIUM V2 — somente as duas caixas de destaque ===== */
+.card-vip-banner,
+.hero-card {
+  isolation: isolate;
+  transform-style: preserve-3d;
+  will-change: box-shadow, background-position;
+}
+
+/* VIP: aurora laranja + feixe diagonal de energia */
+.card-vip-banner {
+  border: 1px solid rgba(255, 174, 91, .82) !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 132, 35, .16),
+    0 14px 42px rgba(255, 102, 0, .20),
+    0 0 36px rgba(255, 125, 35, .17),
+    inset 0 1px 0 rgba(255,255,255,.16) !important;
+  background-image:
+    radial-gradient(ellipse at 15% 15%, rgba(255,145,55,.24), transparent 42%),
+    radial-gradient(ellipse at 90% 90%, rgba(255,70,20,.20), transparent 45%),
+    conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(255,173,83,.13) 70deg, transparent 145deg, rgba(255,94,22,.18) 230deg, transparent 310deg),
+    linear-gradient(135deg,#1b120e 0%,#11131b 48%,#211208 100%) !important;
+  background-size: 100% 100%, 100% 100%, 240% 240%, 100% 100% !important;
+  animation: vipV2Glow 3.6s ease-in-out infinite, vipV2Aurora 10s linear infinite !important;
+}
+.card-vip-banner::before {
+  inset: -2px !important;
+  background: conic-gradient(from var(--vip-v2-angle, 0deg),
+    transparent 0deg, rgba(255,124,31,.05) 45deg,
+    #ff8b35 95deg, #fff0c9 115deg, #ffb35c 140deg,
+    transparent 190deg, transparent 260deg, #ff6a1a 315deg, transparent 360deg) !important;
+  filter: drop-shadow(0 0 7px rgba(255,128,37,.48));
+  animation: vipV2Frame 5s linear infinite !important;
+}
+.card-vip-banner::after {
+  content: "";
+  position: absolute;
+  inset: -45% -65%;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 38%, rgba(255,174,94,.025) 44%, rgba(255,224,181,.18) 49%, rgba(255,119,34,.10) 51%, transparent 58%);
+  transform: translateX(-70%) rotate(-8deg);
+  animation: vipV2Sweep 6.8s ease-in-out infinite;
+}
+.card-vip-banner > * { position: relative; z-index: 1; }
+
+/* Membro: visual holográfico azul, aro energético e pequenos pulsos */
+.hero-card {
+  border: 1px solid rgba(123,222,255,.88) !important;
+  background-image:
+    radial-gradient(ellipse at 8% 5%, rgba(91,232,255,.25), transparent 38%),
+    radial-gradient(ellipse at 95% 100%, rgba(87,89,255,.28), transparent 45%),
+    conic-gradient(from 0deg at 50% 50%, rgba(0,245,255,.08), transparent 65deg, rgba(134,160,255,.13) 140deg, transparent 220deg, rgba(0,195,255,.16) 300deg, transparent 360deg),
+    linear-gradient(135deg,#10328c 0%,#1c56d7 42%,#1748bd 72%,#0b286f 100%) !important;
+  background-size: 100% 100%, 100% 100%, 240% 240%, 100% 100% !important;
+  animation: memberV2Glow 4s ease-in-out infinite, memberV2Aurora 11s linear infinite !important;
+  box-shadow:
+    0 0 0 1px rgba(69,205,255,.22),
+    0 16px 45px rgba(0,98,255,.30),
+    0 0 48px rgba(35,192,255,.22),
+    inset 0 1px 0 rgba(255,255,255,.32) !important;
+}
+.hero-card::before {
+  inset: -2px !important;
+  background: conic-gradient(from var(--member-v2-angle, 0deg),
+    transparent 0deg, rgba(68,215,255,.10) 45deg,
+    #37dfff 90deg, #ffffff 110deg, #8eafff 135deg,
+    transparent 185deg, transparent 255deg, #4c8bff 315deg, transparent 360deg) !important;
+  filter: drop-shadow(0 0 8px rgba(65,220,255,.55));
+  animation: memberV2Frame 4.6s linear infinite !important;
+}
+.hero-card::after {
+  top: -55% !important;
+  left: -80% !important;
+  width: 65% !important;
+  height: 220% !important;
+  background: linear-gradient(100deg, transparent, rgba(94,230,255,.04) 35%, rgba(215,250,255,.24) 50%, rgba(106,190,255,.08) 62%, transparent) !important;
+  animation: memberV2Sweep 7.5s ease-in-out infinite !important;
+}
+
+@keyframes vipV2Glow {
+  0%,100% { box-shadow: 0 0 0 1px rgba(255,132,35,.18),0 14px 38px rgba(255,102,0,.17),0 0 30px rgba(255,125,35,.12),inset 0 1px 0 rgba(255,255,255,.14); }
+  50% { box-shadow: 0 0 0 1px rgba(255,190,105,.38),0 18px 48px rgba(255,102,0,.29),0 0 48px rgba(255,125,35,.24),inset 0 1px 0 rgba(255,255,255,.23); }
+}
+@keyframes vipV2Aurora { to { background-position: 100% 50%,100% 50%,100% 100%,center; } }
+@keyframes vipV2Frame { to { --vip-v2-angle: 360deg; } }
+@keyframes vipV2Sweep { 0%,12% { transform: translateX(-70%) rotate(-8deg); opacity:0; } 28% {opacity:1;} 62%,100% {transform:translateX(70%) rotate(-8deg);opacity:0;} }
+@keyframes memberV2Glow {
+  0%,100% { box-shadow: 0 0 0 1px rgba(69,205,255,.22),0 16px 42px rgba(0,98,255,.25),0 0 38px rgba(35,192,255,.16),inset 0 1px 0 rgba(255,255,255,.28); }
+  50% { box-shadow: 0 0 0 1px rgba(150,245,255,.48),0 18px 52px rgba(0,120,255,.38),0 0 64px rgba(35,220,255,.30),inset 0 1px 0 rgba(255,255,255,.42); }
+}
+@keyframes memberV2Aurora { to { background-position: 100% 50%,100% 50%,100% 100%,center; } }
+@keyframes memberV2Frame { to { --member-v2-angle: 360deg; } }
+@keyframes memberV2Sweep { 0%,10% { left:-80%;opacity:0; } 25% {opacity:1;} 58%,100% {left:125%;opacity:0;} }
+@property --vip-v2-angle { syntax:'<angle>'; initial-value:0deg; inherits:false; }
+@property --member-v2-angle { syntax:'<angle>'; initial-value:0deg; inherits:false; }
+@media (prefers-reduced-motion: reduce) {
+  .card-vip-banner, .card-vip-banner::before, .card-vip-banner::after,
+  .hero-card, .hero-card::before, .hero-card::after { animation:none !important; }
 }
