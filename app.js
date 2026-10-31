@@ -511,6 +511,7 @@ async function carregarPainelAdmin() {
     const snapUsers = await getDocs(collection(db, "usuarios"));
     let totalUsers = 0;
     let totalVips = 0;
+    let totalFree = 0;
     let totalMerchants = 0;
     let listUsersHtml = '';
     let listMerchantsHtml = '';
@@ -520,10 +521,16 @@ async function carregarPainelAdmin() {
       totalUsers++;
       const u = docSnap.data();
       const uid = docSnap.id;
-      if (u.vip) totalVips++;
+      if (u.vip) {
+        totalVips++;
+      } else if (u.funcao === "cliente") {
+        totalFree++;
+      }
+
       if (u.funcao === "lojista") {
         totalMerchants++;
-        cacheEmpresasAdmin.push({ id: uid, nome: u.empresaNome || 'Empresa' });
+        const empNome = u.empresaNome || u.nome || 'Empresa';
+        cacheEmpresasAdmin.push({ id: uid, nome: empNome, data: u });
       }
 
       const badgeVipTxt = u.vip ? "👑 VIP" : "👤 Free";
@@ -549,22 +556,35 @@ async function carregarPainelAdmin() {
           <button class="btn btn-outline btn-small" style="width:100%; margin-top:4px;" onclick="adminAlternarVip('${uid}', ${nextVipState})">${btnVipActionText}</button>
         </div>
       `;
+    });
 
-      if (u.funcao === "lojista") {
-        const empresaCadastradaEm = u.criadoEm ? new Date(u.criadoEm).toLocaleDateString('pt-BR') : 'Não registrada';
-        listMerchantsHtml += `
-          <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <h4 style="font-size:1rem; font-weight:900; color:var(--text);">🏢 ${u.empresaNome || 'Empresa Sem Nome'}</h4>
-              <span class="status-badge lojista">PARCEIRO</span>
-            </div>
-            <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">👤 <strong>Responsável:</strong> ${u.nome || '-'}</p>
-            <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📍 <strong>Endereço:</strong> ${u.empresaEndereco || 'Pelotas / RS'}</p>
-            <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📞 <strong>Contato:</strong> ${u.empresaTelefone || 'Não informado'}</p>
-            <p style="font-size:0.78rem; color:var(--muted);">📅 <strong>Cadastrado em:</strong> <span style="color:var(--primary); font-weight:700;">${empresaCadastradaEm}</span></p>
+    cacheEmpresasAdmin.forEach(emp => {
+      const u = emp.data;
+      const uid = emp.id;
+      const empresaCadastradaEm = u.criadoEm ? new Date(u.criadoEm).toLocaleDateString('pt-BR') : 'Não registrada';
+      const statusAtivo = u.ativo !== false;
+      const statusBadgeTxt = statusAtivo ? "🟢 ATIVA" : "🔴 DESATIVADA";
+      const btnToggleTxt = statusAtivo ? "Desativar" : "Ativar";
+
+      listMerchantsHtml += `
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h4 style="font-size:1rem; font-weight:900; color:var(--text);">🏢 ${u.empresaNome || 'Empresa Sem Nome'}</h4>
+            <span style="font-size:0.7rem; font-weight:800;">${statusBadgeTxt}</span>
           </div>
-        `;
-      }
+          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">👤 <strong>Responsável:</strong> ${u.nome || '-'}</p>
+          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📧 <strong>E-mail:</strong> ${u.email || '-'}</p>
+          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📍 <strong>Endereço:</strong> ${u.empresaEndereco || 'Pelotas / RS'}</p>
+          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📞 <strong>Contato:</strong> ${u.empresaTelefone || 'Não informado'}</p>
+          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:8px;">📅 <strong>Cadastrado em:</strong> <span style="color:var(--primary); font-weight:700;">${empresaCadastradaEm}</span></p>
+
+          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+            <button class="btn btn-outline btn-small" onclick="abrirModalAdminEmpresa('${uid}', '${encodeURIComponent(u.empresaNome || '')}', '${encodeURIComponent(u.email || '')}', '${encodeURIComponent(u.empresaDescricao || '')}', '${encodeURIComponent(u.empresaEndereco || '')}', '${encodeURIComponent(u.empresaTelefone || '')}', '${u.empresaCategoria || 'gastronomia'}', '${encodeURIComponent(u.fotoUrl || '')}')">✏️ Editar</button>
+            <button class="btn btn-outline btn-small" onclick="toggleStatusEmpresaAdmin('${uid}', ${statusAtivo})">⏸️ ${btnToggleTxt}</button>
+            <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="excluirEmpresaAdmin('${uid}', '${encodeURIComponent(u.empresaNome || 'Empresa')}')">🗑️ Excluir</button>
+          </div>
+        </div>
+      `;
     });
 
     atualizarSelectFiltroEmpresas();
@@ -598,27 +618,120 @@ async function carregarPainelAdmin() {
 
     const snapLogs = await getDocs(collection(db, "logs_resgates"));
     cacheLogsAdmin = [];
+    let countCuponsUsados = 0;
+
     snapLogs.forEach(logSnap => {
-      cacheLogsAdmin.push({ id: logSnap.id, ...logSnap.data() });
+      const dataLog = logSnap.data();
+      if (dataLog.status === "usado") countCuponsUsados++;
+      cacheLogsAdmin.push({ id: logSnap.id, ...dataLog });
     });
 
     renderizarLogsAdminFiltrados();
 
     document.getElementById('admin-count-users').innerText = totalUsers;
     document.getElementById('admin-count-vips').innerText = totalVips;
+    document.getElementById('admin-count-free').innerText = totalFree;
     document.getElementById('admin-count-merchants').innerText = totalMerchants;
     document.getElementById('admin-count-offers').innerText = totalCuponsAtivos;
+    document.getElementById('admin-count-coupons-generated').innerText = snapLogs.size;
+    document.getElementById('admin-count-coupons-used').innerText = countCuponsUsados;
+    document.getElementById('admin-count-payments-approved').innerText = totalVips;
 
     document.getElementById('admin-all-coupons-list').innerHTML = allCuponsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum cupom registrado.</p>';
     document.getElementById('admin-users-list').innerHTML = listUsersHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum utilizador encontrado.</p>';
     document.getElementById('admin-merchants-list').innerHTML = listMerchantsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhuma empresa parceira registrada.</p>';
 
-    renderizarGraficosAdmin(totalUsers - totalVips, totalVips);
+    renderizarGraficosAdmin(totalFree, totalVips);
 
   } catch (err) {
     console.error("Erro admin:", err);
   }
 }
+
+window.abrirModalAdminEmpresa = function(id = '', nome = '', email = '', desc = '', endereco = '', telefone = '', cat = 'gastronomia', logo = '') {
+  document.getElementById('modal-admin-empresa-title').innerText = id ? "✏️ Editar Empresa" : "➕ Nova Empresa Parceira";
+  document.getElementById('admin-empresa-id').value = id;
+  document.getElementById('adm-emp-nome').value = decodeURIComponent(nome);
+  document.getElementById('adm-emp-email').value = decodeURIComponent(email);
+  document.getElementById('adm-emp-email').disabled = !!id;
+  document.getElementById('adm-emp-desc').value = decodeURIComponent(desc);
+  document.getElementById('adm-emp-endereco').value = decodeURIComponent(endereco);
+  document.getElementById('adm-emp-telefone').value = decodeURIComponent(telefone);
+  document.getElementById('adm-emp-cat').value = cat;
+  document.getElementById('adm-emp-logo').value = decodeURIComponent(logo);
+  document.getElementById('modal-admin-empresa').classList.add('active');
+};
+
+window.salvarEmpresaPeloAdmin = async function() {
+  const id = document.getElementById('admin-empresa-id').value;
+  const nome = document.getElementById('adm-emp-nome').value.trim();
+  const email = document.getElementById('adm-emp-email').value.trim().toLowerCase();
+  const desc = document.getElementById('adm-emp-desc').value.trim();
+  const endereco = document.getElementById('adm-emp-endereco').value.trim();
+  const telefone = document.getElementById('adm-emp-telefone').value.trim();
+  const categoria = document.getElementById('adm-emp-cat').value;
+  const logo = document.getElementById('adm-emp-logo').value.trim();
+
+  if (!nome || !email) return mostrarAviso("Atenção", "Preencha o nome e o e-mail da empresa.", "⚠️");
+
+  try {
+    if (id) {
+      await updateDoc(doc(db, "usuarios", id), {
+        empresaNome: nome,
+        empresaDescricao: desc,
+        empresaEndereco: endereco || 'Pelotas / RS',
+        empresaTelefone: telefone,
+        empresaCategoria: categoria,
+        fotoUrl: logo || null
+      });
+      mostrarAviso("Sucesso! 🏢", "Empresa atualizada com sucesso.", "✅");
+    } else {
+      const novoDocRef = doc(collection(db, "usuarios"));
+      await setDoc(novoDocRef, {
+        nome: nome,
+        email: email,
+        funcao: "lojista",
+        vip: false,
+        ativo: true,
+        empresaNome: nome,
+        empresaDescricao: desc,
+        empresaEndereco: endereco || 'Pelotas / RS',
+        empresaTelefone: telefone,
+        empresaCategoria: categoria,
+        fotoUrl: logo || null,
+        criadoEm: new Date().toISOString()
+      });
+      mostrarAviso("Sucesso! 🎉", "Nova empresa cadastrada com sucesso.", "✅");
+    }
+    fecharModal('modal-admin-empresa');
+    carregarPainelAdmin();
+  } catch (err) {
+    mostrarAviso("Erro", err.message, "❌");
+  }
+};
+
+window.toggleStatusEmpresaAdmin = async function(uid, estadoAtual) {
+  try {
+    await updateDoc(doc(db, "usuarios", uid), { ativo: !estadoAtual });
+    mostrarAviso("Sucesso", "Status da empresa alterado.", "✅");
+    carregarPainelAdmin();
+  } catch (err) {
+    mostrarAviso("Erro", err.message, "❌");
+  }
+};
+
+window.excluirEmpresaAdmin = async function(uid, nomeEmpresa) {
+  const nomeLimpo = decodeURIComponent(nomeEmpresa);
+  if (confirm(`Tem certeza que deseja excluir a empresa "${nomeLimpo}"? Esta ação removerá o cadastro do parceiro.`)) {
+    try {
+      await deleteDoc(doc(db, "usuarios", uid));
+      mostrarAviso("Excluído 🗑️", `A empresa ${nomeLimpo} foi removida.`, "✅");
+      carregarPainelAdmin();
+    } catch (err) {
+      mostrarAviso("Erro", err.message, "❌");
+    }
+  }
+};
 
 function renderizarGraficosAdmin(freeUsers, vipUsers) {
   const ctx = document.getElementById('chartUsersVip');
@@ -1122,6 +1235,7 @@ window.executarAuth = async function() {
         userData.empresaNome = storeName;
         userData.empresaEndereco = storeAddress;
         userData.empresaTelefone = storePhone;
+        userData.ativo = true;
       }
 
       await setDoc(doc(db, "usuarios", res.user.uid), userData);

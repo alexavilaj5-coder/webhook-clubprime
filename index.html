@@ -226,6 +226,7 @@
         Modo Cliente
       </button>
 
+      <!-- DASHBOARD COMPLETO E EXPANDIDO -->
       <div class="admin-grid">
         <div class="admin-stat-card">
           <div class="admin-stat-lbl">Usuários Total</div>
@@ -236,12 +237,28 @@
           <div id="admin-count-vips" class="admin-stat-val">0</div>
         </div>
         <div class="admin-stat-card">
+          <div class="admin-stat-lbl">Membros Gratuitos</div>
+          <div id="admin-count-free" class="admin-stat-val">0</div>
+        </div>
+        <div class="admin-stat-card">
           <div class="admin-stat-lbl">Lojistas Parceiros</div>
           <div id="admin-count-merchants" class="admin-stat-val">0</div>
         </div>
         <div class="admin-stat-card">
           <div class="admin-stat-lbl">Ofertas Ativas</div>
           <div id="admin-count-offers" class="admin-stat-val">0</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-lbl">Cupons Gerados</div>
+          <div id="admin-count-coupons-generated" class="admin-stat-val">0</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-lbl">Cupons Utilizados</div>
+          <div id="admin-count-coupons-used" class="admin-stat-val">0</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-lbl">Pagamentos Aprovados</div>
+          <div id="admin-count-payments-approved" class="admin-stat-val">0</div>
         </div>
       </div>
 
@@ -273,10 +290,11 @@
         <button class="btn btn-cyan" style="padding:10px; font-size:0.85rem;" onclick="salvarBannerLojistaAdmin()">💾 Publicar Recado para Lojistas</button>
       </div>
 
+      <!-- ABAS DO PAINEL ADMIN -->
       <div class="auth-tabs" style="margin-bottom:16px;">
-        <div id="adm-tab-cupons" class="auth-tab active" onclick="switchAdminTab('cupons')">🎟️ Cupons Usados</div>
+        <div id="adm-tab-cupons" class="auth-tab active" onclick="switchAdminTab('cupons')">🎟️ Cupons</div>
         <div id="adm-tab-clientes" class="auth-tab" onclick="switchAdminTab('clientes')">👥 Clientes & VIP</div>
-        <div id="adm-tab-empresas" class="auth-tab" onclick="switchAdminTab('empresas')">🏢 Empresas</div>
+        <div id="adm-tab-empresas" class="auth-tab" onclick="switchAdminTab('empresas')">🏢 Gerenciar Empresas</div>
       </div>
 
       <div id="adm-section-cupons" class="admin-tab-content">
@@ -308,8 +326,12 @@
         </div>
       </div>
 
+      <!-- SEÇÃO COMPLETA DE GERENCIAR EMPRESAS -->
       <div id="adm-section-empresas" class="admin-tab-content" style="display:none;">
-        <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:12px;">Lojistas e Empresas Parceiras</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="font-size:1.1rem; font-weight:800;">Lojistas e Empresas Parceiras</h3>
+          <button class="btn btn-cyan btn-small" onclick="abrirModalAdminEmpresa()">➕ Nova Empresa</button>
+        </div>
         <div id="admin-merchants-list" style="margin-bottom:20px; max-height:360px; overflow-y:auto; padding-right:4px;">
           <p style="font-size:0.8rem; color:var(--muted);">Nenhuma empresa parceira registrada.</p>
         </div>
@@ -369,7 +391,6 @@
         <input type="text" class="form-control" placeholder="🔍 Buscar restaurante, oficina, barbearia..." onkeyup="filterStores(this.value)">
       </div>
 
-      <!-- CATEGORIAS SEM O BOTÃO DE FAVORITOS -->
       <div class="categories-bar">
         <div class="category-pill active" onclick="filterCat('all', this)">Todos Os Cupons</div>
         <div class="category-pill" onclick="filterCat('gastronomia', this)">🍔 Gastronomia & Delivery</div>
@@ -620,6 +641,51 @@
 
       <button class="btn btn-cyan" style="margin-top:12px;" onclick="salvarOfertaGeral()">💾 Salvar e Publicar</button>
       <button class="btn btn-outline" style="margin-top:8px;" onclick="fecharModal('modal-add-offer')">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- MODAL CADASTRAR / EDITAR EMPRESA (ADMIN) -->
+  <div id="modal-admin-empresa" class="modal">
+    <div class="modal-content">
+      <h3 id="modal-admin-empresa-title" style="font-size:1.2rem; font-weight:800; margin-bottom:12px;">🏢 Nova Empresa Parceira</h3>
+      <input type="hidden" id="admin-empresa-id" value="">
+
+      <div class="form-group" style="text-align:left;">
+        <label>NOME DA EMPRESA</label>
+        <input type="text" id="adm-emp-nome" class="form-control" placeholder="Ex: Hamburgueria Pelotas">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>E-MAIL DE ACESSO DO LOJISTA</label>
+        <input type="email" id="adm-emp-email" class="form-control" placeholder="lojista@email.com">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>DESCRIÇÃO</label>
+        <input type="text" id="adm-emp-desc" class="form-control" placeholder="Breve descrição dos produtos/serviços">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>ENDEREÇO</label>
+        <input type="text" id="adm-emp-endereco" class="form-control" placeholder="Ex: Rua XV de Novembro, 200">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>TELEFONE / WHATSAPP</label>
+        <input type="text" id="adm-emp-telefone" class="form-control" placeholder="Ex: 53 99999-8888">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>CATEGORIA</label>
+        <select id="adm-emp-cat" class="form-control">
+          <option value="gastronomia">Gastronomia & Delivery</option>
+          <option value="compras">Lojas & Compras</option>
+          <option value="automotivo">Automotivo</option>
+          <option value="beleza">Saúde & Beleza</option>
+        </select>
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>LINK DA LOGO / IMAGEM</label>
+        <input type="text" id="adm-emp-logo" class="form-control" placeholder="https://exemplo.com/logo.jpg">
+      </div>
+
+      <button class="btn btn-cyan" style="margin-top:12px;" onclick="salvarEmpresaPeloAdmin()">💾 Salvar Empresa</button>
+      <button class="btn btn-outline" style="margin-top:8px;" onclick="fecharModal('modal-admin-empresa')">Cancelar</button>
     </div>
   </div>
 
