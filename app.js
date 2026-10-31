@@ -198,7 +198,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// CORREÇÃO: Botão renovar abre a cobrança no Pix de R$ 19,90
+// Botão de renovação abre o Pix de R$ 19,90 corretamente
 window.renovarVipAcumulado = async function() {
   const user = auth.currentUser;
   if (!user || !window.currentUserData) return;
@@ -302,7 +302,7 @@ async function carregarCuponsVipAdminList() {
   }
 }
 
-// CORREÇÃO: Função autônoma para listar parceiros para todos os clientes
+// Função de carregar parceiros corrigida para evitar erros de índice no Firestore
 async function carregarParceirosCliente() {
   const container = document.getElementById('partners-list-all');
   if (!container) return;
@@ -310,8 +310,7 @@ async function carregarParceirosCliente() {
   try {
     const qLojistas = query(
       collection(db, "usuarios"), 
-      where("funcao", "==", "lojista"), 
-      where("ativo", "!=", false)
+      where("funcao", "==", "lojista")
     );
     
     const snapLojistas = await getDocs(qLojistas);
@@ -324,6 +323,8 @@ async function carregarParceirosCliente() {
     let partnersClientHtml = '';
     snapLojistas.forEach(docSnap => {
       const u = docSnap.data();
+      if (u.ativo === false) return;
+
       const foneLimpo = (u.empresaTelefone || '').replace(/\D/g, '');
       const wppLink = foneLimpo ? `https://wa.me/55${foneLimpo}?text=Olá,%20vim%20pelo%20Clube%20Prime!` : '#';
 
@@ -340,7 +341,7 @@ async function carregarParceirosCliente() {
       `;
     });
 
-    container.innerHTML = partnersClientHtml;
+    container.innerHTML = partnersClientHtml || `<p style="font-size:0.8rem; color:var(--muted); text-align:center; padding:20px;">Nenhum parceiro ativo no momento.</p>`;
   } catch (err) {
     console.error("Erro ao carregar parceiros:", err);
     container.innerHTML = `<p style="font-size:0.8rem; color:var(--muted); text-align:center; padding:20px;">Erro ao carregar lista de parceiros.</p>`;
@@ -1433,7 +1434,6 @@ window.switchAuthTab = function(type) {
   document.getElementById('btn-auth-submit').innerText = type === 'login' ? 'Entrar na Conta' : 'Criar Conta';
 };
 
-// CORREÇÃO: Chama carregarParceirosCliente ao abrir a tela de busca/parceiros
 window.navTo = function(screenId, btn) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + screenId).classList.add('active');
