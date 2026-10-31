@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   escutarBannerGlobal();
   escutarBannerLojista();
+  escutarLeilaoPatrocinado();
 });
 
 onAuthStateChanged(auth, async (user) => {
@@ -103,6 +104,7 @@ onAuthStateChanged(auth, async (user) => {
         carregarEstatisticasLojista(user.uid);
         carregarCuponsDoLojista(user.uid);
         carregarLogsDoLojista(user.uid);
+        carregarLeilaoLojista();
         return;
       }
 
@@ -145,8 +147,26 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('profile-vip-card').style.display = 'block';
         
         if (data.vipExpiraEm) {
-          const expiraStr = new Date(data.vipExpiraEm).toLocaleDateString('pt-BR');
+          const expiraDate = new Date(data.vipExpiraEm);
+          const expiraStr = expiraDate.toLocaleDateString('pt-BR');
           document.getElementById('profile-vip-expira').innerText = expiraStr;
+
+          const diffTime = expiraDate - new Date();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          const countdownEl = document.getElementById('profile-vip-countdown');
+          const renewBox = document.getElementById('box-renew-vip');
+
+          if (diffDays > 0) {
+            countdownEl.innerText = `Faltam ${diffDays} dia(s) para vencer.`;
+          } else {
+            countdownEl.innerText = `Expira hoje!`;
+          }
+
+          if (diffDays <= 5 && diffDays >= 0) {
+            if (renewBox) renewBox.style.display = 'block';
+          } else {
+            if (renewBox) renewBox.style.display = 'none';
+          }
         }
         fecharModal('modal-pix');
       } else {
@@ -176,6 +196,211 @@ onAuthStateChanged(auth, async (user) => {
     document.querySelector('.bottom-nav').style.display = 'none';
   }
 });
+
+window.renovarVipAcumulado = async function() {
+  const user = auth.currentUser;
+  if (!user || !window.currentUserData) return;
+  
+  // Chama a função de gerar o Pix do Mercado Pago para o usuário pagar os R$ 19,90
+  gerarPixMercadoPago();
+};
+
+window.resgatarCupomVipAdm = async function() {
+  const user = auth.currentUser;
+  if (!user) return mostrarAviso("Atenção", "Faça login para resgatar o cupom.", "⚠️");
+  const codigoDigitado = document.getElementById('input-cupom-vip-adm').value.trim().toUpperCase();
+  if (!codigoDigitado) return mostrarAviso("Atenção", "Digite o código do cupom VIP.", "⚠️");
+
+  try {
+    const qCupom = query(collection(db, "cupons_vip_adm"), where("codigo", "==", codigoDigitado), where("usado", "==", false));
+    const snap = await getDocs(qCupom);
+
+    if (snap.empty) {
+      return mostrarAviso("Cupom Inválido ❌", "Este código VIP não existe ou já foi utilizado.", "⚠️");
+    }
+
+    let cupomDocId = null;
+    snap.forEach(d => { cupomDocId = d.id; });
+
+    await updateDoc(doc(db, "cupons_vip_adm", cupomDocId), {
+      usado: true,
+      usadoPorUid: user.uid,
+      usadoPorEmail: user.email,
+      dataUso: new Date().toISOString()
+    });
+
+    const userRef = doc(db, "usuarios", user.uid);
+    const userSnap = await getDoc(userRef);
+    let uData = userSnap.data();
+
+    let baseDate = new Date();
+    if (uData.vip && uData.vipExpiraEm) {
+      const currentExp = new Date(uData.vipExpiraEm);
+      if (currentExp > baseDate) baseDate = currentExp;
+    }
+    const novaExpiraEm = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    await updateDoc(userRef, {
+      vip: true,
+      vipExpiraEm: novaExpiraEm
+    });
+
+    document.getElementById('input-cupom-vip-adm').value = '';
+    dispararConfetes();
+    mostrarAviso("VIP Ativado! 🎉", "Parabéns! Você ganhou 30 dias de acesso VIP ao Clube Prime!", "👑");
+  } catch(err) {
+    mostrarAviso("Erro", err.message, "❌");
+  }
+};
+
+window.gerar40CuponsVipAdmin = async function() {
+  if (!confirm("Deseja gerar 40 cupons de uso único de 30 dias VIP?")) return;
+  try {
+    const batchPromises = [];
+    for (let i = 1; i <= 40; i++) {
+      const sufixo = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const codigoCupom = `PRIME-VIP30-${sufixo}`;
+      batchPromises.push(addDoc(collection(db, "cupons_vip_adm"), {
+        codigo: codigoCupom,
+        dias: 30,
+        usado: false,
+        criadoEm: new Date().toISOString()
+      }));
+    }
+    await Promise.all(batchPromises);
+    mostrarAviso("Sucesso! 🎁", "40 cupons VIP de 30 dias gerados com sucesso!", "✅");
+    carregarPainelAdmin();
+  } catch(err) {
+    mostrarAviso("Erro", err.message, "❌");
+  }
+};
+
+async function carregarCuponsVipAdminList() {
+  const container = document.getElementById('admin-vip-coupons-list');
+  if (!container) return;
+  try {
+    const snap = await getDocs(collection(db, "cupons_vip_adm"));
+    if (snap.empty) {
+      container.innerHTML = `<p style="color:var(--muted);">Nenhum cupom gerado.</p>`;
+      return;
+    }
+    let html = '';
+    snap.forEach(d => {
+      const c = d.data();
+      const statusColor = c.usado ? "#ef4444" : "#10b981";
+      const statusText = c.usado ? "🔴 UTILIZADO" : "🟢 DISPONÍVEL";
+      html += `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--card); padding:6px 8px; border-radius:8px; margin-bottom:4px; border:1px solid var(--card-border);">
+          <span style="font-weight:800; font-family:monospace;">${c.codigo}</span>
+          <span style="color:${statusColor}; font-weight:800; font-size:0.68rem;">${statusText}</span>
+        </div>
+      `;
+    });
+    container.innerHTML = html;
+  } catch(e) {
+    container.innerHTML = `<p style="color:var(--muted);">Erro ao carregar cupons.</p>`;
+  }
+}
+
+function escutarLeilaoPatrocinado() {
+  const leilaoRef = doc(db, "configuracoes", "leilao_patrocinado");
+  onSnapshot(leilaoRef, (docSnap) => {
+    const sponsoredBanner = document.getElementById('client-sponsored-banner');
+    const sponsoredNameEl = document.getElementById('client-sponsored-name');
+    
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const vencedor = data.vencedorNome;
+      if (vencedor && sponsoredBanner && sponsoredNameEl) {
+        sponsoredNameEl.innerText = vencedor;
+        sponsoredBanner.style.display = 'block';
+      } else if (sponsoredBanner) {
+        sponsoredBanner.style.display = 'none';
+      }
+    }
+  });
+}
+
+function carregarLeilaoLojista() {
+  const leilaoRef = doc(db, "configuracoes", "leilao_patrocinado");
+  onSnapshot(leilaoRef, (docSnap) => {
+    const highestBidEl = document.getElementById('auction-highest-bid');
+    const highestBidderEl = document.getElementById('auction-highest-bidder');
+    const adminBidEl = document.getElementById('admin-auction-bid');
+    const adminBidderEl = document.getElementById('admin-auction-bidder');
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const valor = data.maiorLance || 0;
+      const nome = data.vencedorNome || "Nenhum";
+      const txt = valor > 0 ? `R$ ${valor.toFixed(2).replace('.', ',')}` : "R$ 0,00 (Nenhum lance ainda)";
+      
+      if (highestBidEl) highestBidEl.innerText = txt;
+      if (highestBidderEl) highestBidderEl.innerText = nome;
+      if (adminBidEl) adminBidEl.innerText = txt;
+      if (adminBidderEl) adminBidderEl.innerText = nome;
+    }
+  });
+}
+
+window.darLanceLeilao = async function() {
+  const user = auth.currentUser;
+  if (!user || window.currentUserData?.funcao !== "lojista") {
+    return mostrarAviso("Atenção", "Apenas lojistas podem dar lances no leilão.", "⚠️");
+  }
+  const valorInput = parseFloat(document.getElementById('auction-bid-amount').value);
+  if (isNaN(valorInput) || valorInput < 15.00) {
+    return mostrarAviso("Lance Inválido ⚠️", "O valor mínimo para o leilão é de R$ 15,00.", "❌");
+  }
+
+  const agora = new Date();
+  const hora = agora.getHours();
+  if (hora >= 21) {
+    return mostrarAviso("Leilão Encerrado ⏰", "O leilão diário encerra às 21:00. Tente novamente amanhã cedo!", "⏳");
+  }
+
+  try {
+    const leilaoRef = doc(db, "configuracoes", "leilao_patrocinado");
+    const snap = await getDoc(leilaoRef);
+    let maiorLanceAtual = 0;
+    if (snap.exists()) {
+      maiorLanceAtual = snap.data().maiorLance || 0;
+    }
+
+    if (valorInput <= maiorLanceAtual) {
+      return mostrarAviso("Lance Baixo ⚠️", `O seu lance deve ser superior ao maior lance atual (R$ ${maiorLanceAtual.toFixed(2).replace('.', ',')}).`, "📊");
+    }
+
+    const nomeLoja = window.currentUserData.empresaNome || "Empresa Parceira";
+    await setDoc(leilaoRef, {
+      maiorLance: valorInput,
+      vencedorUid: user.uid,
+      vencedorNome: nomeLoja,
+      atualizadoEm: new Date().toISOString()
+    }, { merge: true });
+
+    document.getElementById('auction-bid-amount').value = '';
+    dispararConfetes();
+    mostrarAviso("Lance Registrado! 🔨", `Parabéns! Seu lance de R$ ${valorInput.toFixed(2).replace('.', ',')} é o mais alto no momento. Lembre-se de enviar o Pix direto para os ADMs!`, "✅");
+  } catch(err) {
+    mostrarAviso("Erro", err.message, "❌");
+  }
+};
+
+window.salvarPatrocinadoAdmin = async function() {
+  const nomePatrocinado = document.getElementById('admin-sponsored-store-name').value.trim();
+  try {
+    await setDoc(doc(db, "configuracoes", "leilao_patrocinado"), {
+      vencedorNome: nomePatrocinado,
+      maiorLance: 0,
+      vencedorUid: ""
+    }, { merge: true });
+    mostrarAviso("Sucesso! ⭐", "Patrocinado do dia definido com sucesso.", "✅");
+    document.getElementById('admin-sponsored-store-name').value = '';
+  } catch(err) {
+    mostrarAviso("Erro", err.message, "❌");
+  }
+};
 
 async function calcularEconomiaNivelUsuario(uid) {
   try {
@@ -517,6 +742,8 @@ async function carregarPainelAdmin() {
     let listMerchantsHtml = '';
     cacheEmpresasAdmin = [];
 
+    let partnersClientHtml = '';
+
     snapUsers.forEach(docSnap => {
       totalUsers++;
       const u = docSnap.data();
@@ -531,6 +758,21 @@ async function carregarPainelAdmin() {
         totalMerchants++;
         const empNome = u.empresaNome || u.nome || 'Empresa';
         cacheEmpresasAdmin.push({ id: uid, nome: empNome, data: u });
+
+        const foneLimpo = (u.empresaTelefone || '').replace(/\D/g, '');
+        const wppLink = foneLimpo ? `https://wa.me/55${foneLimpo}?text=Olá,%20vim%20pelo%20Clube%20Prime!` : '#';
+
+        partnersClientHtml += `
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <h4 style="font-size:1rem; font-weight:900;">🏢 ${u.empresaNome || 'Empresa'}</h4>
+              <span style="font-size:0.7rem; font-weight:800; color:var(--primary);">${u.empresaCategoria || 'Parceiro'}</span>
+            </div>
+            <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📍 <strong>Endereço:</strong> ${u.empresaEndereco || 'Pelotas / RS'}</p>
+            <p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px;">📞 <strong>Contato:</strong> ${u.empresaTelefone || 'Não informado'}</p>
+            ${foneLimpo ? `<a href="${wppLink}" target="_blank" class="btn btn-cyan" style="padding:10px; font-size:0.8rem; text-decoration:none; display:inline-block; width:100%; text-align:center;">💬 Chamar no WhatsApp</a>` : ''}
+          </div>
+        `;
       }
 
       const badgeVipTxt = u.vip ? "👑 VIP" : "👤 Free";
@@ -541,22 +783,27 @@ async function carregarPainelAdmin() {
       const expiraDataStr = u.vipExpiraEm ? new Date(u.vipExpiraEm).toLocaleDateString('pt-BR') : (u.vip ? 'Ativo (Ilimitado)' : 'Não assinante');
 
       listUsersHtml += `
-        <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:12px;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
             <div>
-              <div style="font-size:0.95rem; font-weight:900;">${u.nome || 'Usuário'} <span style="font-size:0.75rem; color:var(--muted);">(${u.funcao})</span></div>
-              <div style="font-size:0.78rem; color:var(--muted); margin-top:2px;">📧 ${u.email}</div>
+              <div style="font-size:0.9rem; font-weight:900;">${u.nome || 'Usuário'} <span style="font-size:0.7rem; color:var(--muted);">(${u.funcao})</span></div>
+              <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">📧 ${u.email}</div>
             </div>
-            <span style="font-weight:800; font-size:0.75rem; padding:4px 10px; border-radius:12px; background:var(--secondary); color:var(--primary);">${badgeVipTxt}</span>
+            <span style="font-weight:800; font-size:0.7rem; padding:3px 8px; border-radius:10px; background:var(--secondary); color:var(--primary);">${badgeVipTxt}</span>
           </div>
-          <div style="font-size:0.75rem; background:var(--secondary); padding:10px; border-radius:12px; margin:8px 0; display:flex; flex-direction:column; gap:4px;">
+          <div style="font-size:0.72rem; background:var(--secondary); padding:8px; border-radius:10px; margin:6px 0; display:flex; flex-direction:column; gap:2px;">
             <div>📅 <strong>Membro Desde:</strong> ${criadoEmData}</div>
             <div>⏳ <strong>Validade VIP:</strong> <span style="color:var(--accent); font-weight:700;">${expiraDataStr}</span></div>
           </div>
-          <button class="btn btn-outline btn-small" style="width:100%; margin-top:4px;" onclick="adminAlternarVip('${uid}', ${nextVipState})">${btnVipActionText}</button>
+          <button class="btn btn-outline btn-small" style="width:100%; margin-top:2px;" onclick="adminAlternarVip('${uid}', ${nextVipState})">${btnVipActionText}</button>
         </div>
       `;
     });
+
+    const partnersContainer = document.getElementById('partners-list-all');
+    if (partnersContainer) {
+      partnersContainer.innerHTML = partnersClientHtml || '<p style="font-size:0.8rem; color:var(--muted); text-align:center;">Nenhuma empresa cadastrada no momento.</p>';
+    }
 
     cacheEmpresasAdmin.forEach(emp => {
       const u = emp.data;
@@ -567,18 +814,18 @@ async function carregarPainelAdmin() {
       const btnToggleTxt = statusAtivo ? "Desativar" : "Ativar";
 
       listMerchantsHtml += `
-        <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <h4 style="font-size:1rem; font-weight:900; color:var(--text);">🏢 ${u.empresaNome || 'Empresa Sem Nome'}</h4>
-            <span style="font-size:0.7rem; font-weight:800;">${statusBadgeTxt}</span>
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <h4 style="font-size:0.95rem; font-weight:900; color:var(--text);">🏢 ${u.empresaNome || 'Empresa Sem Nome'}</h4>
+            <span style="font-size:0.68rem; font-weight:800;">${statusBadgeTxt}</span>
           </div>
-          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">👤 <strong>Responsável:</strong> ${u.nome || '-'}</p>
-          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📧 <strong>E-mail:</strong> ${u.email || '-'}</p>
-          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📍 <strong>Endereço:</strong> ${u.empresaEndereco || 'Pelotas / RS'}</p>
-          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📞 <strong>Contato:</strong> ${u.empresaTelefone || 'Não informado'}</p>
-          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:8px;">📅 <strong>Cadastrado em:</strong> <span style="color:var(--primary); font-weight:700;">${empresaCadastradaEm}</span></p>
+          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">👤 <strong>Responsável:</strong> ${u.nome || '-'}</p>
+          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📧 <strong>E-mail:</strong> ${u.email || '-'}</p>
+          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📍 <strong>Endereço:</strong> ${u.empresaEndereco || 'Pelotas / RS'}</p>
+          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📞 <strong>Contato:</strong> ${u.empresaTelefone || 'Não informado'}</p>
+          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:6px;">📅 <strong>Cadastrado em:</strong> <span style="color:var(--primary); font-weight:700;">${empresaCadastradaEm}</span></p>
 
-          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
             <button class="btn btn-outline btn-small" onclick="abrirModalAdminEmpresa('${uid}', '${encodeURIComponent(u.empresaNome || '')}', '${encodeURIComponent(u.email || '')}', '${encodeURIComponent(u.empresaDescricao || '')}', '${encodeURIComponent(u.empresaEndereco || '')}', '${encodeURIComponent(u.empresaTelefone || '')}', '${u.empresaCategoria || 'gastronomia'}', '${encodeURIComponent(u.fotoUrl || '')}')">✏️ Editar</button>
             <button class="btn btn-outline btn-small" onclick="toggleStatusEmpresaAdmin('${uid}', ${statusAtivo})">⏸️ ${btnToggleTxt}</button>
             <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="excluirEmpresaAdmin('${uid}', '${encodeURIComponent(u.empresaNome || 'Empresa')}')">🗑️ Excluir</button>
@@ -601,13 +848,13 @@ async function carregarPainelAdmin() {
       const btnPausaText = c.ativo ? "Pausar" : "Ativar";
 
       allCuponsHtml += `
-        <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:8px;">
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:10px 12px; border-radius:12px; margin-bottom:6px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div style="font-size:0.85rem; font-weight:800;">${c.titulo} <span style="color:var(--muted); font-weight:600;">(${c.empresaNome})</span></div>
-            <span style="font-size:0.7rem; font-weight:800;">${statusText}</span>
+            <div style="font-size:0.8rem; font-weight:800;">${c.titulo} <span style="color:var(--muted); font-weight:600;">(${c.empresaNome})</span></div>
+            <span style="font-size:0.68rem; font-weight:800;">${statusText}</span>
           </div>
-          <div style="font-size:0.72rem; color:var(--muted); margin-top:2px;">Prefixo: <strong>${c.codigo || 'PRIME'}</strong> | Ordem: <strong>${c.ordem || 0}</strong></div>
-          <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+          <div style="font-size:0.7rem; color:var(--muted); margin-top:2px;">Prefixo: <strong>${c.codigo || 'PRIME'}</strong> | Ordem: <strong>${c.ordem || 0}</strong></div>
+          <div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
             <button class="btn btn-outline btn-small" onclick="toggleStatusCupom('${docId}', ${c.ativo})">⏸️ ${btnPausaText}</button>
             <button class="btn btn-outline btn-small" onclick="abrirModalEditarOferta('${docId}', '${encodeURIComponent(c.titulo)}', '${encodeURIComponent(c.descricao)}', '${encodeURIComponent(c.regras || '')}', '${c.categoria}', '${encodeURIComponent(c.descontoBadge || '')}', ${c.valorEconomia || 10}, '${c.codigo || 'PRIME'}', '${encodeURIComponent(c.imagem || '')}', '${c.limite || 'daily'}', ${c.ordem || 0})">✏️ Editar</button>
             <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="excluirCupom('${docId}')">🗑️ Excluir</button>
@@ -627,6 +874,7 @@ async function carregarPainelAdmin() {
     });
 
     renderizarLogsAdminFiltrados();
+    carregarCuponsVipAdminList();
 
     document.getElementById('admin-count-users').innerText = totalUsers;
     document.getElementById('admin-count-vips').innerText = totalVips;
@@ -642,6 +890,7 @@ async function carregarPainelAdmin() {
     document.getElementById('admin-merchants-list').innerHTML = listMerchantsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhuma empresa parceira registrada.</p>';
 
     renderizarGraficosAdmin(totalFree, totalVips);
+    carregarLeilaoLojista();
 
   } catch (err) {
     console.error("Erro admin:", err);
@@ -745,9 +994,9 @@ function renderizarGraficosAdmin(freeUsers, vipUsers) {
   window.myAdminChart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: ['Membros Free', 'Membros VIP'],
+      labels: ['Free', 'VIP'],
       datasets: [{
-        label: 'Quantidade de Usuários',
+        label: 'Usuários',
         data: [freeUsers, vipUsers],
         backgroundColor: [
           'rgba(100, 116, 139, 0.85)',
@@ -757,10 +1006,9 @@ function renderizarGraficosAdmin(freeUsers, vipUsers) {
           '#64748b',
           '#f97316'
         ],
-        borderWidth: 2,
-        borderRadius: 10,
-        borderSkipped: false,
-        barThickness: 45
+        borderWidth: 1,
+        borderRadius: 6,
+        barThickness: 30
       }]
     },
     options: {
@@ -770,21 +1018,21 @@ function renderizarGraficosAdmin(freeUsers, vipUsers) {
         legend: { display: false },
         tooltip: {
           backgroundColor: '#0f172a',
-          titleFont: { size: 13, weight: 'bold' },
-          bodyFont: { size: 12 },
-          padding: 10,
-          cornerRadius: 8
+          titleFont: { size: 11, weight: 'bold' },
+          bodyFont: { size: 10 },
+          padding: 8,
+          cornerRadius: 6
         }
       },
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: textColor, font: { weight: '600' } }
+          ticks: { color: textColor, font: { weight: '600', size: 10 } }
         },
         y: {
           beginAtZero: true,
           grid: { color: gridColor },
-          ticks: { color: textColor, precision: 0 }
+          ticks: { color: textColor, precision: 0, font: { size: 10 } }
         }
       }
     }
@@ -833,18 +1081,18 @@ function renderizarLogsAdminFiltrados() {
   let logsHtml = '';
   for (const [empresa, dataObj] of Object.entries(logsGrouped)) {
     logsHtml += `
-      <div style="margin-bottom:12px; background:var(--secondary); border:1px solid var(--card-border); padding:10px; border-radius:12px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <h4 style="font-size:0.85rem; font-weight:900; color:var(--primary);">🏢 ${empresa} (${dataObj.logs.length})</h4>
-          <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455; padding:4px 8px; font-size:0.68rem;" onclick="limparLogsEmpresaAdmin('${dataObj.empresaId}', '${empresa}')">🗑️ Limpar Logs</button>
+      <div style="margin-bottom:10px; background:var(--secondary); border:1px solid var(--card-border); padding:8px; border-radius:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <h4 style="font-size:0.8rem; font-weight:900; color:var(--primary);">🏢 ${empresa} (${dataObj.logs.length})</h4>
+          <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455; padding:3px 6px; font-size:0.65rem;" onclick="limparLogsEmpresaAdmin('${dataObj.empresaId}', '${empresa}')">🗑️ Limpar</button>
         </div>
     `;
     dataObj.logs.forEach(l => {
       const statusColor = l.status === "usado" ? "#10b981" : "#f59e0b";
       logsHtml += `
-        <div style="background:var(--card); border:1px solid var(--card-border); padding:8px 10px; border-radius:8px; margin-bottom:4px; font-size:0.75rem;">
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:6px 8px; border-radius:6px; margin-bottom:4px; font-size:0.72rem;">
           <div><strong>${l.usuarioNome || 'Cliente'}</strong> [${l.codigoGerado}] - <span style="color:${statusColor}; font-weight:800;">${(l.status || 'gerado').toUpperCase()}</span></div>
-          <div style="color:var(--muted); font-size:0.68rem; margin-top:2px;">${l.cupomTitulo} • ${new Date(l.dataHora).toLocaleString('pt-BR')}</div>
+          <div style="color:var(--muted); font-size:0.65rem; margin-top:2px;">${l.cupomTitulo} • ${new Date(l.dataHora).toLocaleString('pt-BR')}</div>
         </div>
       `;
     });
