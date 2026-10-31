@@ -181,6 +181,7 @@ onAuthStateChanged(auth, async (user) => {
     });
 
     carregarCuponsVitrine();
+    carregarParceirosCliente();
 
     document.getElementById('screen-auth').classList.remove('active');
     document.getElementById('screen-home').classList.add('active');
@@ -197,11 +198,10 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
+// CORREÇÃO: Botão renovar abre a cobrança no Pix de R$ 19,90
 window.renovarVipAcumulado = async function() {
   const user = auth.currentUser;
   if (!user || !window.currentUserData) return;
-  
-  // Chama a função de gerar o Pix do Mercado Pago para o usuário pagar os R$ 19,90
   gerarPixMercadoPago();
 };
 
@@ -299,6 +299,51 @@ async function carregarCuponsVipAdminList() {
     container.innerHTML = html;
   } catch(e) {
     container.innerHTML = `<p style="color:var(--muted);">Erro ao carregar cupons.</p>`;
+  }
+}
+
+// CORREÇÃO: Função autônoma para listar parceiros para todos os clientes
+async function carregarParceirosCliente() {
+  const container = document.getElementById('partners-list-all');
+  if (!container) return;
+
+  try {
+    const qLojistas = query(
+      collection(db, "usuarios"), 
+      where("funcao", "==", "lojista"), 
+      where("ativo", "!=", false)
+    );
+    
+    const snapLojistas = await getDocs(qLojistas);
+
+    if (snapLojistas.empty) {
+      container.innerHTML = `<p style="font-size:0.8rem; color:var(--muted); text-align:center; padding:20px;">Nenhum parceiro cadastrado no momento.</p>`;
+      return;
+    }
+
+    let partnersClientHtml = '';
+    snapLojistas.forEach(docSnap => {
+      const u = docSnap.data();
+      const foneLimpo = (u.empresaTelefone || '').replace(/\D/g, '');
+      const wppLink = foneLimpo ? `https://wa.me/55${foneLimpo}?text=Olá,%20vim%20pelo%20Clube%20Prime!` : '#';
+
+      partnersClientHtml += `
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h4 style="font-size:1rem; font-weight:900;">🏢 ${u.empresaNome || 'Empresa'}</h4>
+            <span style="font-size:0.7rem; font-weight:800; color:var(--primary);">${u.empresaCategoria || 'Parceiro'}</span>
+          </div>
+          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📍 <strong>Endereço:</strong> ${u.empresaEndereco || 'Pelotas / RS'}</p>
+          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px;">📞 <strong>Contato:</strong> ${u.empresaTelefone || 'Não informado'}</p>
+          ${foneLimpo ? `<a href="${wppLink}" target="_blank" class="btn btn-cyan" style="padding:10px; font-size:0.8rem; text-decoration:none; display:inline-block; width:100%; text-align:center;">💬 Chamar no WhatsApp (Vim pelo Clube Prime)</a>` : ''}
+        </div>
+      `;
+    });
+
+    container.innerHTML = partnersClientHtml;
+  } catch (err) {
+    console.error("Erro ao carregar parceiros:", err);
+    container.innerHTML = `<p style="font-size:0.8rem; color:var(--muted); text-align:center; padding:20px;">Erro ao carregar lista de parceiros.</p>`;
   }
 }
 
@@ -742,8 +787,6 @@ async function carregarPainelAdmin() {
     let listMerchantsHtml = '';
     cacheEmpresasAdmin = [];
 
-    let partnersClientHtml = '';
-
     snapUsers.forEach(docSnap => {
       totalUsers++;
       const u = docSnap.data();
@@ -758,21 +801,6 @@ async function carregarPainelAdmin() {
         totalMerchants++;
         const empNome = u.empresaNome || u.nome || 'Empresa';
         cacheEmpresasAdmin.push({ id: uid, nome: empNome, data: u });
-
-        const foneLimpo = (u.empresaTelefone || '').replace(/\D/g, '');
-        const wppLink = foneLimpo ? `https://wa.me/55${foneLimpo}?text=Olá,%20vim%20pelo%20Clube%20Prime!` : '#';
-
-        partnersClientHtml += `
-          <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <h4 style="font-size:1rem; font-weight:900;">🏢 ${u.empresaNome || 'Empresa'}</h4>
-              <span style="font-size:0.7rem; font-weight:800; color:var(--primary);">${u.empresaCategoria || 'Parceiro'}</span>
-            </div>
-            <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📍 <strong>Endereço:</strong> ${u.empresaEndereco || 'Pelotas / RS'}</p>
-            <p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px;">📞 <strong>Contato:</strong> ${u.empresaTelefone || 'Não informado'}</p>
-            ${foneLimpo ? `<a href="${wppLink}" target="_blank" class="btn btn-cyan" style="padding:10px; font-size:0.8rem; text-decoration:none; display:inline-block; width:100%; text-align:center;">💬 Chamar no WhatsApp</a>` : ''}
-          </div>
-        `;
       }
 
       const badgeVipTxt = u.vip ? "👑 VIP" : "👤 Free";
@@ -799,11 +827,6 @@ async function carregarPainelAdmin() {
         </div>
       `;
     });
-
-    const partnersContainer = document.getElementById('partners-list-all');
-    if (partnersContainer) {
-      partnersContainer.innerHTML = partnersClientHtml || '<p style="font-size:0.8rem; color:var(--muted); text-align:center;">Nenhuma empresa cadastrada no momento.</p>';
-    }
 
     cacheEmpresasAdmin.forEach(emp => {
       const u = emp.data;
@@ -1410,12 +1433,17 @@ window.switchAuthTab = function(type) {
   document.getElementById('btn-auth-submit').innerText = type === 'login' ? 'Entrar na Conta' : 'Criar Conta';
 };
 
+// CORREÇÃO: Chama carregarParceirosCliente ao abrir a tela de busca/parceiros
 window.navTo = function(screenId, btn) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + screenId).classList.add('active');
   if (btn) {
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+  }
+
+  if (screenId === 'search') {
+    carregarParceirosCliente();
   }
 };
 
