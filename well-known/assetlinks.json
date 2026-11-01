@@ -1,8 +1,0 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "app.vercel.webhook_clubprime.twa",
-        "sha256_cert_fingerprints": ["0E:EA:E2:9E:79:8C:6F:A5:D9:AB:BA:56:4F:53:73:2C:12:A4:C1:05:AA:35:85:98:E0:E9:BF:CE:E4:7D:B1:FA"]
-      }
-    }]
