@@ -1,3 +1,17 @@
+// Registo do Service Worker para permitir a instalação como App PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((reg) => {
+        console.log('Service Worker registado com sucesso:', reg.scope);
+      })
+      .catch((err) => {
+        console.log('Falha ao registar o Service Worker:', err);
+      });
+  });
+}
+
+
 import { somCliqueLeve, somSucesso, somAtivacaoVip, vibrar } from './sounds.js';
 
 somSucesso();
@@ -336,7 +350,7 @@ async function carregarParceirosCliente() {
           </div>
           <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📍 <strong>Endereço:</strong> ${u.empresaEndereco || 'Pelotas / RS'}</p>
           <p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px;">📞 <strong>Contato:</strong> ${u.empresaTelefone || 'Não informado'}</p>
-          ${foneLimpo ? `<a href="${wppLink}" target="_blank" class="btn btn-cyan" style="padding:10px; font-size:0.8rem; text-decoration:none; display:inline-block; width:100%; text-align:center;">💬 Chamar no WhatsApp (Vim pelo Clube Prime)</a>` : ''}
+          ${foneLimpo ? `<a href="${wppLink}" target="_blank" class="btn btn-cyan" style="padding:10px; font-size:0.8rem; text-decoration:none; display:inline-block; width:100%; text-align:center;">💬 Chamar no WhatsApp</a>` : ''}
         </div>
       `;
     });
