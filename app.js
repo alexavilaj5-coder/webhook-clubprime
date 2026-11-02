@@ -11,7 +11,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-
 import { somCliqueLeve, somSucesso, somAtivacaoVip, vibrar } from './sounds.js';
 
 somSucesso();
@@ -70,7 +69,24 @@ document.addEventListener('DOMContentLoaded', () => {
   escutarLeilaoPatrocinado();
 });
 
+// Limpeza geral de cache e listeners para evitar vazamento de estado entre trocas de conta
+function resetarEstadoUI() {
+  window.currentUserData = null;
+  window.isVipUser = false;
+  
+  if (unsubscribeUser) { unsubscribeUser(); unsubscribeUser = null; }
+  if (unsubscribeCupons) { unsubscribeCupons(); unsubscribeCupons = null; }
+  if (unsubscribeMerchantCupons) { unsubscribeMerchantCupons(); unsubscribeMerchantCupons = null; }
+  
+  const boxVoltar = document.getElementById('box-voltar-admin');
+  if (boxVoltar) boxVoltar.style.display = 'none';
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+}
+
 onAuthStateChanged(auth, async (user) => {
+  resetarEstadoUI();
+
   if (user) {
     const userDocRef = doc(db, "usuarios", user.uid);
 
@@ -93,6 +109,7 @@ onAuthStateChanged(auth, async (user) => {
 
       window.currentUserData = data;
       
+      // PAINEL ADMINISTRADOR
       if (data.funcao === "admin") {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('screen-admin').classList.add('active');
@@ -101,6 +118,7 @@ onAuthStateChanged(auth, async (user) => {
         return;
       }
 
+      // PAINEL LOJISTA
       if (data.funcao === "lojista") {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('screen-merchant').classList.add('active');
@@ -122,6 +140,7 @@ onAuthStateChanged(auth, async (user) => {
         return;
       }
 
+      // VISOES E FLUXO DO CLIENTE COMUM
       try {
         await fetch(`https://webhook-clubprime.vercel.app/api/checar-pix?email=${encodeURIComponent(user.email)}&userId=${user.uid}`);
       } catch (err) {}
@@ -201,12 +220,6 @@ onAuthStateChanged(auth, async (user) => {
     document.getElementById('screen-home').classList.add('active');
     document.querySelector('.bottom-nav').style.display = 'flex';
   } else {
-    if (unsubscribeUser) unsubscribeUser();
-    if (unsubscribeCupons) unsubscribeCupons();
-    if (unsubscribeMerchantCupons) unsubscribeMerchantCupons();
-
-    window.isVipUser = false;
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('screen-auth').classList.add('active');
     document.querySelector('.bottom-nav').style.display = 'none';
   }
@@ -316,7 +329,6 @@ async function carregarCuponsVipAdminList() {
   }
 }
 
-// Função de carregar parceiros corrigida para evitar erros de índice no Firestore
 async function carregarParceirosCliente() {
   const container = document.getElementById('partners-list-all');
   if (!container) return;
@@ -526,6 +538,8 @@ window.fecharLeitorQrCode = function() {
 };
 
 window.alternarVisaoCliente = function() {
+  if (window.currentUserData?.funcao !== "admin") return;
+  
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-home').classList.add('active');
   document.querySelector('.bottom-nav').style.display = 'flex';
@@ -535,6 +549,8 @@ window.alternarVisaoCliente = function() {
 };
 
 window.voltarAoAdminDesdeCliente = function() {
+  if (window.currentUserData?.funcao !== "admin") return;
+
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-admin').classList.add('active');
   document.querySelector('.bottom-nav').style.display = 'none';
@@ -1554,6 +1570,7 @@ window.recuperarSenha = async function() {
 
 window.deslogar = async function() {
   pararChecagemAutomatica();
+  resetarEstadoUI();
   if (auth.currentUser) await signOut(auth);
 };
 
