@@ -56,7 +56,27 @@ let unsubscribeUser = null;
 let unsubscribeCupons = null;
 let unsubscribeMerchantCupons = null;
 
+let cachePagamentosPix = [];
+let cacheTodosUsuarios = [];
+
+// DETECÇÃO DE MODO OFFLINE / ONLINE
+function checarStatusConexao() {
+  const offlineScreen = document.getElementById('offline-screen');
+  if (offlineScreen) {
+    if (!navigator.onLine) {
+      offlineScreen.style.display = 'flex';
+    } else {
+      offlineScreen.style.display = 'none';
+    }
+  }
+}
+
+window.addEventListener('online', checarStatusConexao);
+window.addEventListener('offline', checarStatusConexao);
+
 document.addEventListener('DOMContentLoaded', () => {
+  checarStatusConexao();
+
   const savedTheme = localStorage.getItem('clube_theme') || 'light';
   document.documentElement.setAttribute('data-theme', savedTheme);
   const themeBtn = document.querySelector('.theme-toggle-btn');
@@ -69,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
   escutarLeilaoPatrocinado();
 });
 
-// Limpeza geral de cache e listeners para evitar vazamento de estado entre trocas de conta
 function resetarEstadoUI() {
   window.currentUserData = null;
   window.isVipUser = false;
@@ -98,6 +117,7 @@ onAuthStateChanged(auth, async (user) => {
         data = {
           nome: user.displayName || "Cliente Clube PRIME",
           email: user.email.toLowerCase(),
+          whatsapp: "",
           fotoUrl: user.photoURL || null,
           funcao: "cliente",
           vip: false,
@@ -140,7 +160,7 @@ onAuthStateChanged(auth, async (user) => {
         return;
       }
 
-      // VISOES E FLUXO DO CLIENTE COMUM
+      // VISÕES E FLUXO DO CLIENTE COMUM
       try {
         await fetch(`https://webhook-clubprime.vercel.app/api/checar-pix?email=${encodeURIComponent(user.email)}&userId=${user.uid}`);
       } catch (err) {}
@@ -157,6 +177,11 @@ onAuthStateChanged(auth, async (user) => {
       document.getElementById('profile-name').innerText = data.nome || user.displayName || "Cliente";
       document.getElementById('profile-email').innerText = data.email || user.email;
       
+      const whatsappEl = document.getElementById('profile-whatsapp');
+      if (whatsappEl) {
+        whatsappEl.innerText = data.whatsapp ? `📱 WhatsApp: ${data.whatsapp}` : "📱 WhatsApp: Não cadastrado";
+      }
+
       const avatarImg = document.getElementById('profile-avatar');
       const fotoFinal = user.photoURL || data.fotoUrl;
       if (fotoFinal) {
@@ -169,6 +194,8 @@ onAuthStateChanged(auth, async (user) => {
       document.getElementById('profile-joined-date').innerText = dataCriado;
 
       calcularEconomiaNivelUsuario(user.uid);
+
+      const vipExpiringAlert = document.getElementById('vip-expiring-alert');
 
       if (data.vip) {
         window.isVipUser = true;
@@ -195,6 +222,16 @@ onAuthStateChanged(auth, async (user) => {
             countdownEl.innerText = `Expira hoje!`;
           }
 
+          // NOTIFICAÇÃO AUTOMÁTICA DE "VIP A EXPIRAR"
+          if (diffDays <= 3 && diffDays >= 1) {
+            if (vipExpiringAlert) {
+              document.getElementById('vip-expiring-msg').innerText = `Seu VIP vence em ${diffDays} dia(s)! Renove agora e garanta seus descontos.`;
+              vipExpiringAlert.style.display = 'block';
+            }
+          } else {
+            if (vipExpiringAlert) vipExpiringAlert.style.display = 'none';
+          }
+
           if (diffDays <= 5 && diffDays >= 0) {
             if (renewBox) renewBox.style.display = 'block';
           } else {
@@ -204,6 +241,7 @@ onAuthStateChanged(auth, async (user) => {
         fecharModal('modal-pix');
       } else {
         window.isVipUser = false;
+        if (vipExpiringAlert) vipExpiringAlert.style.display = 'none';
         document.querySelectorAll('.status-badge').forEach(b => {
           b.innerText = "PLANO GRATUITO";
           b.className = "status-badge free";
@@ -225,7 +263,6 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// Botão de renovação abre o Pix de R$ 19,90 corretamente
 window.renovarVipAcumulado = async function() {
   const user = auth.currentUser;
   if (!user || !window.currentUserData) return;
@@ -269,7 +306,8 @@ window.resgatarCupomVipAdm = async function() {
 
     await updateDoc(userRef, {
       vip: true,
-      vipExpiraEm: novaExpiraEm
+      vipExpiraEm: novaExpiraEm,
+      origemVip: "cupom_adm" // Marcador para separar do Pix real no financeiro
     });
 
     document.getElementById('input-cupom-vip-adm').value = '';
@@ -794,14 +832,37 @@ function carregarLogsDoLojista(empresaUid) {
   });
 }
 
+// NAVEGAÇÃO ENTRE ABAS DO PAINEL ADMIN
 window.switchAdminTab = function(tabName) {
+  document.getElementById('adm-tab-dash').classList.toggle('active', tabName === 'dash');
   document.getElementById('adm-tab-cupons').classList.toggle('active', tabName === 'cupons');
   document.getElementById('adm-tab-clientes').classList.toggle('active', tabName === 'clientes');
   document.getElementById('adm-tab-empresas').classList.toggle('active', tabName === 'empresas');
 
+  document.getElementById('adm-section-dash').style.display = tabName === 'dash' ? 'block' : 'none';
   document.getElementById('adm-section-cupons').style.display = tabName === 'cupons' ? 'block' : 'none';
   document.getElementById('adm-section-clientes').style.display = tabName === 'clientes' ? 'block' : 'none';
   document.getElementById('adm-section-empresas').style.display = tabName === 'empresas' ? 'block' : 'none';
+};
+
+// SUB-ABAS DA DASHBOARD DO ADM
+window.switchDashSubTab = function(subTab) {
+  const btnOverview = document.getElementById('btn-subtab-overview');
+  const btnFinance = document.getElementById('btn-subtab-finance');
+  const secOverview = document.getElementById('dash-sub-overview');
+  const secFinance = document.getElementById('dash-sub-finance');
+
+  if (subTab === 'overview') {
+    btnOverview.className = "btn btn-cyan btn-small";
+    btnFinance.className = "btn btn-outline btn-small";
+    secOverview.style.display = 'block';
+    secFinance.style.display = 'none';
+  } else {
+    btnOverview.className = "btn btn-outline btn-small";
+    btnFinance.className = "btn btn-cyan btn-small";
+    secOverview.style.display = 'none';
+    secFinance.style.display = 'block';
+  }
 };
 
 let cacheLogsAdmin = [];
@@ -811,52 +872,81 @@ async function carregarPainelAdmin() {
   try {
     const snapUsers = await getDocs(collection(db, "usuarios"));
     let totalUsers = 0;
-    let totalVips = 0;
+    let totalVipsReais = 0;
     let totalFree = 0;
     let totalMerchants = 0;
     let listUsersHtml = '';
     let listMerchantsHtml = '';
+    
     cacheEmpresasAdmin = [];
+    cacheTodosUsuarios = [];
+    cachePagamentosPix = [];
+
+    // LEITURA ADICIONAL: BUSCA HISTÓRICO DE PIX PAGOS REAIS NO FIRESTORE
+    try {
+      const snapPix = await getDocs(collection(db, "pagamentos_pix"));
+      snapPix.forEach(d => {
+        cachePagamentosPix.push({ id: d.id, ...d.data() });
+      });
+    } catch(e) {}
 
     snapUsers.forEach(docSnap => {
-      totalUsers++;
       const u = docSnap.data();
       const uid = docSnap.id;
-      if (u.vip) {
-        totalVips++;
-      } else if (u.funcao === "cliente") {
-        totalFree++;
-      }
+      cacheTodosUsuarios.push({ id: uid, ...u });
 
-      if (u.funcao === "lojista") {
+      if (u.funcao === "cliente") {
+        totalUsers++;
+        if (u.vip) {
+          totalVipsReais++;
+          // Se não houver coleção de pagamentos_pix e o usuário for VIP pago (não for cupom adm)
+          if (cachePagamentosPix.length === 0 && u.origemVip !== "cupom_adm") {
+            cachePagamentosPix.push({
+              id: uid,
+              nome: u.nome || "Cliente VIP",
+              email: u.email || "Não informado",
+              whatsapp: u.whatsapp || "Não cadastrado",
+              valor: 19.90,
+              dataHora: u.vipAtivadoEm || u.criadoEm || new Date().toISOString()
+            });
+          }
+        } else {
+          totalFree++;
+        }
+
+        const badgeVipTxt = u.vip ? "👑 VIP" : "👤 Free";
+        const btnVipActionText = u.vip ? "Remover VIP" : "Tornar VIP";
+        const nextVipState = !u.vip;
+
+        const criadoEmData = u.criadoEm ? new Date(u.criadoEm).toLocaleDateString('pt-BR') : 'Não registrada';
+        const expiraDataStr = u.vipExpiraEm ? new Date(u.vipExpiraEm).toLocaleDateString('pt-BR') : (u.vip ? 'Ativo (Ilimitado)' : 'Não assinante');
+        const whatsappUserStr = u.whatsapp ? `💬 ${u.whatsapp}` : '💬 Zap não informado';
+
+        listUsersHtml += `
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+              <div>
+                <div style="font-size:0.9rem; font-weight:900;">${u.nome || 'Usuário'}</div>
+                <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">📧 ${u.email}</div>
+                <div style="font-size:0.75rem; color:var(--primary); margin-top:2px; font-weight:700;">${whatsappUserStr}</div>
+              </div>
+              <span style="font-weight:800; font-size:0.7rem; padding:3px 8px; border-radius:10px; background:var(--secondary); color:var(--primary);">${badgeVipTxt}</span>
+            </div>
+            <div style="font-size:0.72rem; background:var(--secondary); padding:8px; border-radius:10px; margin:6px 0; display:flex; flex-direction:column; gap:2px;">
+              <div>📅 <strong>Membro Desde:</strong> ${criadoEmData}</div>
+              <div>⏳ <strong>Validade VIP:</strong> <span style="color:var(--accent); font-weight:700;">${expiraDataStr}</span></div>
+            </div>
+            <div style="display:flex; gap:6px; margin-top:6px;">
+              <button class="btn btn-outline btn-small" style="flex:1;" onclick="adminAlternarVip('${uid}', ${nextVipState})">${btnVipActionText}</button>
+              <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="confirmarExclusaoCliente('${uid}', '${encodeURIComponent(u.nome || 'Cliente')}')">🗑️ Excluir</button>
+            </div>
+          </div>
+        `;
+      } else if (u.funcao === "lojista") {
         totalMerchants++;
         const empNome = u.empresaNome || u.nome || 'Empresa';
         cacheEmpresasAdmin.push({ id: uid, nome: empNome, data: u });
       }
-
-      const badgeVipTxt = u.vip ? "👑 VIP" : "👤 Free";
-      const btnVipActionText = u.vip ? "Remover VIP" : "Tornar VIP";
-      const nextVipState = !u.vip;
-
-      const criadoEmData = u.criadoEm ? new Date(u.criadoEm).toLocaleDateString('pt-BR') : 'Não registrada';
-      const expiraDataStr = u.vipExpiraEm ? new Date(u.vipExpiraEm).toLocaleDateString('pt-BR') : (u.vip ? 'Ativo (Ilimitado)' : 'Não assinante');
-
-      listUsersHtml += `
-        <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:10px;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
-            <div>
-              <div style="font-size:0.9rem; font-weight:900;">${u.nome || 'Usuário'} <span style="font-size:0.7rem; color:var(--muted);">(${u.funcao})</span></div>
-              <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">📧 ${u.email}</div>
-            </div>
-            <span style="font-weight:800; font-size:0.7rem; padding:3px 8px; border-radius:10px; background:var(--secondary); color:var(--primary);">${badgeVipTxt}</span>
-          </div>
-          <div style="font-size:0.72rem; background:var(--secondary); padding:8px; border-radius:10px; margin:6px 0; display:flex; flex-direction:column; gap:2px;">
-            <div>📅 <strong>Membro Desde:</strong> ${criadoEmData}</div>
-            <div>⏳ <strong>Validade VIP:</strong> <span style="color:var(--accent); font-weight:700;">${expiraDataStr}</span></div>
-          </div>
-          <button class="btn btn-outline btn-small" style="width:100%; margin-top:2px;" onclick="adminAlternarVip('${uid}', ${nextVipState})">${btnVipActionText}</button>
-        </div>
-      `;
     });
 
     cacheEmpresasAdmin.forEach(emp => {
@@ -930,25 +1020,295 @@ async function carregarPainelAdmin() {
     renderizarLogsAdminFiltrados();
     carregarCuponsVipAdminList();
 
+    const taxaConversao = totalUsers > 0 ? ((totalVipsReais / totalUsers) * 100).toFixed(1) : "0.0";
+
     document.getElementById('admin-count-users').innerText = totalUsers;
-    document.getElementById('admin-count-vips').innerText = totalVips;
+    document.getElementById('admin-count-vips').innerText = totalVipsReais;
+    document.getElementById('admin-vip-conversion-rate').innerText = `${taxaConversao}%`;
     document.getElementById('admin-count-free').innerText = totalFree;
     document.getElementById('admin-count-merchants').innerText = totalMerchants;
     document.getElementById('admin-count-offers').innerText = totalCuponsAtivos;
-    document.getElementById('admin-count-coupons-generated').innerText = snapLogs.size;
     document.getElementById('admin-count-coupons-used').innerText = countCuponsUsados;
-    document.getElementById('admin-count-payments-approved').innerText = totalVips;
+    document.getElementById('admin-count-payments-approved').innerText = cachePagamentosPix.length;
 
     document.getElementById('admin-all-coupons-list').innerHTML = allCuponsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum cupom registrado.</p>';
-    document.getElementById('admin-users-list').innerHTML = listUsersHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum utilizador encontrado.</p>';
+    document.getElementById('admin-users-list').innerHTML = listUsersHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum cliente encontrado.</p>';
     document.getElementById('admin-merchants-list').innerHTML = listMerchantsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhuma empresa parceira registrada.</p>';
 
-    renderizarGraficosAdmin(totalFree, totalVips);
+    renderizarGraficosAdmin(totalFree, totalVipsReais);
+    renderizarGraficoCrescimentoClientes();
+    renderizarRelatorioFinanceiro('hoje');
     carregarLeilaoLojista();
 
   } catch (err) {
     console.error("Erro admin:", err);
   }
+}
+
+// EXCLUSÃO REAL DE CLIENTES COM MODAL DE CONFIRMAÇÃO
+window.confirmarExclusaoCliente = function(uid, nomeEncoded) {
+  const nomeDecoded = decodeURIComponent(nomeEncoded);
+  document.getElementById('delete-user-uid').value = uid;
+  document.getElementById('delete-user-name').innerText = nomeDecoded;
+  document.getElementById('modal-confirm-delete-user').classList.add('active');
+};
+
+window.executarExclusaoCliente = async function() {
+  const uid = document.getElementById('delete-user-uid').value;
+  if (!uid) return;
+
+  try {
+    await deleteDoc(doc(db, "usuarios", uid));
+    fecharModal('modal-confirm-delete-user');
+    mostrarAviso("Excluído 🗑️", "Cadastro do cliente removido com sucesso.", "✅");
+    carregarPainelAdmin();
+  } catch(err) {
+    fecharModal('modal-confirm-delete-user');
+    mostrarAviso("Erro", err.message, "❌");
+  }
+};
+
+// ZERAR / RESETAR LEITURA E HISTÓRICO DE PIX
+window.confirmarZerarHistoricoPix = async function() {
+  if (confirm("⚠️ Tem certeza que deseja ZERAR o histórico de Pix? Isso limpará todas as entradas financeiras registradas de teste.")) {
+    try {
+      const snapPix = await getDocs(collection(db, "pagamentos_pix"));
+      const batchPromises = [];
+      snapPix.forEach(d => {
+        batchPromises.push(deleteDoc(doc(db, "pagamentos_pix", d.id)));
+      });
+      await Promise.all(batchPromises);
+
+      cachePagamentosPix = [];
+      mostrarAviso("Histórico Zerado! 🧹", "O histórico de leitura de Pix foi resetado com sucesso.", "✅");
+      carregarPainelAdmin();
+    } catch(err) {
+      mostrarAviso("Erro ao zerar", err.message, "❌");
+    }
+  }
+};
+
+// COPIAR NÚMEROS DE WHATSAPP PARA DISPARO / MARKETING
+window.copiarListaWhatsAppClientes = function() {
+  const zapList = cacheTodosUsuarios
+    .filter(u => u.funcao === "cliente" && u.whatsapp)
+    .map(u => u.whatsapp.replace(/\D/g, ''))
+    .filter(w => w.length >= 10);
+
+  if (zapList.length === 0) {
+    return mostrarAviso("Aviso", "Nenhum cliente cadastrou o WhatsApp ainda.", "ℹ️");
+  }
+
+  const textoFinal = zapList.join("\n");
+  navigator.clipboard.writeText(textoFinal);
+  mostrarAviso("Copiado! 📱", `${zapList.length} número(s) de WhatsApp copiados para a área de transferência.`, "📋");
+};
+
+// FILTRO DE DATAS DE / ATÉ NO FINANCEIRO
+window.aplicarFiltroDataCustomizada = function() {
+  const dtInicio = document.getElementById('filter-date-start').value;
+  const dtFim = document.getElementById('filter-date-end').value;
+
+  if (!dtInicio || !dtFim) {
+    return mostrarAviso("Atenção", "Selecione as datas de início e fim para filtrar.", "⚠️");
+  }
+
+  renderizarRelatorioFinanceiro('custom', new Date(dtInicio + 'T00:00:00'), new Date(dtFim + 'T23:59:59'));
+};
+
+window.filtrarFinanceiroPeriodo = function(periodo, btn) {
+  if (btn) {
+    document.querySelectorAll('.filter-period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  renderizarRelatorioFinanceiro(periodo);
+};
+
+function renderizarRelatorioFinanceiro(periodo = 'hoje', customStart = null, customEnd = null) {
+  const container = document.getElementById('admin-pix-payments-list');
+  const revenueTotalEl = document.getElementById('admin-total-revenue');
+  if (!container) return;
+
+  const agora = new Date();
+  let pagamentosFiltrados = cachePagamentosPix.filter(p => {
+    const dataP = new Date(p.dataHora);
+    if (isNaN(dataP.getTime())) return true;
+
+    if (periodo === 'hoje') {
+      return dataP.toDateString() === agora.toDateString();
+    } else if (periodo === 'semana') {
+      const umaSemanaAtras = new Date(agora.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return dataP >= umaSemanaAtras;
+    } else if (periodo === 'mes') {
+      return dataP.getMonth() === agora.getMonth() && dataP.getFullYear() === agora.getFullYear();
+    } else if (periodo === 'custom' && customStart && customEnd) {
+      return dataP >= customStart && dataP <= customEnd;
+    }
+    return true; // 'todos'
+  });
+
+  const totalFaturado = pagamentosFiltrados.reduce((acc, curr) => acc + (curr.valor || 19.90), 0);
+  if (revenueTotalEl) {
+    revenueTotalEl.innerText = `R$ ${totalFaturado.toFixed(2).replace('.', ',')}`;
+  }
+
+  if (pagamentosFiltrados.length === 0) {
+    container.innerHTML = `<p style="font-size:0.78rem; color:var(--muted); text-align:center; padding:12px;">Nenhum pagamento Pix compensado neste período.</p>`;
+    renderizarGraficoFaturamentoDiario([]);
+    return;
+  }
+
+  let htmlTable = `
+    <table style="width:100%; border-collapse:collapse; font-size:0.73rem; text-align:left;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--card-border); color:var(--muted);">
+          <th style="padding:6px;">Cliente</th>
+          <th style="padding:6px;">WhatsApp</th>
+          <th style="padding:6px;">Valor</th>
+          <th style="padding:6px;">Data / Hora</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  pagamentosFiltrados.forEach(p => {
+    const dataStr = new Date(p.dataHora).toLocaleString('pt-BR');
+    const wppStr = p.whatsapp ? p.whatsapp : '-';
+    htmlTable += `
+      <tr style="border-bottom:1px solid var(--card-border);">
+        <td style="padding:8px 6px;">
+          <div style="font-weight:800;">${p.nome}</div>
+          <div style="font-size:0.65rem; color:var(--muted);">${p.email}</div>
+        </td>
+        <td style="padding:8px 6px; font-weight:700; color:var(--primary);">${wppStr}</td>
+        <td style="padding:8px 6px; font-weight:900; color:#10b981;">R$ ${(p.valor || 19.90).toFixed(2).replace('.', ',')}</td>
+        <td style="padding:8px 6px; font-size:0.68rem; color:var(--muted);">${dataStr}</td>
+      </tr>
+    `;
+  });
+
+  htmlTable += `</tbody></table>`;
+  container.innerHTML = htmlTable;
+
+  renderizarGraficoFaturamentoDiario(pagamentosFiltrados);
+}
+
+function renderizarGraficoFaturamentoDiario(pagamentos) {
+  const ctx = document.getElementById('chartRevenueDay');
+  if (!ctx) return;
+  if (window.myRevenueChart) window.myRevenueChart.destroy();
+
+  const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  const contagemDias = [0, 0, 0, 0, 0, 0, 0];
+
+  pagamentos.forEach(p => {
+    const d = new Date(p.dataHora);
+    if (!isNaN(d.getTime())) {
+      contagemDias[d.getDay()] += (p.valor || 19.90);
+    }
+  });
+
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+  const gridColor = isDark ? '#1e293b' : '#f1f5f9';
+
+  window.myRevenueChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: diasSemana,
+      datasets: [{
+        label: 'Faturamento Real (R$)',
+        data: contagemDias,
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+        fill: true,
+        tension: 0.3,
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: '#10b981'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return `Faturamento: R$ ${context.parsed.y.toFixed(2).replace('.', ',')}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: textColor, font: { size: 10, weight: 'bold' } }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: gridColor },
+          ticks: {
+            color: textColor,
+            font: { size: 9 },
+            callback: function(value) { return 'R$ ' + value; }
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderizarGraficoCrescimentoClientes() {
+  const ctx = document.getElementById('chartUsersGrowth');
+  if (!ctx) return;
+  if (window.myGrowthChart) window.myGrowthChart.destroy();
+
+  const ultimosDiasLabels = [];
+  const contagemCadastros = [];
+  const hoje = new Date();
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(hoje);
+    d.setDate(d.getDate() - i);
+    const dStr = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    ultimosDiasLabels.push(dStr);
+
+    const totalNoDia = cacheTodosUsuarios.filter(u => {
+      if (!u.criadoEm) return false;
+      const uDate = new Date(u.criadoEm);
+      return uDate.toDateString() === d.toDateString();
+    }).length;
+
+    contagemCadastros.push(totalNoDia);
+  }
+
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+  const gridColor = isDark ? '#1e293b' : '#f1f5f9';
+
+  window.myGrowthChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ultimosDiasLabels,
+      datasets: [{
+        label: 'Novos Clientes',
+        data: contagemCadastros,
+        backgroundColor: '#2563eb',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: textColor, font: { size: 9 } } },
+        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, precision: 0, font: { size: 9 } } }
+      }
+    }
+  });
 }
 
 window.abrirModalAdminEmpresa = function(id = '', nome = '', email = '', desc = '', endereco = '', telefone = '', cat = 'gastronomia', logo = '') {
@@ -1329,7 +1689,12 @@ window.salvarOfertaGeral = async function() {
 window.adminAlternarVip = async function(userId, novoEstado) {
   try {
     const expiraEm = novoEstado ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null;
-    await updateDoc(doc(db, "usuarios", userId), { vip: novoEstado, vipExpiraEm: expiraEm });
+    const updateObj = { vip: novoEstado, vipExpiraEm: expiraEm };
+    if (novoEstado) {
+      updateObj.origemVip = "concessao_adm"; // Não marca como Pix real
+    }
+
+    await updateDoc(doc(db, "usuarios", userId), updateObj);
     mostrarAviso("Atualizado!", "Status VIP alterado.", "👑");
     carregarPainelAdmin();
   } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
@@ -1458,6 +1823,7 @@ window.switchAuthTab = function(type) {
   document.getElementById('tab-login').classList.toggle('active', type === 'login');
   document.getElementById('tab-signup').classList.toggle('active', type === 'signup');
   document.getElementById('group-name').style.display = type === 'signup' ? 'block' : 'none';
+  document.getElementById('group-whatsapp').style.display = type === 'signup' ? 'block' : 'none';
   document.getElementById('box-merchant-options').style.display = type === 'signup' ? 'block' : 'none';
   document.getElementById('box-privacy-terms').style.display = type === 'signup' ? 'block' : 'none';
   document.getElementById('box-esqueci').style.display = type === 'login' ? 'block' : 'none';
@@ -1506,6 +1872,7 @@ window.fazerLoginGoogle = async function() {
 window.executarAuth = async function() {
   if (currentAuthTab === 'signup') {
     const nome = document.getElementById('reg-name').value;
+    const whatsapp = document.getElementById('reg-whatsapp')?.value.trim() || '';
     const email = document.getElementById('reg-email').value;
     const pass = document.getElementById('reg-pass').value;
     const acceptTerms = document.getElementById('chk-privacy-terms').checked;
@@ -1532,6 +1899,7 @@ window.executarAuth = async function() {
       const userData = {
         nome: nome,
         email: email.trim().toLowerCase(),
+        whatsapp: whatsapp,
         funcao: userRole,
         vip: false,
         criadoEm: new Date().toISOString()

@@ -26,6 +26,14 @@
 </head>
 <body>
 
+  <!-- TELA PERSONALIZADA DE MODO OFFLINE (SEM CONEXÃO) -->
+  <div id="offline-screen" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg, #f8fafc); z-index:99999; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center;">
+    <div style="font-size:3.5rem; margin-bottom:12px;">📡</div>
+    <h2 style="font-size:1.5rem; font-weight:900; color:var(--text, #0f172a); margin-bottom:8px;">Ops! Você está sem internet</h2>
+    <p style="font-size:0.85rem; color:var(--muted, #64748b); max-width:280px; margin-bottom:20px; line-height:1.4;">Conecte-se a uma rede para ver os cupons atualizados e utilizar o Clube Prime.</p>
+    <button class="btn btn-cyan" style="max-width:220px;" onclick="window.location.reload()">🔄 Tentar Reconectar</button>
+  </div>
+
   <div class="app-shell">
     
     <div class="top-header">
@@ -53,6 +61,11 @@
       <div id="group-name" class="form-group" style="display:none;">
         <label>NOME COMPLETO</label>
         <input type="text" id="reg-name" class="form-control" placeholder="Seu nome">
+      </div>
+
+      <div id="group-whatsapp" class="form-group" style="display:none;">
+        <label>WHATSAPP / CELULAR</label>
+        <input type="tel" id="reg-whatsapp" class="form-control" placeholder="(53) 99999-9999">
       </div>
 
       <div class="form-group">
@@ -243,7 +256,7 @@
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <div>
           <span style="font-size:0.68rem; font-weight:800; color:var(--accent);">PAINEL DE CONTROLE</span>
-          <h2 style="font-size:1.15rem; font-weight:900;">Visão Geral Admin</h2>
+          <h2 style="font-size:1.15rem; font-weight:900;">Gestão Geral ADM</h2>
         </div>
         <div class="status-badge admin" style="padding:4px 10px; font-size:0.6rem;">ADMIN</div>
       </div>
@@ -252,105 +265,185 @@
         Modo Cliente
       </button>
 
-      <!-- DASHBOARD COMPLETO E COMPACTO -->
-      <div class="admin-grid" style="gap:8px; margin-bottom:12px;">
-        <div class="admin-stat-card" style="padding:10px;">
-          <div class="admin-stat-lbl" style="font-size:0.6rem;">Usuários</div>
-          <div id="admin-count-users" class="admin-stat-val" style="font-size:1.1rem;">0</div>
-        </div>
-        <div class="admin-stat-card" style="padding:10px;">
-          <div class="admin-stat-lbl" style="font-size:0.6rem;">VIPs</div>
-          <div id="admin-count-vips" class="admin-stat-val" style="font-size:1.1rem;">0</div>
-        </div>
-        <div class="admin-stat-card" style="padding:10px;">
-          <div class="admin-stat-lbl" style="font-size:0.6rem;">Free</div>
-          <div id="admin-count-free" class="admin-stat-val" style="font-size:1.1rem;">0</div>
-        </div>
-        <div class="admin-stat-card" style="padding:10px;">
-          <div class="admin-stat-lbl" style="font-size:0.6rem;">Lojistas</div>
-          <div id="admin-count-merchants" class="admin-stat-val" style="font-size:1.1rem;">0</div>
-        </div>
-        <div class="admin-stat-card" style="padding:10px;">
-          <div class="admin-stat-lbl" style="font-size:0.6rem;">Ofertas</div>
-          <div id="admin-count-offers" class="admin-stat-val" style="font-size:1.1rem;">0</div>
-        </div>
-        <div class="admin-stat-card" style="padding:10px;">
-          <div class="admin-stat-lbl" style="font-size:0.6rem;">Gerados</div>
-          <div id="admin-count-coupons-generated" class="admin-stat-val" style="font-size:1.1rem;">0</div>
-        </div>
-        <div class="admin-stat-card" style="padding:10px;">
-          <div class="admin-stat-lbl" style="font-size:0.6rem;">Usados</div>
-          <div id="admin-count-coupons-used" class="admin-stat-val" style="font-size:1.1rem;">0</div>
-        </div>
-        <div class="admin-stat-card" style="padding:10px;">
-          <div class="admin-stat-lbl" style="font-size:0.6rem;">Pagos</div>
-          <div id="admin-count-payments-approved" class="admin-stat-val" style="font-size:1.1rem;">0</div>
-        </div>
+      <!-- MENU DE ABAS LIMPAS NO ADM -->
+      <div class="auth-tabs" style="margin-bottom:14px; grid-template-columns: repeat(4, 1fr);">
+        <div id="adm-tab-dash" class="auth-tab active" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('dash')">📊 Dash</div>
+        <div id="adm-tab-cupons" class="auth-tab" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('cupons')">🎟️ Cupons</div>
+        <div id="adm-tab-clientes" class="auth-tab" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('clientes')">👥 Clientes</div>
+        <div id="adm-tab-empresas" class="auth-tab" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('empresas')">🏢 Lojas</div>
       </div>
 
-      <!-- GRÁFICO DE BARRAS MENOR -->
-      <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:12px;">
-        <h3 style="font-size:0.85rem; font-weight:800; margin-bottom:6px; color:var(--text);">📊 Desempenho de Assinantes</h3>
-        <div style="position:relative; width:100%; height:130px;">
-          <canvas id="chartUsersVip"></canvas>
-        </div>
-      </div>
-
-      <!-- GERENCIAMENTO DO LEILÃO DIÁRIO NO ADMIN -->
-      <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:12px;">
-        <h3 style="font-size:0.9rem; font-weight:900; color:var(--accent); margin-bottom:6px;">🔨 Leilão Diário de Patrocínio</h3>
-        <p style="font-size:0.72rem; color:var(--muted); margin-bottom:10px;">Veja o maior lance atual e defina o lojista patrocinado do dia seguinte.</p>
+      <!-- ABA 1: DASHBOARD & RELATÓRIOS FINANCEIROS -->
+      <div id="adm-section-dash" class="admin-tab-content">
         
-        <div style="background:var(--secondary); padding:10px; border-radius:10px; margin-bottom:10px; font-size:0.75rem;">
-          <div>💰 <strong>Maior Lance:</strong> <span id="admin-auction-bid" style="font-weight:900; color:var(--primary);">R$ 0,00</span></div>
-          <div style="margin-top:2px;">👑 <strong>Lojista Líder:</strong> <span id="admin-auction-bidder" style="font-weight:800;">Nenhum</span></div>
+        <!-- SUB-ABAS DASHBOARD / FINANCEIRO -->
+        <div style="display:flex; gap:6px; margin-bottom:12px;">
+          <button id="btn-subtab-overview" class="btn btn-cyan btn-small" style="flex:1;" onclick="switchDashSubTab('overview')">📊 Visão Geral</button>
+          <button id="btn-subtab-finance" class="btn btn-outline btn-small" style="flex:1;" onclick="switchDashSubTab('finance')">💳 Financeiro & Pix</button>
         </div>
 
-        <div class="form-group" style="text-align:left; margin-bottom:8px;">
-          <label>NOME DA EMPRESA PATROCINADA AMANHÃ</label>
-          <input type="text" id="admin-sponsored-store-name" class="form-control" placeholder="Ex: Hamburgueria Pelotas">
-        </div>
-        <button class="btn btn-cyan" style="padding:8px; font-size:0.8rem;" onclick="salvarPatrocinadoAdmin()">💾 Definir Patrocinado do Dia</button>
-      </div>
-
-      <!-- BOTÃO GERAR CUPONS VIP E LISTAGEM -->
-      <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:16px; text-align:center;">
-        <h3 style="font-size:0.9rem; font-weight:900; margin-bottom:4px;">🎁 Gerar novos Cupons de 30 Dias VIP</h3>
-        <p style="font-size:0.72rem; color:var(--muted); margin-bottom:10px;">Cria cupons de uso único para você mandar para clientes entrarem como VIP.</p>
-        <button class="btn btn-cyan" style="padding:10px; font-size:0.82rem; margin-bottom:12px;" onclick="gerar40CuponsVipAdmin()">Gerar Cupons VIP Únicos</button>
-
-        <details style="text-align:left; background:var(--secondary); padding:10px; border-radius:12px;">
-          <summary style="font-size:0.8rem; font-weight:800; cursor:pointer;">📋 Ver Lista dos  Cupons </summary>
-          <div id="admin-vip-coupons-list" style="margin-top:10px; max-height:160px; overflow-y:auto; font-size:0.75rem;">
-            <p style="color:var(--muted);">Nenhum cupom gerado ainda ou carregando...</p>
+        <!-- VISÃO GERAL -->
+        <div id="dash-sub-overview">
+          <div class="admin-grid" style="gap:8px; margin-bottom:12px;">
+            <div class="admin-stat-card" style="padding:10px;">
+              <div class="admin-stat-lbl" style="font-size:0.6rem;">Usuários</div>
+              <div id="admin-count-users" class="admin-stat-val" style="font-size:1.1rem;">0</div>
+            </div>
+            <div class="admin-stat-card" style="padding:10px;">
+              <div class="admin-stat-lbl" style="font-size:0.6rem;">VIPs Reais</div>
+              <div id="admin-count-vips" class="admin-stat-val" style="font-size:1.1rem;">0</div>
+            </div>
+            <div class="admin-stat-card" style="padding:10px;">
+              <div class="admin-stat-lbl" style="font-size:0.6rem;">Conversão VIP</div>
+              <div id="admin-vip-conversion-rate" class="admin-stat-val" style="font-size:1.1rem; color:var(--accent);">0%</div>
+            </div>
+            <div class="admin-stat-card" style="padding:10px;">
+              <div class="admin-stat-lbl" style="font-size:0.6rem;">Free</div>
+              <div id="admin-count-free" class="admin-stat-val" style="font-size:1.1rem;">0</div>
+            </div>
+            <div class="admin-stat-card" style="padding:10px;">
+              <div class="admin-stat-lbl" style="font-size:0.6rem;">Lojistas</div>
+              <div id="admin-count-merchants" class="admin-stat-val" style="font-size:1.1rem;">0</div>
+            </div>
+            <div class="admin-stat-card" style="padding:10px;">
+              <div class="admin-stat-lbl" style="font-size:0.6rem;">Ofertas</div>
+              <div id="admin-count-offers" class="admin-stat-val" style="font-size:1.1rem;">0</div>
+            </div>
+            <div class="admin-stat-card" style="padding:10px;">
+              <div class="admin-stat-lbl" style="font-size:0.6rem;">Resgates Usados</div>
+              <div id="admin-count-coupons-used" class="admin-stat-val" style="font-size:1.1rem;">0</div>
+            </div>
+            <div class="admin-stat-card" style="padding:10px;">
+              <div class="admin-stat-lbl" style="font-size:0.6rem;">Pix Aprovados</div>
+              <div id="admin-count-payments-approved" class="admin-stat-val" style="font-size:1.1rem; color:#10b981;">0</div>
+            </div>
           </div>
-        </details>
-      </div>
 
-      <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:12px;">
-        <h3 style="font-size:0.9rem; font-weight:800; margin-bottom:6px;">📢 Aviso para Todos os Clientes</h3>
-        <div class="form-group" style="text-align:left; margin-bottom:6px;">
-          <input type="text" id="admin-global-banner-text" class="form-control" placeholder="Ex: 🔥 Patrocínio Master na Cidade!">
+          <!-- NOVO GRÁFICO: CADASTRO DE NOVOS CLIENTES AO LONGO DO TEMPO -->
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:12px;">
+            <h3 style="font-size:0.85rem; font-weight:800; margin-bottom:6px; color:var(--text);">📈 Crescimento de Cadastros de Clientes</h3>
+            <div style="position:relative; width:100%; height:130px;">
+              <canvas id="chartUsersGrowth"></canvas>
+            </div>
+          </div>
+
+          <!-- GRÁFICO DE BARRAS: VIP x FREE -->
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:12px;">
+            <h3 style="font-size:0.85rem; font-weight:800; margin-bottom:6px; color:var(--text);">📊 Proporção Free vs VIP</h3>
+            <div style="position:relative; width:100%; height:120px;">
+              <canvas id="chartUsersVip"></canvas>
+            </div>
+          </div>
+
+          <!-- GERENCIAMENTO DO LEILÃO DIÁRIO NO ADMIN -->
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:12px;">
+            <h3 style="font-size:0.9rem; font-weight:900; color:var(--accent); margin-bottom:6px;">🔨 Leilão Diário de Patrocínio</h3>
+            <p style="font-size:0.72rem; color:var(--muted); margin-bottom:10px;">Veja o maior lance atual e defina o lojista patrocinado do dia seguinte.</p>
+            
+            <div style="background:var(--secondary); padding:10px; border-radius:10px; margin-bottom:10px; font-size:0.75rem;">
+              <div>💰 <strong>Maior Lance:</strong> <span id="admin-auction-bid" style="font-weight:900; color:var(--primary);">R$ 0,00</span></div>
+              <div style="margin-top:2px;">👑 <strong>Lojista Líder:</strong> <span id="admin-auction-bidder" style="font-weight:800;">Nenhum</span></div>
+            </div>
+
+            <div class="form-group" style="text-align:left; margin-bottom:8px;">
+              <label>NOME DA EMPRESA PATROCINADA AMANHÃ</label>
+              <input type="text" id="admin-sponsored-store-name" class="form-control" placeholder="Ex: Hamburgueria Pelotas">
+            </div>
+            <button class="btn btn-cyan" style="padding:8px; font-size:0.8rem;" onclick="salvarPatrocinadoAdmin()">💾 Definir Patrocinado do Dia</button>
+          </div>
+
+          <!-- AVISOS GLOBAIS E PARA LOJISTAS -->
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:12px;">
+            <h3 style="font-size:0.9rem; font-weight:800; margin-bottom:6px;">📢 Aviso para Todos os Clientes</h3>
+            <div class="form-group" style="text-align:left; margin-bottom:6px;">
+              <input type="text" id="admin-global-banner-text" class="form-control" placeholder="Ex: 🔥 Patrocínio Master na Cidade!">
+            </div>
+            <button class="btn btn-cyan" style="padding:8px; font-size:0.8rem;" onclick="salvarBannerGlobalAdmin()">💾 Publicar Aviso</button>
+          </div>
+
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:16px;">
+            <h3 style="font-size:0.9rem; font-weight:800; margin-bottom:6px;">🏢 Recado Exclusivo para Lojistas</h3>
+            <div class="form-group" style="text-align:left; margin-bottom:6px;">
+              <input type="text" id="admin-merchant-banner-text" class="form-control" placeholder="Ex: ⚠️ Reunião de parceiros!">
+            </div>
+            <button class="btn btn-cyan" style="padding:8px; font-size:0.8rem;" onclick="salvarBannerLojistaAdmin()">💾 Publicar Recado</button>
+          </div>
         </div>
-        <button class="btn btn-cyan" style="padding:8px; font-size:0.8rem;" onclick="salvarBannerGlobalAdmin()">💾 Publicar Aviso</button>
-      </div>
 
-      <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:16px;">
-        <h3 style="font-size:0.9rem; font-weight:800; margin-bottom:6px;">🏢 Recado Exclusivo para Lojistas</h3>
-        <div class="form-group" style="text-align:left; margin-bottom:6px;">
-          <input type="text" id="admin-merchant-banner-text" class="form-control" placeholder="Ex: ⚠️ Reunião de parceiros!">
+        <!-- RELATÓRIO FINANCEIRO E PIX COMPLETO -->
+        <div id="dash-sub-finance" style="display:none;">
+          
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <div>
+                <h3 style="font-size:0.95rem; font-weight:900;">💰 Entradas Reais de Pix</h3>
+                <p style="font-size:0.68rem; color:var(--muted);">Apenas pagamentos compensados (R$ 19,90)</p>
+              </div>
+              <span id="admin-total-revenue" style="font-size:1.1rem; font-weight:900; color:#10b981;">R$ 0,00</span>
+            </div>
+
+            <!-- GRÁFICO DE FATURAMENTO DIÁRIO -->
+            <div style="position:relative; width:100%; height:150px; margin-top:10px;">
+              <canvas id="chartRevenueDay"></canvas>
+            </div>
+          </div>
+
+          <!-- FILTROS DE PERÍODO + DE DATA A DATA -->
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:12px;">
+            <div style="font-size:0.72rem; font-weight:800; color:var(--muted); margin-bottom:8px;">FILTRAR PERÍODO:</div>
+            
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+              <button class="btn btn-outline btn-small filter-period-btn active" onclick="filtrarFinanceiroPeriodo('hoje', this)">Hoje</button>
+              <button class="btn btn-outline btn-small filter-period-btn" onclick="filtrarFinanceiroPeriodo('semana', this)">Esta Semana</button>
+              <button class="btn btn-outline btn-small filter-period-btn" onclick="filtrarFinanceiroPeriodo('mes', this)">Este Mês</button>
+              <button class="btn btn-outline btn-small filter-period-btn" onclick="filtrarFinanceiroPeriodo('todos', this)">Todos</button>
+            </div>
+
+            <div style="border-top:1px dashed var(--card-border); padding-top:8px; margin-top:8px;">
+              <div style="font-size:0.7rem; font-weight:800; color:var(--text); margin-bottom:6px;">📅 Intervalo Personalizado (De / Até):</div>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input type="date" id="filter-date-start" class="form-control" style="font-size:0.72rem; padding:6px;">
+                <span style="font-size:0.75rem; color:var(--muted);">até</span>
+                <input type="date" id="filter-date-end" class="form-control" style="font-size:0.72rem; padding:6px;">
+              </div>
+              <button class="btn btn-cyan btn-small" style="margin-top:8px; padding:6px; font-size:0.75rem;" onclick="aplicarFiltroDataCustomizada()">🔍 Aplicar Filtro de Datas</button>
+            </div>
+          </div>
+
+          <!-- BOTÃO DE RESETAR / ZERAR HISTÓRICO DE PIX -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h4 style="font-size:0.85rem; font-weight:800;">💳 Histórico de Transações Pix</h4>
+            <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455; padding:4px 8px; font-size:0.68rem;" onclick="confirmarZerarHistoricoPix()">🧹 Zerar Leitura Pix</button>
+          </div>
+
+          <!-- TABELA DEDICADA DE PIX PAGOS -->
+          <div style="background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:12px; overflow-x:auto;">
+            <div id="admin-pix-payments-list" style="max-height:280px; overflow-y:auto;">
+              <p style="font-size:0.75rem; color:var(--muted); text-align:center;">Carregando histórico de pagamentos...</p>
+            </div>
+          </div>
+
         </div>
-        <button class="btn btn-cyan" style="padding:8px; font-size:0.8rem;" onclick="salvarBannerLojistaAdmin()">💾 Publicar Recado</button>
+
       </div>
 
-      <!-- ABAS DO PAINEL ADMIN -->
-      <div class="auth-tabs" style="margin-bottom:12px;">
-        <div id="adm-tab-cupons" class="auth-tab active" onclick="switchAdminTab('cupons')">🎟️ Cupons</div>
-        <div id="adm-tab-clientes" class="auth-tab" onclick="switchAdminTab('clientes')">👥 Clientes & VIP</div>
-        <div id="adm-tab-empresas" class="auth-tab" onclick="switchAdminTab('empresas')">🏢 Empresas</div>
-      </div>
+      <!-- ABA 2: CUPONS -->
+      <div id="adm-section-cupons" class="admin-tab-content" style="display:none;">
+        
+        <!-- BOTÃO GERAR CUPONS VIP E LISTAGEM -->
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:16px; text-align:center;">
+          <h3 style="font-size:0.9rem; font-weight:900; margin-bottom:4px;">🎁 Gerar novos Cupons de 30 Dias VIP</h3>
+          <p style="font-size:0.72rem; color:var(--muted); margin-bottom:10px;">Cria cupons de uso único para você mandar para clientes entrarem como VIP sem somar no faturamento real.</p>
+          <button class="btn btn-cyan" style="padding:10px; font-size:0.82rem; margin-bottom:12px;" onclick="gerar40CuponsVipAdmin()">Gerar Cupons VIP Únicos</button>
 
-      <div id="adm-section-cupons" class="admin-tab-content">
+          <details style="text-align:left; background:var(--secondary); padding:10px; border-radius:12px;">
+            <summary style="font-size:0.8rem; font-weight:800; cursor:pointer;">📋 Ver Lista dos Cupons VIP Gerados</summary>
+            <div id="admin-vip-coupons-list" style="margin-top:10px; max-height:160px; overflow-y:auto; font-size:0.75rem;">
+              <p style="color:var(--muted);">Nenhum cupom gerado ainda ou carregando...</p>
+            </div>
+          </details>
+        </div>
+
         <h3 style="font-size:1rem; font-weight:800; margin-bottom:10px;">Gestão Global de Cupons</h3>
         <div id="admin-all-coupons-list" style="margin-bottom:16px; max-height:220px; overflow-y:auto; padding-right:4px;">
           <p style="font-size:0.8rem; color:var(--muted);">Carregando...</p>
@@ -369,13 +462,18 @@
         </div>
       </div>
 
+      <!-- ABA 3: CLIENTES -->
       <div id="adm-section-clientes" class="admin-tab-content" style="display:none;">
-        <h3 style="font-size:1rem; font-weight:800; margin-bottom:10px;">Gestão de Usuários e VIPs</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <h3 style="font-size:1rem; font-weight:800;">Gestão de Clientes</h3>
+          <button class="btn btn-outline btn-small" style="font-size:0.7rem; padding:4px 8px;" onclick="copiarListaWhatsAppClientes()">📱 Copiar WhatsApps</button>
+        </div>
         <div id="admin-users-list" style="margin-bottom:16px; max-height:300px; overflow-y:auto; padding-right:4px;">
           <p style="font-size:0.8rem; color:var(--muted);">Carregando...</p>
         </div>
       </div>
 
+      <!-- ABA 4: EMPRESAS / LOJISTAS -->
       <div id="adm-section-empresas" class="admin-tab-content" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <h3 style="font-size:1rem; font-weight:800;">Lojistas Parceiros</h3>
@@ -396,6 +494,17 @@
         <button class="btn" style="background:#ef4444; color:#ffffff; font-weight:900;" onclick="voltarAoAdminDesdeCliente()">
           ⚡ Administrador
         </button>
+      </div>
+
+      <!-- ALERTA AUTOMÁTICO DE VIP A EXPIRAR (FALTANDO 3 OU 2 DIAS) -->
+      <div id="vip-expiring-alert" style="display:none; background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color:#ffffff; padding:14px 16px; border-radius:18px; margin-bottom:16px; box-shadow:0 6px 16px rgba(239,68,68,0.25);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:0.72rem; font-weight:900; text-transform:uppercase; letter-spacing:0.5px;">⚠️ Seu VIP vence em breve!</div>
+            <div id="vip-expiring-msg" style="font-size:0.82rem; font-weight:700; margin-top:2px;">Renove agora e garanta seus descontos sem interrupção.</div>
+          </div>
+          <button class="btn btn-cyan btn-small" style="background:#ffffff; color:#dc2626; font-weight:900; width:auto; padding:8px 12px; margin:0;" onclick="renovarVipAcumulado()">Renovar</button>
+        </div>
       </div>
 
       <div id="client-global-banner" style="display:none; background:linear-gradient(135deg, #f97316 0%, #ea580c 100%); color:#ffffff; padding:12px 16px; border-radius:16px; margin-bottom:16px; font-size:0.82rem; font-weight:800; text-align:center; box-shadow:0 6px 16px rgba(249,115,22,0.2);">
@@ -477,6 +586,7 @@
         </div>
         <h2 id="profile-name" style="font-weight:900; font-size:1.3rem;">Carregando...</h2>
         <p id="profile-email" style="font-size:0.82rem; color:var(--muted); margin-top:2px;">-</p>
+        <p id="profile-whatsapp" style="font-size:0.78rem; color:var(--primary); font-weight:700; margin-top:2px;">-</p>
       </div>
 
       <div id="profile-vip-card" style="display:none; background:var(--accent-light); border:1px solid var(--accent-border); padding:16px; border-radius:18px; margin-bottom:18px;">
@@ -563,6 +673,20 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- MODAL CONFIRMAÇÃO DE EXCLUSÃO DE CLIENTE -->
+  <div id="modal-confirm-delete-user" class="modal">
+    <div class="modal-content">
+      <div style="font-size:2.5rem; margin-bottom:6px;">⚠️</div>
+      <h3 style="font-size:1.15rem; font-weight:900; color:var(--danger);">Excluir Cliente?</h3>
+      <p style="font-size:0.8rem; color:var(--muted); margin-top:4px; margin-bottom:14px; line-height:1.4;">
+        Tem certeza que deseja apagar o cadastro de <strong id="delete-user-name">-</strong>? Esta ação removerá totalmente o usuário do banco de dados.
+      </p>
+      <input type="hidden" id="delete-user-uid" value="">
+      <button class="btn" style="background:var(--danger); color:#ffffff; margin-bottom:8px;" onclick="executarExclusaoCliente()">🗑️ Sim, Excluir Cadastro</button>
+      <button class="btn btn-outline" onclick="fecharModal('modal-confirm-delete-user')">Cancelar</button>
+    </div>
   </div>
 
   <!-- MODAL DE TERMOS DE PRIVACIDADE -->
