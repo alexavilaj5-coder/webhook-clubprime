@@ -19,7 +19,7 @@ somAtivacaoVip();
 vibrar('vip');
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, updatePassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -129,6 +129,11 @@ onAuthStateChanged(auth, async (user) => {
 
       window.currentUserData = data;
       
+      // VERIFICA SE A EMPRESA ESTÁ DESATIVADA DE VERDADE
+      if (data.funcao === "lojista" && data.ativo === false) {
+        document.getElementById('modal-empresa-desativada').classList.add('active');
+      }
+
       // PAINEL ADMINISTRADOR
       if (data.funcao === "admin") {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -147,11 +152,13 @@ onAuthStateChanged(auth, async (user) => {
         const nomeEmpresa = data.empresaNome || "Empresa Parceira";
         const enderecoEmpresa = data.empresaEndereco || "Pelotas / RS";
         const telefoneEmpresa = data.empresaTelefone || "";
+        const instagramEmpresa = data.empresaInstagram || "";
 
         document.getElementById('merchant-store-name').innerText = nomeEmpresa;
         if (document.getElementById('merchant-edit-name')) document.getElementById('merchant-edit-name').value = nomeEmpresa;
         if (document.getElementById('merchant-edit-address')) document.getElementById('merchant-edit-address').value = enderecoEmpresa;
         if (document.getElementById('merchant-edit-phone')) document.getElementById('merchant-edit-phone').value = telefoneEmpresa;
+        if (document.getElementById('merchant-edit-instagram')) document.getElementById('merchant-edit-instagram').value = instagramEmpresa;
 
         carregarEstatisticasLojista(user.uid);
         carregarCuponsDoLojista(user.uid);
@@ -222,7 +229,6 @@ onAuthStateChanged(auth, async (user) => {
             countdownEl.innerText = `Expira hoje!`;
           }
 
-          // NOTIFICAÇÃO AUTOMÁTICA DE "VIP A EXPIRAR"
           if (diffDays <= 3 && diffDays >= 1) {
             if (vipExpiringAlert) {
               document.getElementById('vip-expiring-msg').innerText = `Seu VIP vence em ${diffDays} dia(s)! Renove agora e garanta seus descontos.`;
@@ -262,6 +268,49 @@ onAuthStateChanged(auth, async (user) => {
     document.querySelector('.bottom-nav').style.display = 'none';
   }
 });
+
+// ABRIR MODAL EDITAR CADASTRO DO CLIENTE
+window.abrirModalEditarCliente = function() {
+  if (!window.currentUserData) return;
+  document.getElementById('edit-client-name').value = window.currentUserData.nome || '';
+  document.getElementById('edit-client-whatsapp').value = window.currentUserData.whatsapp || '';
+  document.getElementById('edit-client-pass').value = '';
+  document.getElementById('modal-edit-client').classList.add('active');
+};
+
+// SALVAR ALTERAÇÕES DO CLIENTE
+window.salvarAlteracoesCliente = async function() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const novoNome = document.getElementById('edit-client-name').value.trim();
+  const novoWhatsapp = document.getElementById('edit-client-whatsapp').value.trim();
+  const novaSenha = document.getElementById('edit-client-pass').value.trim();
+
+  if (!novoNome) return mostrarAviso("Atenção", "O nome não pode ficar em branco.", "⚠️");
+
+  try {
+    await updateDoc(doc(db, "usuarios", user.uid), {
+      nome: novoNome,
+      whatsapp: novoWhatsapp
+    });
+
+    if (novaSenha && novaSenha.length >= 6) {
+      await updatePassword(user, novaSenha);
+    } else if (novaSenha && novaSenha.length < 6) {
+      return mostrarAviso("Atenção", "A senha deve ter pelo menos 6 caracteres.", "⚠️");
+    }
+
+    fecharModal('modal-edit-client');
+    mostrarAviso("Sucesso! 🎉", "Seus dados foram atualizados com sucesso.", "✅");
+  } catch (err) {
+    mostrarAviso("Erro", err.message, "❌");
+  }
+};
+
+window.abrirModalNiveis = function() {
+  document.getElementById('modal-niveis').classList.add('active');
+};
 
 window.renovarVipAcumulado = async function() {
   const user = auth.currentUser;
@@ -307,7 +356,7 @@ window.resgatarCupomVipAdm = async function() {
     await updateDoc(userRef, {
       vip: true,
       vipExpiraEm: novaExpiraEm,
-      origemVip: "cupom_adm" // Marcador para separar do Pix real no financeiro
+      origemVip: "cupom_adm"
     });
 
     document.getElementById('input-cupom-vip-adm').value = '';
@@ -391,6 +440,7 @@ async function carregarParceirosCliente() {
 
       const foneLimpo = (u.empresaTelefone || '').replace(/\D/g, '');
       const wppLink = foneLimpo ? `https://wa.me/55${foneLimpo}?text=Olá,%20vim%20pelo%20Clube%20Prime!` : '#';
+      const instaLink = u.empresaInstagram ? `https://instagram.com/${u.empresaInstagram.replace('@', '')}` : '#';
 
       partnersClientHtml += `
         <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:12px;">
@@ -399,8 +449,12 @@ async function carregarParceirosCliente() {
             <span style="font-size:0.7rem; font-weight:800; color:var(--primary);">${u.empresaCategoria || 'Parceiro'}</span>
           </div>
           <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📍 <strong>Endereço:</strong> ${u.empresaEndereco || 'Pelotas / RS'}</p>
-          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px;">📞 <strong>Contato:</strong> ${u.empresaTelefone || 'Não informado'}</p>
-          ${foneLimpo ? `<a href="${wppLink}" target="_blank" class="btn btn-cyan" style="padding:10px; font-size:0.8rem; text-decoration:none; display:inline-block; width:100%; text-align:center;">💬 Chamar no WhatsApp</a>` : ''}
+          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📞 <strong>Contato:</strong> ${u.empresaTelefone || 'Não informado'}</p>
+          ${u.empresaInstagram ? `<p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px;">📸 <strong>Instagram:</strong> ${u.empresaInstagram}</p>` : ''}
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            ${foneLimpo ? `<a href="${wppLink}" target="_blank" class="btn btn-cyan" style="flex:1; padding:8px; font-size:0.78rem; text-decoration:none; text-align:center;">💬 WhatsApp</a>` : ''}
+            ${u.empresaInstagram ? `<a href="${instaLink}" target="_blank" class="btn btn-cyan" style="flex:1; padding:8px; font-size:0.78rem; text-decoration:none; text-align:center; background:linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);">📸 Instagram</a>` : ''}
+          </div>
         </div>
       `;
     });
@@ -412,17 +466,42 @@ async function carregarParceirosCliente() {
   }
 }
 
+// ESCUTAR PATROCINADO DO DIA (COM WHATSAPP, INSTAGRAM E LEGENDA)
 function escutarLeilaoPatrocinado() {
   const leilaoRef = doc(db, "configuracoes", "leilao_patrocinado");
   onSnapshot(leilaoRef, (docSnap) => {
     const sponsoredBanner = document.getElementById('client-sponsored-banner');
     const sponsoredNameEl = document.getElementById('client-sponsored-name');
+    const sponsoredLegendEl = document.getElementById('client-sponsored-legend-text');
+    const wppBtn = document.getElementById('client-sponsored-wpp-btn');
+    const instaBtn = document.getElementById('client-sponsored-insta-btn');
     
     if (docSnap.exists()) {
       const data = docSnap.data();
       const vencedor = data.vencedorNome;
+      const legenda = data.legenda || "Destaque especial de hoje no Clube Prime!";
+      const whatsapp = data.whatsapp || "";
+      const instagram = data.instagram || "";
+
       if (vencedor && sponsoredBanner && sponsoredNameEl) {
         sponsoredNameEl.innerText = vencedor;
+        if (sponsoredLegendEl) sponsoredLegendEl.innerText = legenda;
+
+        if (whatsapp) {
+          const foneLimpo = whatsapp.replace(/\D/g, '');
+          wppBtn.href = `https://wa.me/55${foneLimpo}?text=Olá,%20vi%20vocês%20no%20destaque%20do%20Clube%20Prime!`;
+          wppBtn.style.display = 'block';
+        } else {
+          wppBtn.style.display = 'none';
+        }
+
+        if (instagram) {
+          instaBtn.href = `https://instagram.com/${instagram.replace('@', '')}`;
+          instaBtn.style.display = 'block';
+        } else {
+          instaBtn.style.display = 'none';
+        }
+
         sponsoredBanner.style.display = 'block';
       } else if (sponsoredBanner) {
         sponsoredBanner.style.display = 'none';
@@ -482,10 +561,16 @@ window.darLanceLeilao = async function() {
     }
 
     const nomeLoja = window.currentUserData.empresaNome || "Empresa Parceira";
+    const wppLoja = window.currentUserData.empresaTelefone || "";
+    const instaLoja = window.currentUserData.empresaInstagram || "";
+
     await setDoc(leilaoRef, {
       maiorLance: valorInput,
       vencedorUid: user.uid,
       vencedorNome: nomeLoja,
+      legenda: `Destaque exclusivo oferecido por ${nomeLoja}!`,
+      whatsapp: wppLoja,
+      instagram: instaLoja,
       atualizadoEm: new Date().toISOString()
     }, { merge: true });
 
@@ -499,14 +584,24 @@ window.darLanceLeilao = async function() {
 
 window.salvarPatrocinadoAdmin = async function() {
   const nomePatrocinado = document.getElementById('admin-sponsored-store-name').value.trim();
+  const legendaPatrocinado = document.getElementById('admin-sponsored-legend').value.trim();
+  const wppPatrocinado = document.getElementById('admin-sponsored-whatsapp').value.trim();
+  const instaPatrocinado = document.getElementById('admin-sponsored-instagram').value.trim();
+
   try {
     await setDoc(doc(db, "configuracoes", "leilao_patrocinado"), {
       vencedorNome: nomePatrocinado,
+      legenda: legendaPatrocinado,
+      whatsapp: wppPatrocinado,
+      instagram: instaPatrocinado,
       maiorLance: 0,
       vencedorUid: ""
     }, { merge: true });
     mostrarAviso("Sucesso! ⭐", "Patrocinado do dia definido com sucesso.", "✅");
     document.getElementById('admin-sponsored-store-name').value = '';
+    document.getElementById('admin-sponsored-legend').value = '';
+    document.getElementById('admin-sponsored-whatsapp').value = '';
+    document.getElementById('admin-sponsored-instagram').value = '';
   } catch(err) {
     mostrarAviso("Erro", err.message, "❌");
   }
@@ -670,11 +765,6 @@ function carregarCuponsVitrine() {
 
     cuponsArray.sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
 
-    const countOffersEl = document.getElementById('active-offers-count');
-    if (countOffersEl) {
-      countOffersEl.innerText = `${cuponsArray.length}+`;
-    }
-
     let html = '';
     cuponsArray.forEach((cupom) => {
       let imgHtml = cupom.imagem ? `<img src="${cupom.imagem}" alt="Foto" style="width:100%; height:120px; object-fit:cover; border-radius:12px; margin-bottom:10px;">` : '';
@@ -685,7 +775,7 @@ function carregarCuponsVitrine() {
           ${imgHtml ? `<div>${imgHtml}</div>` : ''}
           <div class="company-header">
             <div>
-              <div class="company-title">${cupom.empresaNome}</div>
+              <div class="company-title">🏢 ${cupom.empresaNome}</div>
               <div class="company-meta">
                 <span>📍 ${cupom.endereco || 'Pelotas / RS'}</span>
                 <span style="color:var(--accent);">⭐ 5.0 • Economia ~R$ ${cupom.valorEconomia || 10}</span>
@@ -806,6 +896,7 @@ function carregarCuponsDoLojista(empresaUid) {
   });
 }
 
+// LOGS DO LOJISTA SEPARADOS APENAS PARA A SUA EMPRESA
 function carregarLogsDoLojista(empresaUid) {
   const q = query(collection(db, "logs_resgates"), where("empresaId", "==", empresaUid));
   onSnapshot(q, (snapshot) => {
@@ -813,7 +904,7 @@ function carregarLogsDoLojista(empresaUid) {
     if (!container) return;
 
     if (snapshot.empty) {
-      container.innerHTML = `<p style="font-size:0.8rem; color:var(--muted); text-align:center; padding:10px;">Sem resgates registrados.</p>`;
+      container.innerHTML = `<p style="font-size:0.8rem; color:var(--muted); text-align:center; padding:10px;">Sem resgates registrados para a sua empresa.</p>`;
       return;
     }
 
@@ -832,7 +923,6 @@ function carregarLogsDoLojista(empresaUid) {
   });
 }
 
-// NAVEGAÇÃO ENTRE ABAS DO PAINEL ADMIN
 window.switchAdminTab = function(tabName) {
   document.getElementById('adm-tab-dash').classList.toggle('active', tabName === 'dash');
   document.getElementById('adm-tab-cupons').classList.toggle('active', tabName === 'cupons');
@@ -845,7 +935,6 @@ window.switchAdminTab = function(tabName) {
   document.getElementById('adm-section-empresas').style.display = tabName === 'empresas' ? 'block' : 'none';
 };
 
-// SUB-ABAS DA DASHBOARD DO ADM
 window.switchDashSubTab = function(subTab) {
   const btnOverview = document.getElementById('btn-subtab-overview');
   const btnFinance = document.getElementById('btn-subtab-finance');
@@ -882,7 +971,6 @@ async function carregarPainelAdmin() {
     cacheTodosUsuarios = [];
     cachePagamentosPix = [];
 
-    // LEITURA ADICIONAL: BUSCA HISTÓRICO DE PIX PAGOS REAIS NO FIRESTORE
     try {
       const snapPix = await getDocs(collection(db, "pagamentos_pix"));
       snapPix.forEach(d => {
@@ -899,7 +987,6 @@ async function carregarPainelAdmin() {
         totalUsers++;
         if (u.vip) {
           totalVipsReais++;
-          // Se não houver coleção de pagamentos_pix e o usuário for VIP pago (não for cupom adm)
           if (cachePagamentosPix.length === 0 && u.origemVip !== "cupom_adm") {
             cachePagamentosPix.push({
               id: uid,
@@ -967,10 +1054,11 @@ async function carregarPainelAdmin() {
           <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📧 <strong>E-mail:</strong> ${u.email || '-'}</p>
           <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📍 <strong>Endereço:</strong> ${u.empresaEndereco || 'Pelotas / RS'}</p>
           <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📞 <strong>Contato:</strong> ${u.empresaTelefone || 'Não informado'}</p>
+          ${u.empresaInstagram ? `<p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📸 <strong>Instagram:</strong> ${u.empresaInstagram}</p>` : ''}
           <p style="font-size:0.75rem; color:var(--muted); margin-bottom:6px;">📅 <strong>Cadastrado em:</strong> <span style="color:var(--primary); font-weight:700;">${empresaCadastradaEm}</span></p>
 
           <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
-            <button class="btn btn-outline btn-small" onclick="abrirModalAdminEmpresa('${uid}', '${encodeURIComponent(u.empresaNome || '')}', '${encodeURIComponent(u.email || '')}', '${encodeURIComponent(u.empresaDescricao || '')}', '${encodeURIComponent(u.empresaEndereco || '')}', '${encodeURIComponent(u.empresaTelefone || '')}', '${u.empresaCategoria || 'gastronomia'}', '${encodeURIComponent(u.fotoUrl || '')}')">✏️ Editar</button>
+            <button class="btn btn-outline btn-small" onclick="abrirModalAdminEmpresa('${uid}', '${encodeURIComponent(u.empresaNome || '')}', '${encodeURIComponent(u.email || '')}', '${encodeURIComponent(u.empresaDescricao || '')}', '${encodeURIComponent(u.empresaEndereco || '')}', '${encodeURIComponent(u.empresaTelefone || '')}', '${encodeURIComponent(u.empresaInstagram || '')}', '${u.empresaCategoria || 'gastronomia'}', '${encodeURIComponent(u.fotoUrl || '')}')">✏️ Editar</button>
             <button class="btn btn-outline btn-small" onclick="toggleStatusEmpresaAdmin('${uid}', ${statusAtivo})">⏸️ ${btnToggleTxt}</button>
             <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="excluirEmpresaAdmin('${uid}', '${encodeURIComponent(u.empresaNome || 'Empresa')}')">🗑️ Excluir</button>
           </div>
@@ -1045,7 +1133,6 @@ async function carregarPainelAdmin() {
   }
 }
 
-// EXCLUSÃO REAL DE CLIENTES COM MODAL DE CONFIRMAÇÃO
 window.confirmarExclusaoCliente = function(uid, nomeEncoded) {
   const nomeDecoded = decodeURIComponent(nomeEncoded);
   document.getElementById('delete-user-uid').value = uid;
@@ -1068,7 +1155,6 @@ window.executarExclusaoCliente = async function() {
   }
 };
 
-// ZERAR / RESETAR LEITURA E HISTÓRICO DE PIX
 window.confirmarZerarHistoricoPix = async function() {
   if (confirm("⚠️ Tem certeza que deseja ZERAR o histórico de Pix? Isso limpará todas as entradas financeiras registradas de teste.")) {
     try {
@@ -1088,7 +1174,6 @@ window.confirmarZerarHistoricoPix = async function() {
   }
 };
 
-// COPIAR NÚMEROS DE WHATSAPP PARA DISPARO / MARKETING
 window.copiarListaWhatsAppClientes = function() {
   const zapList = cacheTodosUsuarios
     .filter(u => u.funcao === "cliente" && u.whatsapp)
@@ -1104,7 +1189,6 @@ window.copiarListaWhatsAppClientes = function() {
   mostrarAviso("Copiado! 📱", `${zapList.length} número(s) de WhatsApp copiados para a área de transferência.`, "📋");
 };
 
-// FILTRO DE DATAS DE / ATÉ NO FINANCEIRO
 window.aplicarFiltroDataCustomizada = function() {
   const dtInicio = document.getElementById('filter-date-start').value;
   const dtFim = document.getElementById('filter-date-end').value;
@@ -1144,7 +1228,7 @@ function renderizarRelatorioFinanceiro(periodo = 'hoje', customStart = null, cus
     } else if (periodo === 'custom' && customStart && customEnd) {
       return dataP >= customStart && dataP <= customEnd;
     }
-    return true; // 'todos'
+    return true;
   });
 
   const totalFaturado = pagamentosFiltrados.reduce((acc, curr) => acc + (curr.valor || 19.90), 0);
@@ -1311,7 +1395,7 @@ function renderizarGraficoCrescimentoClientes() {
   });
 }
 
-window.abrirModalAdminEmpresa = function(id = '', nome = '', email = '', desc = '', endereco = '', telefone = '', cat = 'gastronomia', logo = '') {
+window.abrirModalAdminEmpresa = function(id = '', nome = '', email = '', desc = '', endereco = '', telefone = '', instagram = '', cat = 'gastronomia', logo = '') {
   document.getElementById('modal-admin-empresa-title').innerText = id ? "✏️ Editar Empresa" : "➕ Nova Empresa Parceira";
   document.getElementById('admin-empresa-id').value = id;
   document.getElementById('adm-emp-nome').value = decodeURIComponent(nome);
@@ -1320,6 +1404,7 @@ window.abrirModalAdminEmpresa = function(id = '', nome = '', email = '', desc = 
   document.getElementById('adm-emp-desc').value = decodeURIComponent(desc);
   document.getElementById('adm-emp-endereco').value = decodeURIComponent(endereco);
   document.getElementById('adm-emp-telefone').value = decodeURIComponent(telefone);
+  document.getElementById('adm-emp-instagram').value = decodeURIComponent(instagram);
   document.getElementById('adm-emp-cat').value = cat;
   document.getElementById('adm-emp-logo').value = decodeURIComponent(logo);
   document.getElementById('modal-admin-empresa').classList.add('active');
@@ -1332,6 +1417,7 @@ window.salvarEmpresaPeloAdmin = async function() {
   const desc = document.getElementById('adm-emp-desc').value.trim();
   const endereco = document.getElementById('adm-emp-endereco').value.trim();
   const telefone = document.getElementById('adm-emp-telefone').value.trim();
+  const instagram = document.getElementById('adm-emp-instagram').value.trim();
   const categoria = document.getElementById('adm-emp-cat').value;
   const logo = document.getElementById('adm-emp-logo').value.trim();
 
@@ -1344,6 +1430,7 @@ window.salvarEmpresaPeloAdmin = async function() {
         empresaDescricao: desc,
         empresaEndereco: endereco || 'Pelotas / RS',
         empresaTelefone: telefone,
+        empresaInstagram: instagram,
         empresaCategoria: categoria,
         fotoUrl: logo || null
       });
@@ -1360,6 +1447,7 @@ window.salvarEmpresaPeloAdmin = async function() {
         empresaDescricao: desc,
         empresaEndereco: endereco || 'Pelotas / RS',
         empresaTelefone: telefone,
+        empresaInstagram: instagram,
         empresaCategoria: categoria,
         fotoUrl: logo || null,
         criadoEm: new Date().toISOString()
@@ -1561,6 +1649,7 @@ window.salvarDadosEmpresaLojista = async function() {
   const novoNome = document.getElementById('merchant-edit-name').value.trim();
   const novoEndereco = document.getElementById('merchant-edit-address').value.trim();
   const novoTelefone = document.getElementById('merchant-edit-phone').value.trim();
+  const novoInstagram = document.getElementById('merchant-edit-instagram').value.trim();
 
   if (!novoNome) return mostrarAviso("Atenção", "Informe o nome da empresa.", "⚠️");
 
@@ -1568,12 +1657,14 @@ window.salvarDadosEmpresaLojista = async function() {
     await updateDoc(doc(db, "usuarios", user.uid), {
       empresaNome: novoNome,
       empresaEndereco: novoEndereco || 'Pelotas / RS',
-      empresaTelefone: novoTelefone || ''
+      empresaTelefone: novoTelefone || '',
+      empresaInstagram: novoInstagram || ''
     });
 
     window.currentUserData.empresaNome = novoNome;
     window.currentUserData.empresaEndereco = novoEndereco;
     window.currentUserData.empresaTelefone = novoTelefone;
+    window.currentUserData.empresaInstagram = novoInstagram;
 
     document.getElementById('merchant-store-name').innerText = novoNome;
     mostrarAviso("Sucesso! 🏢", "Informações da empresa salvas com sucesso.", "✅");
@@ -1691,7 +1782,7 @@ window.adminAlternarVip = async function(userId, novoEstado) {
     const expiraEm = novoEstado ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null;
     const updateObj = { vip: novoEstado, vipExpiraEm: expiraEm };
     if (novoEstado) {
-      updateObj.origemVip = "concessao_adm"; // Não marca como Pix real
+      updateObj.origemVip = "concessao_adm";
     }
 
     await updateDoc(doc(db, "usuarios", userId), updateObj);
@@ -1880,6 +1971,7 @@ window.executarAuth = async function() {
     const storeName = document.getElementById('reg-store-name')?.value;
     const storeAddress = document.getElementById('reg-store-address')?.value || 'Pelotas / RS';
     const storePhone = document.getElementById('reg-store-phone')?.value || '';
+    const storeInstagram = document.getElementById('reg-store-instagram')?.value.trim() || '';
     const storeCode = document.getElementById('reg-store-code')?.value.trim().toUpperCase();
 
     if (!email || !pass || !nome) return mostrarAviso("Atenção", "Preencha todos os campos.", "⚠️");
@@ -1909,6 +2001,7 @@ window.executarAuth = async function() {
         userData.empresaNome = storeName;
         userData.empresaEndereco = storeAddress;
         userData.empresaTelefone = storePhone;
+        userData.empresaInstagram = storeInstagram;
         userData.ativo = true;
       }
 
@@ -2016,7 +2109,7 @@ window.resgatarCupomReal = async function(cupomId, empresaId, empresaNome, titul
     const qrContainer = document.getElementById('qrcode-canvas');
     if (qrContainer) {
       qrContainer.innerHTML = "";
-      new QRCode(qrContainer, { text: codigoUnico, width: 130, height: 130 });
+      new QRCode(qrContainer, { text: codigoUnico, width: 120, height: 120 });
     }
 
     const user = auth.currentUser;

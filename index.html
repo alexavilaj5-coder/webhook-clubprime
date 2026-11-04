@@ -105,6 +105,10 @@
             <input type="text" id="reg-store-phone" class="form-control" placeholder="Ex: 53 99999-9999">
           </div>
           <div class="form-group">
+            <label>INSTAGRAM DA EMPRESA (OPCIONAL)</label>
+            <input type="text" id="reg-store-instagram" class="form-control" placeholder="Ex: @sualoja (editável depois)">
+          </div>
+          <div class="form-group">
             <label>CÓDIGO DE ATIVAÇÃO DE PARCEIRO</label>
             <input type="text" id="reg-store-code" class="form-control" placeholder="Digite a chave secreta" style="text-transform:uppercase;">
           </div>
@@ -233,9 +237,13 @@
             <label>ENDEREÇO</label>
             <input type="text" id="merchant-edit-address" class="form-control" placeholder="Ex: Rua Barão de Mauá, 450">
           </div>
-          <div class="form-group" style="text-align:left; margin-bottom:12px;">
+          <div class="form-group" style="text-align:left; margin-bottom:8px;">
             <label>TELEFONE / WHATSAPP</label>
             <input type="text" id="merchant-edit-phone" class="form-control" placeholder="Ex: 53 99999-9999">
+          </div>
+          <div class="form-group" style="text-align:left; margin-bottom:12px;">
+            <label>INSTAGRAM</label>
+            <input type="text" id="merchant-edit-instagram" class="form-control" placeholder="Ex: @sualoja">
           </div>
           <button class="btn btn-outline" style="padding:8px; font-size:0.8rem;" onclick="salvarDadosEmpresaLojista()">💾 Salvar Alterações da Empresa</button>
         </div>
@@ -319,7 +327,7 @@
             </div>
           </div>
 
-          <!-- NOVO GRÁFICO: CADASTRO DE NOVOS CLIENTES AO LONGO DO TEMPO -->
+          <!-- GRÁFICO: CADASTRO DE NOVOS CLIENTES AO LONGO DO TEMPO -->
           <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:12px;">
             <h3 style="font-size:0.85rem; font-weight:800; margin-bottom:6px; color:var(--text);">📈 Crescimento de Cadastros de Clientes</h3>
             <div style="position:relative; width:100%; height:130px;">
@@ -348,6 +356,18 @@
             <div class="form-group" style="text-align:left; margin-bottom:8px;">
               <label>NOME DA EMPRESA PATROCINADA AMANHÃ</label>
               <input type="text" id="admin-sponsored-store-name" class="form-control" placeholder="Ex: Hamburgueria Pelotas">
+            </div>
+            <div class="form-group" style="text-align:left; margin-bottom:8px;">
+              <label>LEGENDA / FRASE DE DESTAQUE DO PATROCINADO</label>
+              <input type="text" id="admin-sponsored-legend" class="form-control" placeholder="Ex: O melhor hambúrguer artesanal da cidade!">
+            </div>
+            <div class="form-group" style="text-align:left; margin-bottom:8px;">
+              <label>WHATSAPP DO PATROCINADO (EX: 53999999999)</label>
+              <input type="text" id="admin-sponsored-whatsapp" class="form-control" placeholder="53999999999">
+            </div>
+            <div class="form-group" style="text-align:left; margin-bottom:8px;">
+              <label>INSTAGRAM DO PATROCINADO (EX: @loja)</label>
+              <input type="text" id="admin-sponsored-instagram" class="form-control" placeholder="@loja">
             </div>
             <button class="btn btn-cyan" style="padding:8px; font-size:0.8rem;" onclick="salvarPatrocinadoAdmin()">💾 Definir Patrocinado do Dia</button>
           </div>
@@ -496,7 +516,7 @@
         </button>
       </div>
 
-      <!-- ALERTA AUTOMÁTICO DE VIP A EXPIRAR (FALTANDO 3 OU 2 DIAS) -->
+      <!-- ALERTA AUTOMÁTICO DE VIP A EXPIRAR -->
       <div id="vip-expiring-alert" style="display:none; background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color:#ffffff; padding:14px 16px; border-radius:18px; margin-bottom:16px; box-shadow:0 6px 16px rgba(239,68,68,0.25);">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
@@ -511,11 +531,23 @@
         📢 <span id="client-global-banner-content">-</span>
       </div>
 
-      <!-- LOJA PATROCINADA DO DIA (SE HOUVER) -->
-      <div id="client-sponsored-banner" style="display:none; background:linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color:#ffffff; padding:14px 18px; border-radius:20px; margin-bottom:16px; box-shadow:0 8px 20px rgba(139,92,246,0.25);">
-        <div style="font-size:0.7rem; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:#ddd6fe;">⭐ Patrocinado do Dia</div>
-        <h3 id="client-sponsored-name" style="font-size:1.15rem; font-weight:900; margin-top:2px;">-</h3>
-        <p style="font-size:0.78rem; color:#f3e8ff; margin-top:2px;">Destaque de hoje!</p>
+      <!-- LOJA PATROCINADA DO DIA (AMPLIADA, CLICÁVEL COM WHATSAPP, INSTAGRAM E LEGENDA) -->
+      <div id="client-sponsored-banner" style="display:none; background:linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color:#ffffff; padding:18px 20px; border-radius:20px; margin-bottom:16px; box-shadow:0 10px 24px rgba(139,92,246,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size:0.72rem; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:#ddd6fe;">⭐ Patrocinado do Dia</span>
+          <span style="background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:10px; font-size:0.65rem; font-weight:800;">DESTAQUE</span>
+        </div>
+        <h3 id="client-sponsored-name" style="font-size:1.3rem; font-weight:900; margin-top:2px; margin-bottom:4px;">-</h3>
+        <p id="client-sponsored-legend-text" style="font-size:0.82rem; color:#f3e8ff; margin-bottom:12px; line-height:1.4;">-</p>
+        
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <a id="client-sponsored-wpp-btn" href="#" target="_blank" class="btn btn-cyan" style="flex:1; padding:10px; font-size:0.78rem; text-decoration:none; text-align:center; background:#10b981; color:#fff; border:none; display:none;">
+            💬 WhatsApp
+          </a>
+          <a id="client-sponsored-insta-btn" href="#" target="_blank" class="btn btn-cyan" style="flex:1; padding:10px; font-size:0.78rem; text-decoration:none; text-align:center; background:linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color:#fff; border:none; display:none;">
+            📸 Instagram
+          </a>
+        </div>
       </div>
 
       <div class="hero-card" style="padding: 12px 16px;">
@@ -532,9 +564,9 @@
             <div id="user-economy-display" class="stat-val" style="font-size: 0.95rem;">R$ 0,00</div>
             <div class="stat-lbl" style="font-size: 0.6rem;">Economia Média/mês</div>
           </div>
-          <div class="stat-item">
+          <div class="stat-item" onclick="abrirModalNiveis()" style="cursor:pointer;" title="Clique para ver detalhes dos níveis">
             <div id="user-level-display" class="stat-val" style="font-size: 0.95rem;">🥉 Bronze</div>
-            <div class="stat-lbl" style="font-size: 0.6rem;">Nível do Membro</div>
+            <div class="stat-lbl" style="font-size: 0.6rem;">Nível (Ver mais)</div>
           </div>
         </div>
       </div>
@@ -556,12 +588,17 @@
         <input type="text" class="form-control" placeholder="🔍 Buscar restaurante, oficina, barbearia..." onkeyup="filterStores(this.value)">
       </div>
 
+      <!-- CATEGORIAS EXPANDIDAS -->
       <div class="categories-bar">
         <div class="category-pill active" onclick="filterCat('all', this)">Todos Os Cupons</div>
         <div class="category-pill" onclick="filterCat('gastronomia', this)">🍔 Gastronomia & Delivery</div>
         <div class="category-pill" onclick="filterCat('compras', this)">🛍️ Lojas & Compras</div>
         <div class="category-pill" onclick="filterCat('automotivo', this)">🔧 Automotivo</div>
         <div class="category-pill" onclick="filterCat('beleza', this)">💇 Saúde & Beleza</div>
+        <div class="category-pill" onclick="filterCat('servicos', this)">⚙️ Serviços Gerais</div>
+        <div class="category-pill" onclick="filterCat('pet', this)">🐾 Pet Shop</div>
+        <div class="category-pill" onclick="filterCat('saude', this)">🏥 Saúde & Farmácia</div>
+        <div class="category-pill" onclick="filterCat('lazer', this)">🎟️ Lazer & Entretenimento</div>
       </div>
 
       <div id="stores-list-dynamic">
@@ -589,6 +626,11 @@
         <p id="profile-whatsapp" style="font-size:0.78rem; color:var(--primary); font-weight:700; margin-top:2px;">-</p>
       </div>
 
+      <!-- BOTÃO PARA EDITAR DADOS DO CLIENTE (NOME, WHATSAPP, SENHA) -->
+      <button class="btn btn-cyan" style="margin-bottom:18px; padding:10px; font-size:0.82rem;" onclick="abrirModalEditarCliente()">
+        ✏️ Editar Meus Dados (Nome, WhatsApp, Senha)
+      </button>
+
       <div id="profile-vip-card" style="display:none; background:var(--accent-light); border:1px solid var(--accent-border); padding:16px; border-radius:18px; margin-bottom:18px;">
         <div style="display:flex; align-items:center; justify-content:space-between;">
           <div style="display:flex; align-items:center; gap:10px;">
@@ -599,7 +641,6 @@
               <div style="font-size:0.75rem; color:var(--primary); margin-top:2px; font-weight:800;" id="profile-vip-countdown">-</div>
             </div>
           </div>
-          <!-- BOTÃO RENOVAR ACUMULANDO 30 DIAS (APARECE QUANDO FALTAR <= 5 DIAS) -->
           <div id="box-renew-vip" style="display:none;">
             <button class="btn btn-cyan" style="padding:8px 12px; font-size:0.78rem;" onclick="renovarVipAcumulado()">🔄 Renovar (+30d)</button>
           </div>
@@ -616,8 +657,8 @@
         </div>
       </div>
 
-      <div style="background:var(--card); border:1px solid var(--card-border); border-radius:20px; padding:18px; margin-bottom:20px;">
-        <h3 style="font-size:0.95rem; font-weight:800; margin-bottom:10px;">🏆 Suas Conquistas no Clube</h3>
+      <div style="background:var(--card); border:1px solid var(--card-border); border-radius:20px; padding:18px; margin-bottom:20px; cursor:pointer;" onclick="abrirModalNiveis()">
+        <h3 style="font-size:0.95rem; font-weight:800; margin-bottom:10px;">🏆 Suas Conquistas no Clube (Ver Níveis)</h3>
         <div style="display:flex; justify-content:space-around; text-align:center;">
           <div>
             <span style="font-size:1.8rem;">🎯</span>
@@ -675,6 +716,57 @@
 
   </div>
 
+  <!-- MODAL EXPLICAÇÃO DOS NÍVEIS (BRONZE, PRATA, OURO) -->
+  <div id="modal-niveis" class="modal">
+    <div class="modal-content" style="text-align:left;">
+      <div style="text-align:center; font-size:2rem; margin-bottom:4px;">🏅</div>
+      <h3 style="font-size:1.15rem; font-weight:900; text-align:center; margin-bottom:12px;">Como Funcionam os Níveis</h3>
+      <p style="font-size:0.78rem; color:var(--muted); margin-bottom:14px; text-align:center;">Quanto mais você utiliza os cupons do Clube Prime, mais você sobe de nível e economiza!</p>
+      
+      <div style="background:var(--secondary); padding:12px; border-radius:14px; margin-bottom:8px;">
+        <div style="font-weight:900; font-size:0.9rem; color:#cd7f32;">🥉 Nível Bronze (0 a 3 cupons usados)</div>
+        <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">Nível inicial de todos os membros ao entrar no clube. Comece a resgatar para subir!</div>
+      </div>
+
+      <div style="background:var(--secondary); padding:12px; border-radius:14px; margin-bottom:8px;">
+        <div style="font-weight:900; font-size:0.9rem; color:#c0c0c0;">🥈 Nível Prata (4 a 9 cupons usados)</div>
+        <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">Você já é um membro ativo que economiza regularmente com os parceiros de Pelotas.</div>
+      </div>
+
+      <div style="background:var(--secondary); padding:12px; border-radius:14px; margin-bottom:16px;">
+        <div style="font-weight:900; font-size:0.9rem; color:#ffd700;">🥇 Nível Ouro (10 ou mais cupons usados)</div>
+        <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">O topo do clube! Membro Elite com máxima economia garantida nas melhores lojas da cidade.</div>
+      </div>
+
+      <button class="btn" onclick="fecharModal('modal-niveis')">Entendido</button>
+    </div>
+  </div>
+
+  <!-- MODAL EDITAR CADASTRO DO CLIENTE -->
+  <div id="modal-edit-client" class="modal">
+    <div class="modal-content" style="text-align:left;">
+      <h3 style="font-size:1.2rem; font-weight:900; margin-bottom:12px;">✏️ Editar Meus Dados</h3>
+      
+      <div class="form-group">
+        <label>NOME COMPLETO</label>
+        <input type="text" id="edit-client-name" class="form-control" placeholder="Seu nome">
+      </div>
+
+      <div class="form-group">
+        <label>WHATSAPP / CELULAR</label>
+        <input type="tel" id="edit-client-whatsapp" class="form-control" placeholder="(53) 99999-9999">
+      </div>
+
+      <div class="form-group">
+        <label>NOVA SENHA (DEIXE EM BRANCO PARA NÃO ALTERAR)</label>
+        <input type="password" id="edit-client-pass" class="form-control" placeholder="Nova senha">
+      </div>
+
+      <button class="btn btn-cyan" style="margin-top:12px;" onclick="salvarAlteracoesCliente()">💾 Salvar Alterações</button>
+      <button class="btn btn-outline" style="margin-top:8px;" onclick="fecharModal('modal-edit-client')">Cancelar</button>
+    </div>
+  </div>
+
   <!-- MODAL CONFIRMAÇÃO DE EXCLUSÃO DE CLIENTE -->
   <div id="modal-confirm-delete-user" class="modal">
     <div class="modal-content">
@@ -686,6 +778,19 @@
       <input type="hidden" id="delete-user-uid" value="">
       <button class="btn" style="background:var(--danger); color:#ffffff; margin-bottom:8px;" onclick="executarExclusaoCliente()">🗑️ Sim, Excluir Cadastro</button>
       <button class="btn btn-outline" onclick="fecharModal('modal-confirm-delete-user')">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE SUPORTE AO DESATIVAR EMPRESA -->
+  <div id="modal-empresa-desativada" class="modal">
+    <div class="modal-content">
+      <div style="font-size:2.5rem; margin-bottom:6px;">🔒</div>
+      <h3 style="font-size:1.15rem; font-weight:900; color:var(--accent);">Empresa Desativada</h3>
+      <p style="font-size:0.82rem; color:var(--muted); margin-top:6px; margin-bottom:16px; line-height:1.4;">
+        Esta empresa parceira foi desativada no sistema administrativo. Caso você seja o lojista e acredite que isso seja um engano, entre em contato com o suporte do Clube Prime.
+      </p>
+      <a href="https://wa.me/555384052112?text=Olá,%20minha%20empresa%20foi%20desativada%20no%20Clube%20Prime%20e%20gostaria%20de%20falar%20com%20o%20suporte." target="_blank" class="btn btn-cyan" style="margin-bottom:8px; text-decoration:none; display:block; text-align:center;">💬 Falar com o Suporte (WhatsApp)</a>
+      <button class="btn btn-outline" onclick="fecharModal('modal-empresa-desativada')">Fechar</button>
     </div>
   </div>
 
@@ -735,42 +840,42 @@
     </div>
   </div>
 
-  <!-- MODAL CUPOM DO CLIENTE -->
+  <!-- MODAL CUPOM DO CLIENTE (MAIS ELEGANTE E ENCAIXADO) -->
   <div id="modal-coupon" class="modal">
-    <div class="modal-content">
-      <h3 id="modal-title" style="font-size:1.2rem; font-weight:800;">---</h3>
-      <div id="modal-disc" style="color:var(--primary); font-weight:900; font-size:1.1rem; margin-top:4px;">---</div>
+    <div class="modal-content" style="max-width: 380px; padding: 20px;">
+      <h3 id="modal-title" style="font-size:1.15rem; font-weight:800;">---</h3>
+      <div id="modal-disc" style="color:var(--primary); font-weight:900; font-size:1.05rem; margin-top:2px;">---</div>
 
-      <div style="text-align:left; background:var(--secondary); padding:12px; border-radius:14px; margin-top:12px; font-size:0.8rem;">
+      <div style="text-align:left; background:var(--secondary); padding:10px 12px; border-radius:12px; margin-top:10px; font-size:0.78rem;">
         <div>📍 <strong>Endereço:</strong> <span id="modal-address">-</span></div>
-        <div style="margin-top:4px;">📞 <strong>Contato/Zap:</strong> <span id="modal-phone">-</span></div>
-        <div style="margin-top:4px;">📜 <strong>Regras / Horários:</strong> <span id="modal-rules">-</span></div>
+        <div style="margin-top:3px;">📞 <strong>Contato/Zap:</strong> <span id="modal-phone">-</span></div>
+        <div style="margin-top:3px;">📜 <strong>Regras / Horários:</strong> <span id="modal-rules">-</span></div>
       </div>
 
-      <div id="box-blocked" style="display:none; margin-top:16px; background:var(--accent-light); border:1px solid var(--accent-border); padding:16px; border-radius:18px;">
-        <span style="font-size:2rem;">🔒</span>
-        <h4 style="font-size:0.92rem; font-weight:800; color:var(--accent); margin-top:4px;">Código VIP Bloqueado!</h4>
-        <p style="font-size:0.78rem; color:var(--muted); margin-top:4px; line-height:1.3;">Seja membro VIP por apenas R$ 19,90 para desbloquear este e todos os cupons de Pelotas.</p>
-        <button class="btn btn-cyan" style="margin-top:12px;" onclick="gerarPixMercadoPago()">⚡ Desbloquear Cupons (R$ 19,90)</button>
+      <div id="box-blocked" style="display:none; margin-top:14px; background:var(--accent-light); border:1px solid var(--accent-border); padding:14px; border-radius:16px;">
+        <span style="font-size:1.8rem;">🔒</span>
+        <h4 style="font-size:0.9rem; font-weight:800; color:var(--accent); margin-top:2px;">Código VIP Bloqueado!</h4>
+        <p style="font-size:0.75rem; color:var(--muted); margin-top:3px; line-height:1.3;">Seja membro VIP por apenas R$ 19,90 para desbloquear este e todos os cupons de Pelotas.</p>
+        <button class="btn btn-cyan" style="margin-top:10px;" onclick="gerarPixMercadoPago()">⚡ Desbloquear Cupons (R$ 19,90)</button>
       </div>
 
-      <div id="box-unlocked" style="display:none; margin-top:16px;">
-        <div style="font-size:0.75rem; color:var(--muted); font-weight:700; margin-bottom:6px;">MOSTRE ESTE QR CODE OU CÓDIGO NO CAIXA:</div>
+      <div id="box-unlocked" style="display:none; margin-top:14px;">
+        <div style="font-size:0.72rem; color:var(--muted); font-weight:700; margin-bottom:4px;">MOSTRE ESTE QR CODE OU CÓDIGO NO CAIXA:</div>
         
-        <div id="qrcode-canvas" style="background:#ffffff; padding:12px; border-radius:16px; width:160px; height:160px; margin:10px auto; display:flex; justify-content:center; align-items:center;"></div>
+        <div id="qrcode-canvas" style="background:#ffffff; padding:10px; border-radius:14px; width:140px; height:140px; margin:8px auto; display:flex; justify-content:center; align-items:center;"></div>
 
-        <div style="background:var(--secondary); border:2px dashed var(--primary); padding:12px; border-radius:16px; margin:10px 0;">
-          <div id="modal-code" style="font-size:1.5rem; font-weight:900; letter-spacing:2px; color:var(--primary);">---</div>
+        <div style="background:var(--secondary); border:2px dashed var(--primary); padding:10px; border-radius:14px; margin:8px 0;">
+          <div id="modal-code" style="font-size:1.3rem; font-weight:900; letter-spacing:2px; color:var(--primary);">---</div>
         </div>
 
-        <button class="btn" onclick="copiarCodigoCupom()">📋 Copiar Código Único</button>
+        <button class="btn" style="padding:10px;" onclick="copiarCodigoCupom()">📋 Copiar Código Único</button>
       </div>
 
-      <button class="btn btn-outline" style="margin-top:14px;" onclick="fecharModal('modal-coupon')">Fechar</button>
+      <button class="btn btn-outline" style="margin-top:12px; padding:10px;" onclick="fecharModal('modal-coupon')">Fechar</button>
     </div>
   </div>
 
-  <!-- MODAL CRIAR/EDITAR OFERTA -->
+  <!-- MODAL CRIAR/EDITAR OFERTA (COM UPLOAD / LINK DE IMAGEM DA EMPRESA) -->
   <div id="modal-add-offer" class="modal">
     <div class="modal-content">
       <h3 id="modal-offer-heading" style="font-size:1.2rem; font-weight:800; margin-bottom:12px;">➕ Nova Oferta</h3>
@@ -806,7 +911,7 @@
       </div>
 
       <div class="form-group" style="text-align:left;">
-        <label>LINK DA FOTO / LOGÓTIPO DA LOJA (OPCIONAL)</label>
+        <label>LINK DA FOTO / LOGÓTIPO DA EMPRESA (PARA FICAR JUNTO AO NOME)</label>
         <input type="text" id="offer-image" class="form-control" placeholder="Ex: https://i.imgur.com/foto.jpg">
       </div>
 
@@ -817,6 +922,10 @@
           <option value="compras">Lojas & Compras</option>
           <option value="automotivo">Automotivo</option>
           <option value="beleza">Saúde & Beleza</option>
+          <option value="servicos">Serviços Gerais</option>
+          <option value="pet">Pet Shop</option>
+          <option value="saude">Saúde & Farmácia</option>
+          <option value="lazer">Lazer & Entretenimento</option>
         </select>
       </div>
 
@@ -867,12 +976,20 @@
         <input type="text" id="adm-emp-telefone" class="form-control" placeholder="Ex: 53 99999-8888">
       </div>
       <div class="form-group" style="text-align:left;">
+        <label>INSTAGRAM</label>
+        <input type="text" id="adm-emp-instagram" class="form-control" placeholder="Ex: @sualoja">
+      </div>
+      <div class="form-group" style="text-align:left;">
         <label>CATEGORIA</label>
         <select id="adm-emp-cat" class="form-control">
           <option value="gastronomia">Gastronomia & Delivery</option>
           <option value="compras">Lojas & Compras</option>
           <option value="automotivo">Automotivo</option>
           <option value="beleza">Saúde & Beleza</option>
+          <option value="servicos">Serviços Gerais</option>
+          <option value="pet">Pet Shop</option>
+          <option value="saude">Saúde & Farmácia</option>
+          <option value="lazer">Lazer & Entretenimento</option>
         </select>
       </div>
       <div class="form-group" style="text-align:left;">
