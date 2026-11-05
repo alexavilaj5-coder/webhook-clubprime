@@ -2,7 +2,7 @@
 <html lang="pt-BR" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>CLUBE PRIME - Pelotas / RS</title>
   
   <!-- Configuração PWA / Manifesto -->
@@ -147,12 +147,14 @@
 
     <!-- TELA PAINEL DO LOJISTA -->
     <div id="screen-merchant" class="screen">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <div>
-          <span style="font-size:0.75rem; font-weight:800; color:var(--accent);">PAINEL DO LOJISTA</span>
-          <h2 id="merchant-store-name" style="font-size:1.4rem; font-weight:900;">Empresa Parceira</h2>
+      <div class="panel-controle-highlight" style="padding: 12px; border-radius: 20px; margin-bottom: 16px; background: var(--card);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <span style="font-size:0.75rem; font-weight:800; color:var(--accent);">PAINEL DO LOJISTA</span>
+            <h2 id="merchant-store-name" style="font-size:1.4rem; font-weight:900;">Empresa Parceira</h2>
+          </div>
+          <div class="status-badge lojista">PARCEIRO ATIVO</div>
         </div>
-        <div class="status-badge lojista">PARCEIRO ATIVO</div>
       </div>
 
       <div id="merchant-banner-notice" style="display:none; background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:#ffffff; padding:14px 16px; border-radius:18px; margin-bottom:16px; font-size:0.82rem; font-weight:700; box-shadow:0 6px 16px rgba(37,99,235,0.2);">
@@ -256,12 +258,14 @@
 
     <!-- TELA PAINEL ADMINISTRADOR -->
     <div id="screen-admin" class="screen">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <div>
-          <span style="font-size:0.68rem; font-weight:800; color:var(--accent);">PAINEL DE CONTROLE</span>
-          <h2 style="font-size:1.15rem; font-weight:900;">Gestão Geral ADM</h2>
+      <div class="panel-controle-highlight" style="padding: 12px; border-radius: 20px; margin-bottom: 12px; background: var(--card);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <span style="font-size:0.68rem; font-weight:800; color:var(--accent);">PAINEL DE CONTROLE</span>
+            <h2 style="font-size:1.15rem; font-weight:900;">Gestão Geral ADM</h2>
+          </div>
+          <div class="status-badge admin" style="padding:4px 10px; font-size:0.6rem;">ADMIN</div>
         </div>
-        <div class="status-badge admin" style="padding:4px 10px; font-size:0.6rem;">ADMIN</div>
       </div>
 
       <button class="btn btn-cyan" style="margin-bottom:12px; padding:10px; font-size:0.82rem; font-weight:900;" onclick="alternarVisaoCliente()">
@@ -498,7 +502,7 @@
       </div>
 
       <!-- LOJA PATROCINADA DA SEMANA (NOME GIGANTE, PROPORCIONAL E IMPONENTE) -->
-      <div id="client-sponsored-banner" style="display:none; background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color:#ffffff; padding:24px 22px; border-radius:24px; margin-bottom:14px; box-shadow:0 14px 32px rgba(124,58,237,0.35); border: 1px solid rgba(255, 255, 255, 0.3); animation: pulseSponsored 3s infinite ease-in-out;">
+      <div id="client-sponsored-banner" class="company-card patrocinado" style="display:none; background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color:#ffffff; padding:24px 22px; border-radius:24px; margin-bottom:14px; box-shadow:0 14px 32px rgba(124,58,237,0.35); border: 1px solid rgba(255, 255, 255, 0.3);">
         
         <!-- CABEÇALHO: TÍTULO DA SEMANA E BOTÕES LADO A LADO -->
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
@@ -522,15 +526,6 @@
         <!-- LEGENDA MAIOR E MAIS LEGÍVEL -->
         <p id="client-sponsored-legend-text" style="font-size:1rem; color:#ede9fe; margin:0; line-height:1.4; opacity:0.95;">-</p>
       </div>
-
-      <!-- ANIMAÇÃO CSS PARA O CARD PULSAR SUAVEMENTE -->
-      <style>
-        @keyframes pulseSponsored {
-          0% { transform: scale(1); box-shadow: 0 14px 32px rgba(124,58,237,0.35); }
-          50% { transform: scale(1.008); box-shadow: 0 18px 38px rgba(124,58,237,0.5); }
-          100% { transform: scale(1); box-shadow: 0 14px 32px rgba(124,58,237,0.35); }
-        }
-      </style>
 
       <!-- PAINEL DO MEMBRO (BEM COMPACTO E ENXUTO) -->
       <div class="hero-card" style="padding: 10px 14px; min-height: auto; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 16px;">
@@ -584,7 +579,7 @@
         <div class="category-pill" onclick="filterCat('lazer', this)">🎟️ Lazer & Entretenimento</div>
       </div>
 
-      <!-- VITRINE DE EMPRESAS (CADA EMPRESA COM SEU CARD ÚNICO E ATÉ 3 CUPONS) -->
+      <!-- VITRINE DE EMPRESAS -->
       <div id="stores-list-dynamic">
         <p style="font-size:0.8rem; color:var(--muted); text-align:center;">Carregando cupons de Pelotas...</p>
       </div>
@@ -599,7 +594,7 @@
       </div>
     </div>
 
-    <!-- TELA PERFIL (COM EXTRATO DE ECONOMIA) -->
+    <!-- TELA PERFIL -->
     <div id="screen-profile" class="screen">
       <div style="text-align:center; margin-bottom:20px; margin-top:10px;">
         <div class="profile-avatar-container">
@@ -722,7 +717,9 @@
 
   </div>
 
-  <!-- MODAL DEFINIR PATROCINADO DA SEMANA (NOVO) -->
+  <!-- MODAIS DO SISTEMA -->
+
+  <!-- MODAL DEFINIR PATROCINADO DA SEMANA -->
   <div id="modal-patrocinar-empresa" class="modal">
     <div class="modal-content" style="text-align:left;">
       <div style="font-size:2.2rem; margin-bottom:4px; text-align:center;">⭐</div>
@@ -744,7 +741,7 @@
     </div>
   </div>
 
-  <!-- MODAL EXPLICAÇÃO DOS NÍVEIS (BRONZE, PRATA, OURO) -->
+  <!-- MODAL EXPLICAÇÃO DOS NÍVEIS -->
   <div id="modal-niveis" class="modal">
     <div class="modal-content" style="text-align:left;">
       <div style="text-align:center; font-size:2rem; margin-bottom:4px;">🏅</div>
@@ -770,7 +767,7 @@
     </div>
   </div>
 
-  <!-- MODAL DE EXIBIÇÃO DE REGRAS DA PROMOÇÃO (ÍCONE "i") -->
+  <!-- MODAL DE EXIBIÇÃO DE REGRAS DA PROMOÇÃO -->
   <div id="modal-regras-cupom" class="modal">
     <div class="modal-content" style="text-align:left;">
       <div style="font-size:2rem; margin-bottom:4px; text-align:center;">ℹ️</div>
