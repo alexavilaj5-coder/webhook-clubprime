@@ -159,30 +159,6 @@
         📢 <span id="merchant-banner-content">-</span>
       </div>
 
-      <!-- PAINEL DE LEILÃO DO PATROCINADO (EXCLUSIVO PARA LOJISTAS) -->
-      <div style="background:var(--card); border:2px solid var(--accent); padding:18px; border-radius:20px; margin-bottom:16px; box-shadow:0 8px 20px rgba(249,115,22,0.15);">
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-          <span style="font-size:1.5rem;">🔨</span>
-          <h3 style="font-size:1rem; font-weight:900; color:var(--accent);">Leilão Diário: Espaço Patrocinado</h3>
-        </div>
-        <p style="font-size:0.78rem; color:var(--muted); margin-bottom:12px; line-height:1.4;">
-          Dê o seu lance (Mínimo R$ 15,00). Quem ofertar mais até às <strong>21:00</strong> garante o topo do app no dia seguinte! Pix direto para os ADMs.
-        </p>
-
-        <div style="background:var(--secondary); padding:10px 14px; border-radius:12px; margin-bottom:12px; font-size:0.8rem;">
-          <div>⏳ <strong>Encerra hoje às:</strong> 21:00</div>
-          <div style="margin-top:2px;">🏆 <strong>Maior Lance Atual:</strong> <span id="auction-highest-bid" style="font-weight:900; color:var(--primary);">R$ 0,00 (Nenhum lance ainda)</span></div>
-          <div style="margin-top:2px;">👑 <strong>Lojista Vencedor Atual:</strong> <span id="auction-highest-bidder" style="font-weight:800;">-</span></div>
-        </div>
-
-        <div class="form-group" style="text-align:left; margin-bottom:10px;">
-          <label>SEU VALOR DE LANCE (R$)</label>
-          <input type="number" id="auction-bid-amount" class="form-control" min="15" step="1" placeholder="Ex: 25">
-        </div>
-
-        <button class="btn btn-cyan" onclick="darLanceLeilao()">⚡ Enviar Lance no Leilão</button>
-      </div>
-
       <div style="background:var(--card); border:2px solid var(--primary); padding:20px; border-radius:20px; text-align:center; margin-bottom:16px; box-shadow:0 8px 20px rgba(37,99,235,0.15);">
         <span style="font-size:2.2rem;">🎟️</span>
         <h3 style="font-size:1.1rem; font-weight:800; margin-top:6px;">Validar Cupom do Cliente</h3>
@@ -196,10 +172,29 @@
 
         <div class="form-group" style="text-align:left;">
           <label>OU DIGITE O CÓDIGO MANUAL</label>
-          <input type="text" id="input-validar-codigo" class="form-control" placeholder="Ex: BARBER-8F2K" style="text-transform:uppercase;">
+          <input type="text" id="input-validar-codigo" class="form-control" placeholder="Ex: BARBER-8F2K" style="text-transform:uppercase;" oninput="verificarCodigoDigitadoLojista(this.value)">
         </div>
 
-        <button class="btn" onclick="validarCupomTextoLojista()">✅ Validar e Dar Baixa no Caixa</button>
+        <!-- ÁREA DINÂMICA DE CÁLCULO DE DESCONTO E VALOR -->
+        <div id="box-calculo-validacao" style="display:none; background:var(--secondary); border:1px solid var(--card-border); padding:12px; border-radius:12px; margin-bottom:12px; text-align:left;">
+          <div style="font-size:0.8rem; font-weight:900; color:var(--primary); margin-bottom:6px;">📊 Detalhes do Desconto Aplicado</div>
+          <div style="font-size:0.75rem; color:var(--muted); margin-bottom:4px;">Cupom: <strong id="val-CupomNome">-</strong></div>
+          <div style="font-size:0.75rem; color:var(--muted); margin-bottom:8px;">Desconto cadastrado: <strong id="val-DescontoPct" style="color:var(--accent);">-</strong></div>
+          
+          <div class="form-group" style="margin-bottom:8px;">
+            <label style="font-size:0.7rem;">INFORME O VALOR DO SERVIÇO OU DA VENDA (R$)</label>
+            <input type="number" id="input-valor-servico" class="form-control" step="0.01" placeholder="Ex: 100.00" oninput="calcularValoresBaixa(this.value)">
+          </div>
+
+          <div style="background:var(--card); padding:8px; border-radius:8px; font-size:0.75rem; display:flex; flex-direction:column; gap:3px;">
+            <div>Valor original: <strong id="res-val-original">R$ 0,00</strong></div>
+            <div>Desconto (%): <strong id="res-val-pct">0%</strong></div>
+            <div>Valor do desconto: <strong id="res-val-desconto" style="color:#10b981;">R$ 0,00</strong></div>
+            <div style="font-size:0.85rem; border-top:1px dashed var(--card-border); padding-top:4px; margin-top:2px;">Valor a pagar: <strong id="res-val-final" style="color:var(--primary);">R$ 0,00</strong></div>
+          </div>
+        </div>
+
+        <button id="btn-validar-baixa-final" class="btn" disabled style="opacity:0.5; pointer-events:none;" onclick="validarCupomTextoLojista()">✅ Validar e Dar Baixa no Caixa</button>
       </div>
 
       <div class="admin-grid" style="margin-bottom:16px;">
@@ -215,7 +210,7 @@
 
       <details style="background:var(--card); border:1px solid var(--card-border); border-radius:18px; margin-bottom:16px; overflow:hidden;">
         <summary style="padding:14px 16px; font-weight:800; font-size:0.95rem; cursor:pointer; background:var(--card); list-style:none; display:flex; justify-content:space-between; align-items:center;">
-          <span>📋 Logs de Resgate Recentes</span>
+          <span>📋 Logs de Resgate Recentes (Sua Empresa)</span>
           <span style="font-size:0.8rem; color:var(--muted);">▼</span>
         </summary>
         <div id="merchant-logs-list" style="padding:12px; border-top:1px solid var(--card-border); max-height:200px; overflow-y:auto;">
@@ -249,7 +244,7 @@
         </div>
       </details>
 
-      <button class="btn" style="margin-bottom:20px;" onclick="abrirModalCriarOferta()">➕ Publicar Nova Oferta / Cupom</button>
+      <button class="btn" style="margin-bottom:20px;" onclick="abrirModalCriarOferta()">➕ Publicar Nova Oferta / Cupom (Máx. 3)</button>
 
       <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:12px;">Suas Promoções Criadas</h3>
       <div id="merchant-offers-list">
@@ -343,40 +338,11 @@
             </div>
           </div>
 
-          <!-- GERENCIAMENTO DO LEILÃO DIÁRIO NO ADMIN -->
-          <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:12px;">
-            <h3 style="font-size:0.9rem; font-weight:900; color:var(--accent); margin-bottom:6px;">🔨 Leilão Diário de Patrocínio</h3>
-            <p style="font-size:0.72rem; color:var(--muted); margin-bottom:10px;">Veja o maior lance atual e defina o lojista patrocinado do dia seguinte.</p>
-            
-            <div style="background:var(--secondary); padding:10px; border-radius:10px; margin-bottom:10px; font-size:0.75rem;">
-              <div>💰 <strong>Maior Lance:</strong> <span id="admin-auction-bid" style="font-weight:900; color:var(--primary);">R$ 0,00</span></div>
-              <div style="margin-top:2px;">👑 <strong>Lojista Líder:</strong> <span id="admin-auction-bidder" style="font-weight:800;">Nenhum</span></div>
-            </div>
-
-            <div class="form-group" style="text-align:left; margin-bottom:8px;">
-              <label>NOME DA EMPRESA PATROCINADA AMANHÃ</label>
-              <input type="text" id="admin-sponsored-store-name" class="form-control" placeholder="Ex: Hamburgueria Pelotas">
-            </div>
-            <div class="form-group" style="text-align:left; margin-bottom:8px;">
-              <label>LEGENDA / FRASE DE DESTAQUE DO PATROCINADO</label>
-              <input type="text" id="admin-sponsored-legend" class="form-control" placeholder="Ex: O melhor hambúrguer artesanal da cidade!">
-            </div>
-            <div class="form-group" style="text-align:left; margin-bottom:8px;">
-              <label>WHATSAPP DO PATROCINADO (EX: 53999999999)</label>
-              <input type="text" id="admin-sponsored-whatsapp" class="form-control" placeholder="53999999999">
-            </div>
-            <div class="form-group" style="text-align:left; margin-bottom:8px;">
-              <label>INSTAGRAM DO PATROCINADO (EX: @loja)</label>
-              <input type="text" id="admin-sponsored-instagram" class="form-control" placeholder="@loja">
-            </div>
-            <button class="btn btn-cyan" style="padding:8px; font-size:0.8rem;" onclick="salvarPatrocinadoAdmin()">💾 Definir Patrocinado do Dia</button>
-          </div>
-
           <!-- AVISOS GLOBAIS E PARA LOJISTAS -->
           <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:12px;">
             <h3 style="font-size:0.9rem; font-weight:800; margin-bottom:6px;">📢 Aviso para Todos os Clientes</h3>
             <div class="form-group" style="text-align:left; margin-bottom:6px;">
-              <input type="text" id="admin-global-banner-text" class="form-control" placeholder="Ex: 🔥 Patrocínio Master na Cidade!">
+              <input type="text" id="admin-global-banner-text" class="form-control" placeholder="Ex: 🔥 Novas ofertas na cidade!">
             </div>
             <button class="btn btn-cyan" style="padding:8px; font-size:0.8rem;" onclick="salvarBannerGlobalAdmin()">💾 Publicar Aviso</button>
           </div>
@@ -384,7 +350,7 @@
           <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:16px;">
             <h3 style="font-size:0.9rem; font-weight:800; margin-bottom:6px;">🏢 Recado Exclusivo para Lojistas</h3>
             <div class="form-group" style="text-align:left; margin-bottom:6px;">
-              <input type="text" id="admin-merchant-banner-text" class="form-control" placeholder="Ex: ⚠️ Reunião de parceiros!">
+              <input type="text" id="admin-merchant-banner-text" class="form-control" placeholder="Ex: ⚠️ Lembre-se de validar os cupons!">
             </div>
             <button class="btn btn-cyan" style="padding:8px; font-size:0.8rem;" onclick="salvarBannerLojistaAdmin()">💾 Publicar Recado</button>
           </div>
@@ -523,7 +489,7 @@
             <div style="font-size:0.72rem; font-weight:900; text-transform:uppercase; letter-spacing:0.5px;">⚠️ Seu VIP vence em breve!</div>
             <div id="vip-expiring-msg" style="font-size:0.82rem; font-weight:700; margin-top:2px;">Renove agora e garanta seus descontos sem interrupção.</div>
           </div>
-          <button class="btn btn-cyan btn-small" style="background:#ffffff; color:#dc2626; font-weight:900; width:auto; padding:8px 12px; margin:0;" onclick="renovarVipAcumulado()">Renovar</button>
+          <button class="btn btn-cyan btn-small" style="background:#ffffff; color:#dc2626; font-weight:900; width:auto; padding:8px 12px; margin:0;" onclick="renovarVipAcumulado()">Renove</button>
         </div>
       </div>
 
@@ -531,42 +497,59 @@
         📢 <span id="client-global-banner-content">-</span>
       </div>
 
-      <!-- LOJA PATROCINADA DO DIA (AMPLIADA, CLICÁVEL COM WHATSAPP, INSTAGRAM E LEGENDA) -->
-      <div id="client-sponsored-banner" style="display:none; background:linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color:#ffffff; padding:18px 20px; border-radius:20px; margin-bottom:16px; box-shadow:0 10px 24px rgba(139,92,246,0.3);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <span style="font-size:0.72rem; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:#ddd6fe;">⭐ Patrocinado do Dia</span>
-          <span style="background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:10px; font-size:0.65rem; font-weight:800;">DESTAQUE</span>
-        </div>
-        <h3 id="client-sponsored-name" style="font-size:1.3rem; font-weight:900; margin-top:2px; margin-bottom:4px;">-</h3>
-        <p id="client-sponsored-legend-text" style="font-size:0.82rem; color:#f3e8ff; margin-bottom:12px; line-height:1.4;">-</p>
+      <!-- LOJA PATROCINADA DA SEMANA (NOME GIGANTE, PROPORCIONAL E IMPONENTE) -->
+      <div id="client-sponsored-banner" style="display:none; background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color:#ffffff; padding:24px 22px; border-radius:24px; margin-bottom:14px; box-shadow:0 14px 32px rgba(124,58,237,0.35); border: 1px solid rgba(255, 255, 255, 0.3); animation: pulseSponsored 3s infinite ease-in-out;">
         
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <a id="client-sponsored-wpp-btn" href="#" target="_blank" class="btn btn-cyan" style="flex:1; padding:10px; font-size:0.78rem; text-decoration:none; text-align:center; background:#10b981; color:#fff; border:none; display:none;">
-            💬 WhatsApp
-          </a>
-          <a id="client-sponsored-insta-btn" href="#" target="_blank" class="btn btn-cyan" style="flex:1; padding:10px; font-size:0.78rem; text-decoration:none; text-align:center; background:linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color:#fff; border:none; display:none;">
-            📸 Instagram
-          </a>
+        <!-- CABEÇALHO: TÍTULO DA SEMANA E BOTÕES LADO A LADO -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+          <div>
+            <span style="font-size:0.72rem; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; color:#e0e7ff; display:block; margin-bottom:4px;">⭐ Oferta da Semana</span>
+            <!-- NOME DA EMPRESA BEM GRANDE E DESTAQUE -->
+            <h3 id="client-sponsored-name" style="font-size:1.9rem; font-weight:900; margin:0; line-height:1.15; text-shadow: 0 2px 5px rgba(0,0,0,0.2);">-</h3>
+          </div>
+          
+          <!-- BOTÕES DE CONTATO (WHATSAPP E INSTAGRAM MAIORES) -->
+          <div style="display:flex; gap:8px; align-items:center; flex-shrink:0; margin-top:2px;">
+            <a id="client-sponsored-wpp-btn" href="#" target="_blank" style="display:none; width:44px; height:44px; background:rgba(255,255,255,0.22); backdrop-filter:blur(6px); border-radius:50%; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; color:#fff; font-size:1.3rem; border:1px solid rgba(255,255,255,0.35); transition:all 0.2s;" title="Chamar no WhatsApp">
+              💬
+            </a>
+            <a id="client-sponsored-insta-btn" href="#" target="_blank" style="display:none; width:44px; height:44px; background:rgba(255,255,255,0.22); backdrop-filter:blur(6px); border-radius:50%; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; color:#fff; border:1px solid rgba(255,255,255,0.35); transition:all 0.2s;" title="Ver no Instagram">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+            </a>
+          </div>
         </div>
+
+        <!-- LEGENDA MAIOR E MAIS LEGÍVEL -->
+        <p id="client-sponsored-legend-text" style="font-size:1rem; color:#ede9fe; margin:0; line-height:1.4; opacity:0.95;">-</p>
       </div>
 
-      <div class="hero-card" style="padding: 12px 16px;">
+      <!-- ANIMAÇÃO CSS PARA O CARD PULSAR SUAVEMENTE -->
+      <style>
+        @keyframes pulseSponsored {
+          0% { transform: scale(1); box-shadow: 0 14px 32px rgba(124,58,237,0.35); }
+          50% { transform: scale(1.008); box-shadow: 0 18px 38px rgba(124,58,237,0.5); }
+          100% { transform: scale(1); box-shadow: 0 14px 32px rgba(124,58,237,0.35); }
+        }
+      </style>
+
+      <!-- PAINEL DO MEMBRO (BEM COMPACTO E ENXUTO) -->
+      <div class="hero-card" style="padding: 10px 14px; min-height: auto; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 16px;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <span class="hero-welcome" style="font-size: 0.6rem;">Painel do Membro</span>
-            <h2 class="hero-name" style="font-size: 1.05rem; margin-top: 1px;">Olá, <span id="user-name-display">Cliente</span> 👋</h2>
+            <span class="hero-welcome" style="font-size: 0.55rem; opacity:0.75;">Painel do Membro</span>
+            <h2 class="hero-name" style="font-size: 0.9rem; margin-top: 1px;">Olá, <span id="user-name-display">Cliente</span> 👋</h2>
           </div>
-          <div class="status-badge free" style="font-size: 0.6rem; padding: 4px 10px;">PLANO GRATUITO</div>
+          <div class="status-badge free" style="font-size: 0.55rem; padding: 2px 7px;">PLANO GRATUITO</div>
         </div>
 
-        <div class="hero-stats" style="margin-top: 8px; padding-top: 8px;">
+        <div class="hero-stats" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.15);">
           <div class="stat-item">
-            <div id="user-economy-display" class="stat-val" style="font-size: 0.95rem;">R$ 0,00</div>
-            <div class="stat-lbl" style="font-size: 0.6rem;">Economia Média/mês</div>
+            <div id="user-economy-display" class="stat-val" style="font-size: 0.85rem;">R$ 0,00</div>
+            <div class="stat-lbl" style="font-size: 0.55rem;">Economia Média/mês</div>
           </div>
           <div class="stat-item" onclick="abrirModalNiveis()" style="cursor:pointer;" title="Clique para ver detalhes dos níveis">
-            <div id="user-level-display" class="stat-val" style="font-size: 0.95rem;">🥉 Bronze</div>
-            <div class="stat-lbl" style="font-size: 0.6rem;">Nível (Ver mais)</div>
+            <div id="user-level-display" class="stat-val" style="font-size: 0.85rem;">🥉 Bronze</div>
+            <div class="stat-lbl" style="font-size: 0.55rem;">Nível (Ver mais)</div>
           </div>
         </div>
       </div>
@@ -601,6 +584,7 @@
         <div class="category-pill" onclick="filterCat('lazer', this)">🎟️ Lazer & Entretenimento</div>
       </div>
 
+      <!-- VITRINE DE EMPRESAS (CADA EMPRESA COM SEU CARD ÚNICO E ATÉ 3 CUPONS) -->
       <div id="stores-list-dynamic">
         <p style="font-size:0.8rem; color:var(--muted); text-align:center;">Carregando cupons de Pelotas...</p>
       </div>
@@ -615,7 +599,7 @@
       </div>
     </div>
 
-    <!-- TELA PERFIL -->
+    <!-- TELA PERFIL (COM EXTRATO DE ECONOMIA) -->
     <div id="screen-profile" class="screen">
       <div style="text-align:center; margin-bottom:20px; margin-top:10px;">
         <div class="profile-avatar-container">
@@ -624,6 +608,13 @@
         <h2 id="profile-name" style="font-weight:900; font-size:1.3rem;">Carregando...</h2>
         <p id="profile-email" style="font-size:0.82rem; color:var(--muted); margin-top:2px;">-</p>
         <p id="profile-whatsapp" style="font-size:0.78rem; color:var(--primary); font-weight:700; margin-top:2px;">-</p>
+      </div>
+
+      <!-- EXTRATO DE ECONOMIA DO CLIENTE NO PERFIL -->
+      <div style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#ffffff; padding:18px; border-radius:20px; margin-bottom:18px; text-align:center; box-shadow:0 8px 20px rgba(16,185,129,0.25);">
+        <div style="font-size:0.75rem; font-weight:900; text-transform:uppercase; letter-spacing:1px; opacity:0.9;">💰 Extrato de Economia Total</div>
+        <div id="profile-total-economy-val" style="font-size:2rem; font-weight:900; margin:6px 0;">R$ 0,00</div>
+        <div style="font-size:0.75rem; opacity:0.9;">Valor total economizado utilizando os cupons da plataforma!</div>
       </div>
 
       <!-- BOTÃO PARA EDITAR DADOS DO CLIENTE (NOME, WHATSAPP, SENHA) -->
@@ -654,6 +645,21 @@
         <div style="display:flex; gap:8px;">
           <input type="text" id="input-cupom-vip-adm" class="form-control" placeholder="EX: VIP-XXXX" style="text-transform:uppercase;">
           <button class="btn btn-cyan" style="width:120px; font-size:0.8rem;" onclick="resgatarCupomVipAdm()">Resgatar</button>
+        </div>
+      </div>
+
+      <!-- HISTÓRICO DE CUPONS RESGATADOS PELO CLIENTE -->
+      <div style="background:var(--card); border:1px solid var(--card-border); border-radius:20px; padding:18px; margin-bottom:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="font-size:0.95rem; font-weight:800;">🎟️ Histórico de Cupons Resgatados</h3>
+          <select id="filter-client-history" class="form-control" style="width:110px; font-size:0.7rem; padding:4px;" onchange="renderizarHistoricoClientePerfil()">
+            <option value="todos">Todos</option>
+            <option value="mes">Este Mês</option>
+            <option value="ano">Este Ano</option>
+          </select>
+        </div>
+        <div id="client-history-list" style="max-height:220px; overflow-y:auto; font-size:0.75rem;">
+          <p style="color:var(--muted); text-align:center;">Nenhum cupom resgatado ainda.</p>
         </div>
       </div>
 
@@ -716,6 +722,28 @@
 
   </div>
 
+  <!-- MODAL DEFINIR PATROCINADO DA SEMANA (NOVO) -->
+  <div id="modal-patrocinar-empresa" class="modal">
+    <div class="modal-content" style="text-align:left;">
+      <div style="font-size:2.2rem; margin-bottom:4px; text-align:center;">⭐</div>
+      <h3 style="font-size:1.2rem; font-weight:900; margin-bottom:4px; text-align:center;">Definir Patrocinado da Semana</h3>
+      <div id="patrocinar-empresa-nome-label" style="font-size:0.85rem; color:var(--primary); font-weight:900; margin-bottom:14px; text-align:center;">Empresa</div>
+      
+      <input type="hidden" id="patrocinar-empresa-uid" value="">
+      <input type="hidden" id="patrocinar-empresa-nome" value="">
+      <input type="hidden" id="patrocinar-empresa-wpp" value="">
+      <input type="hidden" id="patrocinar-empresa-insta" value="">
+
+      <div class="form-group">
+        <label>LEGENDA / FRASE DE DESTAQUE DA SEMANA</label>
+        <input type="text" id="patrocinar-empresa-legenda" class="form-control" placeholder="Ex: A melhor revisão e suspensão da cidade!">
+      </div>
+
+      <button class="btn btn-cyan" style="margin-top:12px;" onclick="salvarPatrocinadoDaSemana()">💾 Definir como Patrocinado</button>
+      <button class="btn btn-outline" style="margin-top:8px;" onclick="fecharModal('modal-patrocinar-empresa')">Cancelar</button>
+    </div>
+  </div>
+
   <!-- MODAL EXPLICAÇÃO DOS NÍVEIS (BRONZE, PRATA, OURO) -->
   <div id="modal-niveis" class="modal">
     <div class="modal-content" style="text-align:left;">
@@ -739,6 +767,21 @@
       </div>
 
       <button class="btn" onclick="fecharModal('modal-niveis')">Entendido</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE EXIBIÇÃO DE REGRAS DA PROMOÇÃO (ÍCONE "i") -->
+  <div id="modal-regras-cupom" class="modal">
+    <div class="modal-content" style="text-align:left;">
+      <div style="font-size:2rem; margin-bottom:4px; text-align:center;">ℹ️</div>
+      <h3 style="font-size:1.1rem; font-weight:900; text-align:center; margin-bottom:4px;" id="modal-regra-titulo">Regras da Promoção</h3>
+      <div id="modal-regra-loja" style="font-size:0.8rem; font-weight:800; color:var(--primary); text-align:center; margin-bottom:12px;">-</div>
+      
+      <div style="background:var(--secondary); padding:14px; border-radius:14px; margin-bottom:16px; font-size:0.8rem; line-height:1.4; color:var(--text);" id="modal-regra-texto">
+        Nenhuma regra informada.
+      </div>
+
+      <button class="btn" onclick="fecharModal('modal-regras-cupom')">Fechar</button>
     </div>
   </div>
 
@@ -840,7 +883,7 @@
     </div>
   </div>
 
-  <!-- MODAL CUPOM DO CLIENTE (MAIS ELEGANTE E ENCAIXADO) -->
+  <!-- MODAL CUPOM DO CLIENTE -->
   <div id="modal-coupon" class="modal">
     <div class="modal-content" style="max-width: 380px; padding: 20px;">
       <h3 id="modal-title" style="font-size:1.15rem; font-weight:800;">---</h3>
@@ -875,7 +918,7 @@
     </div>
   </div>
 
-  <!-- MODAL CRIAR/EDITAR OFERTA (COM UPLOAD / LINK DE IMAGEM DA EMPRESA) -->
+  <!-- MODAL CRIAR/EDITAR OFERTA -->
   <div id="modal-add-offer" class="modal">
     <div class="modal-content">
       <h3 id="modal-offer-heading" style="font-size:1.2rem; font-weight:800; margin-bottom:12px;">➕ Nova Oferta</h3>
@@ -892,8 +935,13 @@
       </div>
 
       <div class="form-group" style="text-align:left;">
-        <label>DIAS E HORÁRIOS DE VALIDADE</label>
+        <label>DIAS E HORÁRIOS DE VALIDADE (REGRAS)</label>
         <input type="text" id="offer-rules" class="form-control" placeholder="Ex: Terça a Quinta, das 14h às 18h">
+      </div>
+
+      <div class="form-group" style="text-align:left;">
+        <label>PORCENTAGEM DE DESCONTO (%)</label>
+        <input type="number" id="offer-desconto-pct" class="form-control" min="1" max="100" step="1" placeholder="Ex: 15 (para 15% de desconto)">
       </div>
 
       <div class="form-group" style="text-align:left;">
@@ -911,7 +959,7 @@
       </div>
 
       <div class="form-group" style="text-align:left;">
-        <label>LINK DA FOTO / LOGÓTIPO DA EMPRESA (PARA FICAR JUNTO AO NOME)</label>
+        <label>LINK DA FOTO / LOGÓTIPO DA EMPRESA</label>
         <input type="text" id="offer-image" class="form-control" placeholder="Ex: https://i.imgur.com/foto.jpg">
       </div>
 
