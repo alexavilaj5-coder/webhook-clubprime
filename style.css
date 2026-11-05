@@ -120,20 +120,14 @@
 }
 
 body {
-  background-color: #cbd5e1;
+  background-color: #020617;
   color: var(--text);
   display: flex;
   justify-content: center;
+  align-items: center;
   min-height: 100vh;
+  margin: 0;
   overflow-x: hidden;
-}
-
-[data-theme="dark"] body,
-[data-theme="emerald"] body,
-[data-theme="purple"] body,
-[data-theme="sunset"] body,
-[data-theme="midnight"] body {
-  background-color: #020617;
 }
 
 .app-shell {
@@ -141,11 +135,13 @@ body {
   max-width: 480px;
   background-color: var(--bg);
   min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   position: relative;
   padding-bottom: 90px;
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3);
+  overflow-y: auto;
 }
 
 .top-header {
@@ -245,7 +241,7 @@ body {
   display: block !important;
 }
 
-/* Área do usuário reduzida pela metade em termos de padding e espaçamentos */
+/* Área do usuário reduzida */
 .hero-card {
   background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
   border-radius: 20px;
@@ -296,6 +292,51 @@ body {
   font-size: 0.6rem;
   color: #bfdbfe;
   margin-top: 1px;
+}
+
+/* Efeito Glow / Neon Moderno para Painel de Controle e áreas Adm */
+.admin-panel-container, [data-admin-panel], .panel-controle-highlight {
+  position: relative;
+}
+
+.admin-panel-container::before, .panel-controle-highlight::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(45deg, var(--primary), var(--accent), var(--primary));
+  border-radius: 24px;
+  z-index: -1;
+  opacity: 0.35;
+  filter: blur(8px);
+  animation: pulseGlow 4s ease infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.25; filter: blur(6px); }
+  50% { opacity: 0.55; filter: blur(12px); }
+}
+
+/* Efeito especial para Cards Patrocinados / Destaques */
+.company-card.patrocinado, .company-card[data-patrocinado="true"] {
+  border: 1.5px solid var(--accent);
+  position: relative;
+  background: linear-gradient(145deg, var(--card), var(--accent-light));
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.18), var(--shadow-soft);
+}
+
+.company-card.patrocinado::after {
+  content: '★ DESTAQUE';
+  position: absolute;
+  top: -10px;
+  right: 16px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 8px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
 
 .card-vip-banner {
@@ -646,14 +687,17 @@ body {
 }
 
 @media (min-width: 600px) {
+  body {
+    background-color: #090d16;
+  }
   .app-shell {
-    margin: 20px auto;
-    min-height: calc(100vh - 40px);
+    height: 92vh;
+    max-height: 880px;
     border-radius: 28px;
-    padding-bottom: 90px;
+    border: 1px solid var(--card-border);
   }
   .top-header { border-radius: 28px 28px 0 0; }
-  .bottom-nav { border-radius: 0 0 28px 28px; }
+  .bottom-nav { border-radius: 0 0 28px 28px; position: absolute; }
 }
 
 @media (prefers-reduced-motion: reduce) {
