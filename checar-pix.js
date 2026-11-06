@@ -3,18 +3,28 @@ const admin = require('firebase-admin');
 function getFirebaseFirestore() {
   if (admin.apps.length) return admin.firestore();
 
-  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+  const projectId = process.env.FIREBASE_PROJECT_ID || "projeto-01-63111";
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || "firebase-adminsdk-fbsvc@projeto-01-63111.iam.gserviceaccount.com";
+  let rawKey = process.env.FIREBASE_PRIVATE_KEY;
 
-  if (!serviceAccountJson) {
-    console.error("❌ ERRO: FIREBASE_SERVICE_ACCOUNT não configurada nas variáveis de ambiente.");
+  if (!rawKey) {
+    console.error("❌ ERRO: FIREBASE_PRIVATE_KEY não configurada nas variáveis de ambiente.");
     return null;
   }
 
-  try {
-    const serviceAccount = JSON.parse(serviceAccountJson);
+  // Tratamento robusto: remove aspas extras e converte \n textuais em quebras de linha reais se necessário
+  let privateKey = rawKey.replace(/^["']|["']$/g, '').trim();
+  if (privateKey.includes('\\n')) {
+    privateKey = privateKey.replace(/\\n/g, '\n');
+  }
 
+  try {
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
+      credential: admin.credential.cert({
+        projectId,
+        clientEmail,
+        privateKey,
+      })
     });
 
     console.log("✅ Firebase Admin inicializado com sucesso no checar-pix!");
