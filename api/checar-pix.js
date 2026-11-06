@@ -3,17 +3,13 @@ const admin = require('firebase-admin');
 function getFirebaseFirestore() {
   if (admin.apps.length) return admin.firestore();
 
-  const projectId = process.env.FIREBASE_PROJECT_ID || "projeto-01-63111";
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || "firebase-adminsdk-fbsvc@projeto-01-63111.iam.gserviceaccount.com";
-  let rawKey = process.env.FIREBASE_PRIVATE_KEY;
+  const projectId = "projeto-01-63111";
+  const clientEmail = "firebase-adminsdk-fbsvc@projeto-01-63111.iam.gserviceaccount.com";
+  
+  // Chave nova tratada com conversão direta de barras invertidas para quebras reais
+  const rawKey = `-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDLtp1D9TlHAqLO\nc2OdwRt4mJkVkc9cAlPDXwLjoB+6kOFI7oI0SBJnhjnMoOQCd7IZjfs6r3t3CKER\n3L45fkEB19SxCaaHGOqM/ItHbqTt5WRu5uNOpiXmOj2BwT/HSUBNpuFyvpWfPzjX\n6WOb8PhdWoiEkPZ9rqptPT9CxafeIICc/oGFtCMgGRMEQK3VCdbNRX2LM7Qspik9\nIg+gJhhjrNcruGhAhnX3c5xXaNJ8bi3p9RIC7yrY2Xdqdp1FfiXfkvL5WcpNOY8y\nnUsaCnByurKYfuQsWD9DTZ+bXczXNRsx2yuDjjDrmwGSieChMRrWNvv4SkDQyzPt\nQ8r975xjAgMBAAECggEACi00vQclcUpV654wyGwz+HnOfs/aa6oMq1KIZjOnX9U4\nSsHFw4Yjnc1VbNlz46f0Gzn95kgdx8dxyrpJqirjicKIYeQABwtGPzODYx/t875y\n+eXlTl9ymfPxTDoJsdNKLrbj/HX0vWKe7vrithDNb3q61L0aBFxOeRnZiEAv9EdV\nQ7tthVoZP0vDLO21+sMlR3WupxhqZus7A1vsaPF+aOjPjz0y29mAgiIL5YRzQlDA\nJ3Py+yUbOgkCNyctFzBIy5j9HoW+6dSzBOhBz1CnCDtwFm48RoAJdFDcM4aHLAx7\nbdk1f0mZfnDa7JWsS1CLtzgxsyU9O8ab0oVYcgxzlQKBgQDuSxBKbj8OV5EJUiIM\n24D8tfsRzyfof/pnOrcUWAenWf2UKjPdhmf++E4hCdKAzpdEDfIj4xdA+V4U3Ad/\nkI0qBdzX08bquN1r1hCIERsDjabOpHO1zz3CBodlA+B9tfeECmqP9tKAnKkBwZG9\nOQydtfgX8so1aa613e3VSe9U3QKBgQDa2cEfV/aW/rUkGV3G+pjfbYZAn2TbtLhX\nVdatfVTgL7KFNxaJzqlJQ+bz0+s7fB5sgq2um21RYnF8Lhdi3k3oKRVfnCMHM24j\n0/O8pqHXZ0cgetL0fNY3+ZwDouBrsq9rawQmBQJy1us8JEbiEN/TsBKsSaJDf/eC\nqFjtnOACPwKBgQC2rFSQunMcS4Sj4JK5yIvZLqiJvoSZd4I+IIS408MKR7JdIv0f\nlSmkDDXYne8BT14mjYpSeIQbCw9UblhRMj8FN/lUesTCq3USdce2h2ZuEukNAISz\nm2t8kgS5K3+s3xIf5txKAKzeazokXn+az2EchaLquPTKfXmxcbAhEcynAQKBgCpW\n7HTq6KsHtfW47pqbSs4W+10vOS0ERpGm6rR/xdblg20gXjzk/X1OJLVRb3X/qkcl\n9QIN0dVn7TqwFBgtl/btU9Q+ecxf19QYolQCDNeGhI01FfD04eDMarGNZkuPsz5d\n4tyUJYggKjxlbE06JINo0gQA7uKONE1T0niN3AyzAoGBANUkTkndBm6gxlQF/ZLi\nIOxydCd4CnAyJ7wZA7/Hltv9LH1ldzbuVuMWeT6nCbtsh47QWADHy5a0kikYp4SB\naVi4O16PXSVHmXGhTkhDxDZHUPxuGBP7UItorcdVhaFTqYUk+WcDgiRgkxTs6v/7\n/1njYdLKgl1Pb1xLZ+TGFew4\n-----END PRIVATE KEY-----`;
 
-  if (!rawKey) {
-    console.error("❌ ERRO: FIREBASE_PRIVATE_KEY não configurada nas variáveis de ambiente.");
-    return null;
-  }
-
-  // Substitui literais \n e garante o formato correto da chave privada
-  const privateKey = rawKey.replace(/\\n/g, '\n').replace(/"/g, '');
+  const privateKey = rawKey.replace(/\\n/g, '\n');
 
   try {
     admin.initializeApp({
@@ -106,6 +102,7 @@ module.exports = async function handler(req, res) {
         lastPaymentId: pagamentoValido.id
       };
 
+      // Gravação estrita com verificação: se falhar, vai cair no catch e não dá falso positivo
       if (userId) {
         await db.collection('usuarios').doc(userId).set(dadosVip, { merge: true });
       } else if (emailUsuario) {
