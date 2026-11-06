@@ -9,16 +9,20 @@ if (!getApps().length) {
   if (!rawKey) {
     console.error("❌ ERRO: FIREBASE_PRIVATE_KEY não configurada nas variáveis de ambiente do Webhook.");
   } else {
-    const privateKey = rawKey.replace(/\\n/g, '\n');
+    const privateKey = rawKey.replace(/\\n/g, '\n').replace(/"/g, '');
 
-    initializeApp({
-      credential: cert({
-        projectId,
-        clientEmail,
-        privateKey,
-      })
-    });
-    console.log("✅ Firebase Admin inicializado com sucesso no Webhook!");
+    try {
+      initializeApp({
+        credential: cert({
+          projectId,
+          clientEmail,
+          privateKey,
+        })
+      });
+      console.log("✅ Firebase Admin inicializado com sucesso no Webhook!");
+    } catch (error) {
+      console.error("❌ Erro ao inicializar Firebase no Webhook:", error.message);
+    }
   }
 }
 
