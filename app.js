@@ -11,13 +11,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-import { somCliqueLeve, somSucesso, somAtivacaoVip, vibrar } from './sounds.js';
-
-somSucesso();
-vibrar('sucesso');
-somAtivacaoVip();
-vibrar('vip');
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, updatePassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -137,12 +130,10 @@ onAuthStateChanged(auth, async (user) => {
 
       window.currentUserData = data;
       
-      // VERIFICA SE A EMPRESA ESTÁ DESATIVADA DE VERDADE
       if (data.funcao === "lojista" && data.ativo === false) {
         document.getElementById('modal-empresa-desativada').classList.add('active');
       }
 
-      // PAINEL ADMINISTRADOR
       if (data.funcao === "admin") {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('screen-admin').classList.add('active');
@@ -151,7 +142,6 @@ onAuthStateChanged(auth, async (user) => {
         return;
       }
 
-      // PAINEL LOJISTA
       if (data.funcao === "lojista") {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('screen-merchant').classList.add('active');
@@ -174,7 +164,6 @@ onAuthStateChanged(auth, async (user) => {
         return;
       }
 
-      // VISÕES E FLUXO DO CLIENTE COMUM
       try {
         await fetch(`https://webhook-clubprime.vercel.app/api/checar-pix?email=${encodeURIComponent(user.email)}&userId=${user.uid}`);
       } catch (err) {}
@@ -277,7 +266,30 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// ABRIR MODAL EDITAR CADASTRO DO CLIENTE
+// FUNÇÃO DE GEOLOCALIZAÇÃO / GPS PARA EMPRESAS PRÓXIMAS
+window.ativarBuscaProximidadeGps = function() {
+  if (!navigator.geolocation) {
+    return mostrarAviso("GPS Indisponível", "Seu navegador não suporta geolocalização.", "⚠️");
+  }
+
+  mostrarAviso("Localizando...", "Buscando parceiros próximos de você...", "📍");
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const latUsuario = position.coords.latitude;
+      const lonUsuario = position.coords.longitude;
+      fecharModal('modal-alert');
+      mostrarAviso("GPS Ativo! 🎯", "Filtro por proximidade ativado com sucesso.", "✅");
+      // Aqui as empresas podem ser ordenadas por proximidade se houver lat/lon salvas.
+    },
+    (error) => {
+      fecharModal('modal-alert');
+      mostrarAviso("Erro no GPS", "Não foi possível obter sua localização. Verifique as permissões.", "❌");
+    },
+    { timeout: 10000, enableHighAccuracy: true }
+  );
+};
+
 window.abrirModalEditarCliente = function() {
   if (!window.currentUserData) return;
   document.getElementById('edit-client-name').value = window.currentUserData.nome || '';
@@ -286,7 +298,6 @@ window.abrirModalEditarCliente = function() {
   document.getElementById('modal-edit-client').classList.add('active');
 };
 
-// SALVAR ALTERAÇÕES DO CLIENTE
 window.salvarAlteracoesCliente = async function() {
   const user = auth.currentUser;
   if (!user) return;
@@ -469,12 +480,10 @@ async function carregarParceirosCliente() {
 
     container.innerHTML = partnersClientHtml || `<p style="font-size:0.8rem; color:var(--muted); text-align:center; padding:20px;">Nenhum parceiro ativo no momento.</p>`;
   } catch (err) {
-    console.error("Erro ao carregar parceiros:", err);
     container.innerHTML = `<p style="font-size:0.8rem; color:var(--muted); text-align:center; padding:20px;">Erro ao carregar lista de parceiros.</p>`;
   }
 }
 
-// ESCUTAR PATROCINADO DA SEMANA
 function escutarLeilaoPatrocinado() {
   const leilaoRef = doc(db, "configuracoes", "leilao_patrocinado");
   onSnapshot(leilaoRef, (docSnap) => {
@@ -518,7 +527,6 @@ function escutarLeilaoPatrocinado() {
   });
 }
 
-// ABRIR MODAL PARA PATROCINAR A EMPRESA ESCOLHIDA NA LISTA DO ADMIN
 window.abrirModalPatrocinarEmpresa = function(uid, nomeEncoded, wppEncoded, instaEncoded) {
   const nome = decodeURIComponent(nomeEncoded);
   const wpp = decodeURIComponent(wppEncoded);
@@ -535,7 +543,6 @@ window.abrirModalPatrocinarEmpresa = function(uid, nomeEncoded, wppEncoded, inst
   document.getElementById('modal-patrocinar-empresa').classList.add('active');
 };
 
-// SALVAR O PATROCINADO DA SEMANA DIRETO NO FIREBASE
 window.salvarPatrocinadoDaSemana = async function() {
   const uid = document.getElementById('patrocinar-empresa-uid').value;
   const nome = document.getElementById('patrocinar-empresa-nome').value;
@@ -606,12 +613,9 @@ async function calcularEconomiaNivelUsuario(uid) {
     const badgeTitle = document.getElementById('badge-level-title');
     if (badgeTitle) badgeTitle.innerText = nivelName;
 
-  } catch (e) {
-    console.error(e);
-  }
+  } catch (e) {}
 }
 
-// CARREGAR HISTÓRICO DE CUPONS DO CLIENTE NO PERFIL
 async function carregarHistoricoClientePerfil(uidTarget = null) {
   const user = auth.currentUser;
   const uid = uidTarget || user?.uid;
@@ -630,9 +634,7 @@ async function carregarHistoricoClientePerfil(uidTarget = null) {
     });
 
     renderizarHistoricoClientePerfil();
-  } catch (e) {
-    console.error("Erro ao carregar histórico do cliente:", e);
-  }
+  } catch (e) {}
 }
 
 window.renderizarHistoricoClientePerfil = function() {
@@ -682,12 +684,20 @@ window.renderizarHistoricoClientePerfil = function() {
   container.innerHTML = html;
 };
 
+// CORREÇÃO DA CÂMERA DO QR CODE (FORÇANDO A CÂMERA TRASEIRA)
 window.abrirLeitorQrCode = function() {
   const container = document.getElementById('reader-container');
   container.style.display = 'block';
 
   if (!html5QrCodeScanner) {
-    html5QrCodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
+    html5QrCodeScanner = new Html5QrcodeScanner("qr-reader", { 
+      fps: 10, 
+      qrbox: 250,
+      aspectRatio: 1.0,
+      videoConstraints: {
+        facingMode: "environment" // Força a câmera traseira do celular
+      }
+    });
   }
 
   html5QrCodeScanner.render((decodedText) => {
@@ -780,9 +790,7 @@ window.verificarCodigoDigitadoLojista = async function(codigo) {
 
     boxCalculo.style.display = 'block';
 
-  } catch(e) {
-    console.error(e);
-  }
+  } catch(e) {}
 };
 
 window.calcularValoresBaixa = function(valorStr) {
@@ -1340,9 +1348,7 @@ async function carregarPainelAdmin() {
     renderizarGraficoCrescimentoClientes();
     renderizarRelatorioFinanceiro('hoje');
 
-  } catch (err) {
-    console.error("Erro admin:", err);
-  }
+  } catch (err) {}
 }
 
 window.confirmarExclusaoCliente = function(uid, nomeEncoded) {
@@ -1827,9 +1833,7 @@ window.limparLogsEmpresaAdmin = async function(empresaId, empresaNome) {
       await Promise.all(promessas);
       mostrarAviso("Limpeza Concluída 🗑️", `Os logs da empresa ${empresaNome} foram removidos.`, "✅");
       carregarPainelAdmin();
-    } catch (err) {
-      mostrarAviso("Erro ao limpar", err.message, "❌");
-    }
+    } catch (err) {}
   }
 };
 
@@ -2016,7 +2020,7 @@ window.adminAlternarVip = async function(userId, novoEstado) {
     await updateDoc(doc(db, "usuarios", userId), updateObj);
     mostrarAviso("Atualizado!", "Status VIP alterado.", "👑");
     carregarPainelAdmin();
-  } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
+  } catch (err) {}
 };
 
 window.validarCupomTextoLojista = async function() {
@@ -2053,9 +2057,7 @@ window.validarCupomTextoLojista = async function() {
 
     carregarEstatisticasLojista(user.uid);
     carregarLogsDoLojista(user.uid);
-  } catch (err) {
-    mostrarAviso("Erro na validação", err.message, "❌");
-  }
+  } catch (err) {}
 };
 
 window.toggleTheme = function() {

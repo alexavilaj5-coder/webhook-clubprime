@@ -342,7 +342,7 @@
             </div>
           </div>
 
-          <!-- AVISOS GLOBAIS E PARA LOJISTAS -->
+          <!-- AVISOS GLOBAIS -->
           <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:12px;">
             <h3 style="font-size:0.9rem; font-weight:800; margin-bottom:6px;">📢 Aviso para Todos os Clientes</h3>
             <div class="form-group" style="text-align:left; margin-bottom:6px;">
@@ -378,7 +378,7 @@
             </div>
           </div>
 
-          <!-- FILTROS DE PERÍODO + DE DATA A DATA -->
+          <!-- FILTROS DE PERÍODO -->
           <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:12px;">
             <div style="font-size:0.72rem; font-weight:800; color:var(--muted); margin-bottom:8px;">FILTRAR PERÍODO:</div>
             
@@ -400,13 +400,11 @@
             </div>
           </div>
 
-          <!-- BOTÃO DE RESETAR / ZERAR HISTÓRICO DE PIX -->
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <h4 style="font-size:0.85rem; font-weight:800;">💳 Histórico de Transações Pix</h4>
             <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455; padding:4px 8px; font-size:0.68rem;" onclick="confirmarZerarHistoricoPix()">🧹 Zerar Leitura Pix</button>
           </div>
 
-          <!-- TABELA DEDICADA DE PIX PAGOS -->
           <div style="background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:12px; overflow-x:auto;">
             <div id="admin-pix-payments-list" style="max-height:280px; overflow-y:auto;">
               <p style="font-size:0.75rem; color:var(--muted); text-align:center;">Carregando histórico de pagamentos...</p>
@@ -420,7 +418,6 @@
       <!-- ABA 2: CUPONS -->
       <div id="adm-section-cupons" class="admin-tab-content" style="display:none;">
         
-        <!-- BOTÃO GERAR CUPONS VIP E LISTAGEM -->
         <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:16px; text-align:center;">
           <h3 style="font-size:0.9rem; font-weight:900; margin-bottom:4px;">🎁 Gerar novos Cupons de 30 Dias VIP</h3>
           <p style="font-size:0.72rem; color:var(--muted); margin-bottom:10px;">Cria cupons de uso único para você mandar para clientes entrarem como VIP sem somar no faturamento real.</p>
@@ -501,18 +498,14 @@
         📢 <span id="client-global-banner-content">-</span>
       </div>
 
-      <!-- LOJA PATROCINADA DA SEMANA (NOME GIGANTE, PROPORCIONAL E IMPONENTE) -->
+      <!-- LOJA PATROCINADA DA SEMANA -->
       <div id="client-sponsored-banner" class="company-card patrocinado" style="display:none; background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color:#ffffff; padding:24px 22px; border-radius:24px; margin-bottom:14px; box-shadow:0 14px 32px rgba(124,58,237,0.35); border: 1px solid rgba(255, 255, 255, 0.3);">
-        
-        <!-- CABEÇALHO: TÍTULO DA SEMANA E BOTÕES LADO A LADO -->
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
           <div>
             <span style="font-size:0.72rem; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; color:#e0e7ff; display:block; margin-bottom:4px;">⭐ Oferta da Semana</span>
-            <!-- NOME DA EMPRESA BEM GRANDE E DESTAQUE -->
             <h3 id="client-sponsored-name" style="font-size:1.9rem; font-weight:900; margin:0; line-height:1.15; text-shadow: 0 2px 5px rgba(0,0,0,0.2);">-</h3>
           </div>
           
-          <!-- BOTÕES DE CONTATO (WHATSAPP E INSTAGRAM MAIORES) -->
           <div style="display:flex; gap:8px; align-items:center; flex-shrink:0; margin-top:2px;">
             <a id="client-sponsored-wpp-btn" href="#" target="_blank" style="display:none; width:44px; height:44px; background:rgba(255,255,255,0.22); backdrop-filter:blur(6px); border-radius:50%; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; color:#fff; font-size:1.3rem; border:1px solid rgba(255,255,255,0.35); transition:all 0.2s;" title="Chamar no WhatsApp">
               💬
@@ -522,12 +515,10 @@
             </a>
           </div>
         </div>
-
-        <!-- LEGENDA MAIOR E MAIS LEGÍVEL -->
         <p id="client-sponsored-legend-text" style="font-size:1rem; color:#ede9fe; margin:0; line-height:1.4; opacity:0.95;">-</p>
       </div>
 
-      <!-- PAINEL DO MEMBRO (BEM COMPACTO E ENXUTO) -->
+      <!-- PAINEL DO MEMBRO -->
       <div class="hero-card" style="padding: 10px 14px; min-height: auto; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 16px;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
@@ -566,9 +557,10 @@
         <input type="text" class="form-control" placeholder="🔍 Buscar restaurante, oficina, barbearia..." onkeyup="filterStores(this.value)">
       </div>
 
-      <!-- CATEGORIAS EXPANDIDAS -->
+      <!-- CATEGORIAS EXPANDIDAS + BOTÃO DE GPS (PRÓXIMOS DE MIM) -->
       <div class="categories-bar">
         <div class="category-pill active" onclick="filterCat('all', this)">Todos Os Cupons</div>
+        <div class="category-pill" style="background:var(--primary); color:#fff; border-color:var(--primary);" onclick="ativarBuscaProximidadeGps()">📍 Próximos de Mim (GPS)</div>
         <div class="category-pill" onclick="filterCat('gastronomia', this)">🍔 Gastronomia & Delivery</div>
         <div class="category-pill" onclick="filterCat('compras', this)">🛍️ Lojas & Compras</div>
         <div class="category-pill" onclick="filterCat('automotivo', this)">🔧 Automotivo</div>
@@ -605,14 +597,13 @@
         <p id="profile-whatsapp" style="font-size:0.78rem; color:var(--primary); font-weight:700; margin-top:2px;">-</p>
       </div>
 
-      <!-- EXTRATO DE ECONOMIA DO CLIENTE NO PERFIL -->
+      <!-- EXTRATO DE ECONOMIA -->
       <div style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#ffffff; padding:18px; border-radius:20px; margin-bottom:18px; text-align:center; box-shadow:0 8px 20px rgba(16,185,129,0.25);">
         <div style="font-size:0.75rem; font-weight:900; text-transform:uppercase; letter-spacing:1px; opacity:0.9;">💰 Extrato de Economia Total</div>
         <div id="profile-total-economy-val" style="font-size:2rem; font-weight:900; margin:6px 0;">R$ 0,00</div>
         <div style="font-size:0.75rem; opacity:0.9;">Valor total economizado utilizando os cupons da plataforma!</div>
       </div>
 
-      <!-- BOTÃO PARA EDITAR DADOS DO CLIENTE (NOME, WHATSAPP, SENHA) -->
       <button class="btn btn-cyan" style="margin-bottom:18px; padding:10px; font-size:0.82rem;" onclick="abrirModalEditarCliente()">
         ✏️ Editar Meus Dados (Nome, WhatsApp, Senha)
       </button>
@@ -633,7 +624,6 @@
         </div>
       </div>
 
-      <!-- BOTÃO PARA RESGATAR CUPOM DE 30 DIAS VIP DO ADM -->
       <div style="background:var(--card); border:1px solid var(--card-border); border-radius:20px; padding:16px; margin-bottom:18px;">
         <h3 style="font-size:0.9rem; font-weight:800; margin-bottom:6px;">🎁 Possui um Cupom VIP do ADM?</h3>
         <p style="font-size:0.75rem; color:var(--muted); margin-bottom:10px;">Insira abaixo o código recebido para ganhar 30 dias de VIP instantâneo:</p>
@@ -643,7 +633,6 @@
         </div>
       </div>
 
-      <!-- HISTÓRICO DE CUPONS RESGATADOS PELO CLIENTE -->
       <div style="background:var(--card); border:1px solid var(--card-border); border-radius:20px; padding:18px; margin-bottom:18px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
           <h3 style="font-size:0.95rem; font-weight:800;">🎟️ Histórico de Cupons Resgatados</h3>
@@ -719,7 +708,6 @@
 
   <!-- MODAIS DO SISTEMA -->
 
-  <!-- MODAL DEFINIR PATROCINADO DA SEMANA -->
   <div id="modal-patrocinar-empresa" class="modal">
     <div class="modal-content" style="text-align:left;">
       <div style="font-size:2.2rem; margin-bottom:4px; text-align:center;">⭐</div>
@@ -741,7 +729,6 @@
     </div>
   </div>
 
-  <!-- MODAL EXPLICAÇÃO DOS NÍVEIS -->
   <div id="modal-niveis" class="modal">
     <div class="modal-content" style="text-align:left;">
       <div style="text-align:center; font-size:2rem; margin-bottom:4px;">🏅</div>
@@ -767,7 +754,6 @@
     </div>
   </div>
 
-  <!-- MODAL DE EXIBIÇÃO DE REGRAS DA PROMOÇÃO -->
   <div id="modal-regras-cupom" class="modal">
     <div class="modal-content" style="text-align:left;">
       <div style="font-size:2rem; margin-bottom:4px; text-align:center;">ℹ️</div>
@@ -782,7 +768,6 @@
     </div>
   </div>
 
-  <!-- MODAL EDITAR CADASTRO DO CLIENTE -->
   <div id="modal-edit-client" class="modal">
     <div class="modal-content" style="text-align:left;">
       <h3 style="font-size:1.2rem; font-weight:900; margin-bottom:12px;">✏️ Editar Meus Dados</h3>
@@ -807,7 +792,6 @@
     </div>
   </div>
 
-  <!-- MODAL CONFIRMAÇÃO DE EXCLUSÃO DE CLIENTE -->
   <div id="modal-confirm-delete-user" class="modal">
     <div class="modal-content">
       <div style="font-size:2.5rem; margin-bottom:6px;">⚠️</div>
@@ -821,7 +805,6 @@
     </div>
   </div>
 
-  <!-- MODAL DE SUPORTE AO DESATIVAR EMPRESA -->
   <div id="modal-empresa-desativada" class="modal">
     <div class="modal-content">
       <div style="font-size:2.5rem; margin-bottom:6px;">🔒</div>
@@ -834,7 +817,6 @@
     </div>
   </div>
 
-  <!-- MODAL DE TERMOS DE PRIVACIDADE -->
   <div id="modal-terms" class="modal">
     <div class="modal-content" style="text-align:left;">
       <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:10px;">📜 Termos e Privacidade</h3>
@@ -848,7 +830,6 @@
     </div>
   </div>
 
-  <!-- MODAL DE NOTIFICAÇÕES ALERT -->
   <div id="modal-alert" class="modal modal-top">
     <div class="modal-content">
       <div id="alert-icon" style="font-size:2rem; margin-bottom:6px;">⚡</div>
@@ -858,7 +839,6 @@
     </div>
   </div>
 
-  <!-- MODAL PIX -->
   <div id="modal-pix" class="modal">
     <div class="modal-content">
       <div style="font-size:2.2rem; margin-bottom:4px;">⚡</div>
@@ -880,7 +860,6 @@
     </div>
   </div>
 
-  <!-- MODAL CUPOM DO CLIENTE -->
   <div id="modal-coupon" class="modal">
     <div class="modal-content" style="max-width: 380px; padding: 20px;">
       <h3 id="modal-title" style="font-size:1.15rem; font-weight:800;">---</h3>
@@ -915,7 +894,6 @@
     </div>
   </div>
 
-  <!-- MODAL CRIAR/EDITAR OFERTA -->
   <div id="modal-add-offer" class="modal">
     <div class="modal-content">
       <h3 id="modal-offer-heading" style="font-size:1.2rem; font-weight:800; margin-bottom:12px;">➕ Nova Oferta</h3>
@@ -994,7 +972,6 @@
     </div>
   </div>
 
-  <!-- MODAL CADASTRAR / EDITAR EMPRESA (ADMIN) -->
   <div id="modal-admin-empresa" class="modal">
     <div class="modal-content">
       <h3 id="modal-admin-empresa-title" style="font-size:1.2rem; font-weight:800; margin-bottom:12px;">🏢 Nova Empresa Parceira</h3>
