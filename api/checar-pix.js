@@ -5,14 +5,15 @@ function getFirebaseFirestore() {
 
   const projectId = process.env.FIREBASE_PROJECT_ID || "projeto-01-63111";
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || "firebase-adminsdk-fbsvc@projeto-01-63111.iam.gserviceaccount.com";
-  const rawKey = process.env.FIREBASE_PRIVATE_KEY;
+  let rawKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (!rawKey) {
     console.error("❌ ERRO: FIREBASE_PRIVATE_KEY não configurada nas variáveis de ambiente.");
     return null;
   }
 
-  const privateKey = rawKey.replace(/\\n/g, '\n');
+  // Substitui literais \n e garante o formato correto da chave privada
+  const privateKey = rawKey.replace(/\\n/g, '\n').replace(/"/g, '');
 
   try {
     admin.initializeApp({
