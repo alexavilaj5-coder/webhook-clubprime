@@ -53,6 +53,10 @@ let cachePagamentosPix = [];
 let cacheTodosUsuarios = [];
 let cacheLogsClientePerfil = [];
 
+const PRECO_VIP = 19.90;
+let pixChecadoParaUid = null;
+let pixPollingInicio = 0;
+
 // Variáveis temporárias para validação com cálculo de desconto
 let cupomEmValidacao = null;
 let valorServicoCalculado = 0;
@@ -93,6 +97,10 @@ document.addEventListener('DOMContentLoaded', () => {
 function resetarEstadoUI() {
   window.currentUserData = null;
   window.isVipUser = false;
+  window._vipAnterior = undefined;
+  window._vipExpiraAnterior = null;
+  pixChecadoParaUid = null;
+  pararChecagemAutomatica();
   
   if (unsubscribeUser) { unsubscribeUser(); unsubscribeUser = null; }
   if (unsubscribeCupons) { unsubscribeCupons(); unsubscribeCupons = null; }
@@ -102,6 +110,14 @@ function resetarEstadoUI() {
   if (boxVoltar) boxVoltar.style.display = 'none';
 
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+}
+
+function celebrarVip(msg) {
+  if (Date.now() - (window._ultimaCelebracaoVip || 0) < 15000) return;
+  window._ultimaCelebracaoVip = Date.now();
+  fecharModal('modal-pix');
+  dispararConfetes();
+  mostrarAviso("VIP Ativado! 🎉", msg || "Seu acesso VIP foi liberado.", "👑");
 }
 
 onAuthStateChanged(auth, async (user) => {
@@ -164,9 +180,12 @@ onAuthStateChanged(auth, async (user) => {
         return;
       }
 
-      try {
-        await fetch(`https://webhook-clubprime.vercel.app/api/checar-pix?email=${encodeURIComponent(user.email)}&userId=${user.uid}`);
-      } catch (err) {}
+      // Checa pagamento pendente só uma vez por login e só se ainda não é VIP (antes isso gerava um loop com o onSnapshot)
+      if (!data.vip && pixChecadoParaUid !== user.uid) {
+        pixChecadoParaUid = user.uid;
+        fetch(`https://webhook-clubprime.vercel.app/api/checar-pix?email=${encodeURIComponent(user.email)}&userId=${user.uid}`)
+          .catch((err) => console.error('Checagem de Pix:', err));
+      }
 
       if (data.vip && data.vipExpiraEm) {
         const expiraData = new Date(data.vipExpiraEm);
@@ -241,9 +260,17 @@ onAuthStateChanged(auth, async (user) => {
             if (renewBox) renewBox.style.display = 'none';
           }
         }
-        fecharModal('modal-pix');
+
+        const virouVip = window._vipAnterior === false;
+        const renovou = window._vipAnterior === true && window._vipExpiraAnterior && data.vipExpiraEm
+          && new Date(data.vipExpiraEm) > new Date(window._vipExpiraAnterior);
+        if (virouVip || renovou) celebrarVip("Pagamento confirmado! Seu acesso VIP está ativo.");
+        window._vipAnterior = true;
+        window._vipExpiraAnterior = data.vipExpiraEm || null;
       } else {
         window.isVipUser = false;
+        window._vipAnterior = false;
+        window._vipExpiraAnterior = null;
         if (vipExpiringAlert) vipExpiringAlert.style.display = 'none';
         document.querySelectorAll('.status-badge').forEach(b => {
           b.innerText = "PLANO GRATUITO";
@@ -613,7 +640,7 @@ async function calcularEconomiaNivelUsuario(uid) {
     const badgeTitle = document.getElementById('badge-level-title');
     if (badgeTitle) badgeTitle.innerText = nivelName;
 
-  } catch (e) {}
+  } catch (e) { console.error(e); }
 }
 
 async function carregarHistoricoClientePerfil(uidTarget = null) {
@@ -634,7 +661,7 @@ async function carregarHistoricoClientePerfil(uidTarget = null) {
     });
 
     renderizarHistoricoClientePerfil();
-  } catch (e) {}
+  } catch (e) { console.error(e); }
 }
 
 window.renderizarHistoricoClientePerfil = function() {
@@ -790,7 +817,7 @@ window.verificarCodigoDigitadoLojista = async function(codigo) {
 
     boxCalculo.style.display = 'block';
 
-  } catch(e) {}
+  } catch (e) { console.error(e); }
 };
 
 window.calcularValoresBaixa = function(valorStr) {
@@ -1008,33 +1035,35 @@ window.clicarElesResgatar = async function(cupomId, empresaId, empresaNome, titu
       const qCheck = query(
         collection(db, "logs_resgates"),
         where("usuarioUid", "==", user.uid),
-        where("cupomId", "==", cupomId)
+        where("cupomId", "==", cupomId),
+        where("status", "==", "usado")
       );
       const snapCheck = await getDocs(qCheck);
 
       if (!snapCheck.empty) {
         if (limite === 'once') {
-          return mostrarAviso("Cupom Já Utilizado! ⚠️", "Esta oferta é de USO ÚNICO e você já a resgatou anteriormente.", "🔒");
+          return mostrarAviso("Cupom Já Utilizado! ⚠️", "Esta oferta é de USO ÚNICO e você já a utilizou anteriormente.", "🔒");
         } else if (limite === 'daily') {
-          const hojeStr = new Date().toISOString().split('T')[0];
+          const hoje = new Date().toDateString();
           let jaUsouHoje = false;
           snapCheck.forEach(docSnap => {
-            const dataUso = docSnap.data().dataHora || '';
-            if (dataUso.startsWith(hojeStr)) jaUsouHoje = true;
+            const d = docSnap.data();
+            const quando = new Date(d.dataValidacao || d.dataHora);
+            if (!isNaN(quando.getTime()) && quando.toDateString() === hoje) jaUsouHoje = true;
           });
           if (jaUsouHoje) {
-            return mostrarAviso("Limite Diário Atingido! ⏳", "Você já resgatou este cupom hoje. Tente novamente amanhã!", "📅");
+            return mostrarAviso("Limite Diário Atingido! ⏳", "Você já utilizou este cupom hoje. Tente novamente amanhã!", "📅");
           }
         }
       }
-    } catch(e) {}
+    } catch(e) { console.error(e); }
   }
 
   try {
     await updateDoc(doc(db, "cupons", cupomId), {
       cliquesCount: increment(1)
     });
-  } catch(e) {}
+  } catch (e) { console.error(e); }
 
   resgatarCupomReal(cupomId, empresaId, empresaNome, titulo, prefixoCodigo, econ, endereco, telefone, regras, descontoPct);
 };
@@ -1052,7 +1081,7 @@ async function carregarEstatisticasLojista(empresaUid) {
     const qValid = query(collection(db, "logs_resgates"), where("empresaId", "==", empresaUid), where("status", "==", "usado"));
     const snapValid = await getDocs(qValid);
     document.getElementById('merchant-stat-validations').innerText = snapValid.size;
-  } catch(e) {}
+  } catch (e) { console.error(e); }
 }
 
 function carregarCuponsDoLojista(empresaUid) {
@@ -1192,7 +1221,7 @@ async function carregarPainelAdmin() {
       snapPix.forEach(d => {
         cachePagamentosPix.push({ id: d.id, ...d.data() });
       });
-    } catch(e) {}
+    } catch (e) { console.error(e); }
 
     snapUsers.forEach(docSnap => {
       const u = docSnap.data();
@@ -1209,7 +1238,7 @@ async function carregarPainelAdmin() {
               nome: u.nome || "Cliente VIP",
               email: u.email || "Não informado",
               whatsapp: u.whatsapp || "Não cadastrado",
-              valor: 19.90,
+              valor: PRECO_VIP,
               dataHora: u.vipAtivadoEm || u.criadoEm || new Date().toISOString()
             });
           }
@@ -1348,7 +1377,7 @@ async function carregarPainelAdmin() {
     renderizarGraficoCrescimentoClientes();
     renderizarRelatorioFinanceiro('hoje');
 
-  } catch (err) {}
+  } catch (err) { console.error(err); }
 }
 
 window.confirmarExclusaoCliente = function(uid, nomeEncoded) {
@@ -1449,7 +1478,7 @@ function renderizarRelatorioFinanceiro(periodo = 'hoje', customStart = null, cus
     return true;
   });
 
-  const totalFaturado = pagamentosFiltrados.reduce((acc, curr) => acc + (curr.valor || 19.90), 0);
+  const totalFaturado = pagamentosFiltrados.reduce((acc, curr) => acc + (curr.valor || PRECO_VIP), 0);
   if (revenueTotalEl) {
     revenueTotalEl.innerText = `R$ ${totalFaturado.toFixed(2).replace('.', ',')}`;
   }
@@ -1483,7 +1512,7 @@ function renderizarRelatorioFinanceiro(periodo = 'hoje', customStart = null, cus
           <div style="font-size:0.65rem; color:var(--muted);">${p.email}</div>
         </td>
         <td style="padding:8px 6px; font-weight:700; color:var(--primary);">${wppStr}</td>
-        <td style="padding:8px 6px; font-weight:900; color:#10b981;">R$ ${(p.valor || 19.90).toFixed(2).replace('.', ',')}</td>
+        <td style="padding:8px 6px; font-weight:900; color:#10b981;">R$ ${(p.valor || PRECO_VIP).toFixed(2).replace('.', ',')}</td>
         <td style="padding:8px 6px; font-size:0.68rem; color:var(--muted);">${dataStr}</td>
       </tr>
     `;
@@ -1506,7 +1535,7 @@ function renderizarGraficoFaturamentoDiario(pagamentos) {
   pagamentos.forEach(p => {
     const d = new Date(p.dataHora);
     if (!isNaN(d.getTime())) {
-      contagemDias[d.getDay()] += (p.valor || 19.90);
+      contagemDias[d.getDay()] += (p.valor || PRECO_VIP);
     }
   });
 
@@ -1833,7 +1862,7 @@ window.limparLogsEmpresaAdmin = async function(empresaId, empresaNome) {
       await Promise.all(promessas);
       mostrarAviso("Limpeza Concluída 🗑️", `Os logs da empresa ${empresaNome} foram removidos.`, "✅");
       carregarPainelAdmin();
-    } catch (err) {}
+    } catch (err) { console.error(err); }
   }
 };
 
@@ -2020,7 +2049,7 @@ window.adminAlternarVip = async function(userId, novoEstado) {
     await updateDoc(doc(db, "usuarios", userId), updateObj);
     mostrarAviso("Atualizado!", "Status VIP alterado.", "👑");
     carregarPainelAdmin();
-  } catch (err) {}
+  } catch (err) { console.error(err); }
 };
 
 window.validarCupomTextoLojista = async function() {
@@ -2057,7 +2086,7 @@ window.validarCupomTextoLojista = async function() {
 
     carregarEstatisticasLojista(user.uid);
     carregarLogsDoLojista(user.uid);
-  } catch (err) {}
+  } catch (err) { console.error(err); }
 };
 
 window.toggleTheme = function() {
@@ -2106,7 +2135,11 @@ window.fecharModal = function(modalId) {
 
 function iniciarChecagemAutomatica() {
   pararChecagemAutomatica();
-  intervalPixCheck = setInterval(() => { checarPixSilencioso(); }, 5000);
+  pixPollingInicio = Date.now();
+  intervalPixCheck = setInterval(() => {
+    if (Date.now() - pixPollingInicio > 10 * 60 * 1000) return pararChecagemAutomatica();
+    checarPixSilencioso();
+  }, 15000);
 }
 
 function pararChecagemAutomatica() {
@@ -2121,15 +2154,13 @@ async function checarPixSilencioso() {
     const data = await response.json();
     if (data.success && data.vip) {
       pararChecagemAutomatica();
-      fecharModal('modal-pix');
-      dispararConfetes();
-      mostrarAviso("VIP Ativado! 🎉", data.message, "👑");
+      celebrarVip(data.message);
       window.isVipUser = true;
       document.querySelectorAll('.status-badge').forEach(b => { b.innerText = "ASSINANTE VIP"; b.className = "status-badge vip"; });
       document.getElementById('banner-assinatura').style.display = 'none';
       document.getElementById('profile-vip-card').style.display = 'block';
     }
-  } catch (err) {}
+  } catch (err) { console.error(err); }
 }
 
 window.switchAuthTab = function(type) {
@@ -2267,7 +2298,7 @@ window.gerarPixMercadoPago = async function() {
   if (btn) { btn.innerHTML = `<span class="spinner"></span> Gerando Pix...`; btn.style.opacity = "0.7"; btn.style.pointerEvents = "none"; }
   try {
     const response = await fetch('https://webhook-clubprime.vercel.app/api/criar-pix', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: emailPix.toLowerCase(), nome: window.currentUserData?.nome || 'Membro' })
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: emailPix.toLowerCase(), nome: window.currentUserData?.nome || 'Membro', userId: user ? user.uid : undefined })
     });
     const data = await response.json();
     if (data.success && data.qrCodeBase64) {
@@ -2297,9 +2328,7 @@ window.verificarStatusVipManual = async function() {
     const data = await response.json();
     if (data.success && data.vip) {
       pararChecagemAutomatica();
-      fecharModal('modal-pix');
-      dispararConfetes();
-      mostrarAviso("VIP Ativado! 🎉", data.message, "👑");
+      celebrarVip(data.message);
     } else { mostrarAviso("Aguardando ⏳", data.message || "Pagamento não compensado.", "ℹ️"); }
   } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
   finally { btn.innerHTML = `🔄 Já Paguei / Checar Agora`; }
@@ -2324,9 +2353,44 @@ window.resgatarCupomReal = async function(cupomId, empresaId, empresaNome, titul
     document.getElementById('box-blocked').style.display = 'none';
     document.getElementById('box-unlocked').style.display = 'block';
 
-    const sufixoAleatorio = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const prefixoLimpo = (prefixo || 'PRIME').toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const codigoUnico = `${prefixoLimpo}-${sufixoAleatorio}`;
+    const user = auth.currentUser;
+    const uidResgate = user?.uid || 'anonimo';
+    let codigoUnico = null;
+
+    // Se já existe um código gerado e ainda não usado para este cupom, reaproveita em vez de criar outro log
+    try {
+      const qExistente = query(
+        collection(db, "logs_resgates"),
+        where("usuarioUid", "==", uidResgate),
+        where("cupomId", "==", cupomId),
+        where("status", "==", "gerado")
+      );
+      const snapExistente = await getDocs(qExistente);
+      if (!snapExistente.empty) codigoUnico = snapExistente.docs[0].data().codigoGerado || null;
+    } catch(e) { console.error(e); }
+
+    if (!codigoUnico) {
+      const sufixoAleatorio = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const prefixoLimpo = (prefixo || 'PRIME').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      codigoUnico = `${prefixoLimpo}-${sufixoAleatorio}`;
+
+      try {
+        await addDoc(collection(db, "logs_resgates"), {
+          usuarioUid: uidResgate,
+          usuarioEmail: user?.email || 'desconhecido',
+          usuarioNome: window.currentUserData?.nome || 'Membro VIP',
+          usuarioWhatsapp: window.currentUserData?.whatsapp || '',
+          cupomId: cupomId,
+          cupomTitulo: titulo,
+          descontoPct: descontoPct,
+          empresaId: empresaId,
+          empresaNome: empresaNome,
+          codigoGerado: codigoUnico,
+          status: "gerado",
+          dataHora: new Date().toISOString()
+        });
+      } catch(e) { console.error(e); }
+    }
 
     codigoCupomAtual = codigoUnico;
     document.getElementById('modal-code').innerText = codigoUnico;
@@ -2336,25 +2400,6 @@ window.resgatarCupomReal = async function(cupomId, empresaId, empresaNome, titul
       qrContainer.innerHTML = "";
       new QRCode(qrContainer, { text: codigoUnico, width: 120, height: 120 });
     }
-
-    const user = auth.currentUser;
-
-    try {
-      await addDoc(collection(db, "logs_resgates"), {
-        usuarioUid: user?.uid || 'anonimo',
-        usuarioEmail: user?.email || 'desconhecido',
-        usuarioNome: window.currentUserData?.nome || 'Membro VIP',
-        usuarioWhatsapp: window.currentUserData?.whatsapp || '',
-        cupomId: cupomId,
-        cupomTitulo: titulo,
-        descontoPct: descontoPct,
-        empresaId: empresaId,
-        empresaNome: empresaNome,
-        codigoGerado: codigoUnico,
-        status: "gerado",
-        dataHora: new Date().toISOString()
-      });
-    } catch(e) {}
   } else {
     document.getElementById('box-blocked').style.display = 'block';
     document.getElementById('box-unlocked').style.display = 'none';
