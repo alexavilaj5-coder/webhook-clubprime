@@ -180,7 +180,7 @@ onAuthStateChanged(auth, async (user) => {
         return;
       }
 
-      // Checa pagamento pendente só uma vez por login e só se ainda não é VIP (antes isso gerava um loop com o onSnapshot)
+      // Checa pagamento pendente só uma vez por login e só se ainda não é VIP
       if (!data.vip && pixChecadoParaUid !== user.uid) {
         pixChecadoParaUid = user.uid;
         fetch(`https://webhook-clubprime.vercel.app/api/checar-pix?email=${encodeURIComponent(user.email)}&userId=${user.uid}`)
@@ -303,11 +303,8 @@ window.ativarBuscaProximidadeGps = function() {
 
   navigator.geolocation.getCurrentPosition(
     (position) => {
-      const latUsuario = position.coords.latitude;
-      const lonUsuario = position.coords.longitude;
       fecharModal('modal-alert');
       mostrarAviso("GPS Ativo! 🎯", "Filtro por proximidade ativado com sucesso.", "✅");
-      // Aqui as empresas podem ser ordenadas por proximidade se houver lat/lon salvas.
     },
     (error) => {
       fecharModal('modal-alert');
@@ -2294,11 +2291,35 @@ window.deslogar = async function() {
 window.gerarPixMercadoPago = async function() {
   const user = auth.currentUser;
   const emailPix = user ? user.email : "teste@clubprime.com";
+  
+  let cpf = window.currentUserData?.cpf || '';
+  if (!cpf) {
+    const inputCpf = prompt("Informe o seu CPF (apenas números) para gerar a cobrança Pix do VIP:");
+    if (!inputCpf) return;
+    cpf = inputCpf.replace(/\D/g, '');
+    if (cpf.length !== 11) {
+      return mostrarAviso("CPF Inválido", "O CPF deve conter exatamente 11 dígitos.", "⚠️");
+    }
+    if (user) {
+      try {
+        await updateDoc(doc(db, "usuarios", user.uid), { cpf: cpf });
+        if (window.currentUserData) window.currentUserData.cpf = cpf;
+      } catch (e) { console.error(e); }
+    }
+  }
+
   const btn = document.getElementById('btn-gerar-pix');
   if (btn) { btn.innerHTML = `<span class="spinner"></span> Gerando Pix...`; btn.style.opacity = "0.7"; btn.style.pointerEvents = "none"; }
   try {
     const response = await fetch('https://webhook-clubprime.vercel.app/api/criar-pix', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: emailPix.toLowerCase(), nome: window.currentUserData?.nome || 'Membro', userId: user ? user.uid : undefined })
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify({ 
+        email: emailPix.toLowerCase(), 
+        nome: window.currentUserData?.nome || 'Membro', 
+        userId: user ? user.uid : undefined,
+        cpf: cpf 
+      })
     });
     const data = await response.json();
     if (data.success && data.qrCodeBase64) {
@@ -2357,7 +2378,6 @@ window.resgatarCupomReal = async function(cupomId, empresaId, empresaNome, titul
     const uidResgate = user?.uid || 'anonimo';
     let codigoUnico = null;
 
-    // Se já existe um código gerado e ainda não usado para este cupom, reaproveita em vez de criar outro log
     try {
       const qExistente = query(
         collection(db, "logs_resgates"),
