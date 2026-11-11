@@ -15,12 +15,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { email, nome, userId } = req.body || {};
+    const { email, nome, userId, cpf } = req.body || {};
     if (!email) {
       return res.status(400).json({ success: false, error: 'E-mail do usuário é obrigatório.' });
     }
 
     const emailLimpo = String(email).toLowerCase().trim();
+    const cpfLimpo = cpf ? String(cpf).replace(/\D/g, '') : '';
+
+    if (!cpfLimpo || cpfLimpo.length !== 11) {
+      return res.status(400).json({ success: false, error: 'CPF válido (11 dígitos) é obrigatório para gerar o Pix.' });
+    }
+
     const ACCESS_TOKEN = getAccessToken();
     if (!ACCESS_TOKEN) {
       return res.status(500).json({ success: false, error: 'Token do Mercado Pago não configurado no servidor.' });
@@ -32,7 +38,14 @@ export default async function handler(req, res) {
       transaction_amount: PRECO_VIP,
       description: 'Assinatura VIP - Clube PRIME',
       payment_method_id: 'pix',
-      payer: { email: emailLimpo, first_name: nome || 'Membro PRIME' },
+      payer: { 
+        email: emailLimpo, 
+        first_name: nome || 'Membro PRIME',
+        identification: {
+          type: 'CPF',
+          number: cpfLimpo
+        }
+      },
       external_reference: referencia,
       notification_url: 'https://webhook-clubprime.vercel.app/api/webhook'
     };
@@ -42,7 +55,6 @@ export default async function handler(req, res) {
       headers: {
         'Authorization': `Bearer ${ACCESS_TOKEN}`,
         'Content-Type': 'application/json',
-        // Cliques repetidos no mesmo minuto devolvem o mesmo Pix, em vez de criar cobranças duplicadas.
         'X-Idempotency-Key': `${referencia}-${Math.floor(Date.now() / 60000)}`
       },
       body: JSON.stringify(paymentData)
