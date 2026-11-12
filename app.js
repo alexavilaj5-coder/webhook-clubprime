@@ -1,19 +1,19 @@
-// Registo do Service Worker para permitir a instalação como App PWA
+// Registro do Service Worker para permitir a instalação como App PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((reg) => {
-        console.log('Service Worker registado com sucesso:', reg.scope);
+        console.log('Service Worker registrado com sucesso:', reg.scope);
       })
       .catch((err) => {
-        console.log('Falha ao registar o Service Worker:', err);
+        console.log('Falha ao registrar o Service Worker:', err);
       });
   });
 }
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, updatePassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, increment, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCTVY6ogF-o7pGuDeHPYCkGfrkeLTvpjKU",
@@ -44,6 +44,7 @@ let codigoCupomAtual = "";
 let currentAuthTab = "login";
 let intervalPixCheck = null;
 let html5QrCodeScanner = null;
+let timerDebounceValidacao = null;
 
 let unsubscribeUser = null;
 let unsubscribeCupons = null;
@@ -63,6 +64,27 @@ let valorServicoCalculado = 0;
 let valorDescontoCalculado = 0;
 let valorFinalCalculado = 0;
 let descontoPctCalculado = 0;
+
+// FUNÇÃO AUXILIAR DE DEBOUNCE PARA EVITAR CONSULTAS EXCESSIVAS NO FIRESTORE
+function debounce(fn, delay) {
+  return function (...args) {
+    clearTimeout(timerDebounceValidacao);
+    timerDebounceValidacao = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+// CÁLCULO DE DISTÂNCIA REAL GPS (FÓRMULA DE HAVERSINE)
+function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 // DETECÇÃO DE MODO OFFLINE / ONLINE
 function checarStatusConexao() {
@@ -131,20 +153,39 @@ onAuthStateChanged(auth, async (user) => {
       if (snapshot.exists()) {
         data = snapshot.data();
       } else {
-        data = {
-          nome: user.displayName || "Cliente Clube PRIME",
-          email: user.email.toLowerCase(),
-          whatsapp: "",
-          fotoUrl: user.photoURL || null,
-          funcao: "cliente",
-          vip: false,
-          vipExpiraEm: null,
-          criadoEm: new Date().toISOString()
-        };
-        await setDoc(userDocRef, data);
+        // PREVENÇÃO DE LOJISTA ÓRFÃO: Checa se já existe pré-cadastro pelo e-mail criado pelo Admin
+        const qOrfao = query(collection(db, "usuarios"), where("email", "==", user.email.toLowerCase()), where("funcao", "==", "lojista"));
+        const snapOrfao = await getDocs(qOrfao);
+
+        if (!snapOrfao.empty) {
+          const docOrfao = snapOrfao.docs[0];
+          data = { ...docOrfao.data(), uid: user.uid };
+          await setDoc(userDocRef, data);
+          await deleteDoc(doc(db, "usuarios", docOrfao.id)); // Migra para o UID real do Auth
+        } else {
+          data = {
+            nome: user.displayName || "Cliente Clube PRIME",
+            email: user.email.toLowerCase(),
+            whatsapp: "",
+            fotoUrl: user.photoURL || null,
+            funcao: "cliente",
+            vip: false,
+            vipExpiraEm: null,
+            criadoEm: new Date().toISOString()
+          };
+          await setDoc(userDocRef, data);
+        }
       }
 
       window.currentUserData = data;
+
+      // ONBOARDING SE CADASTROU COM GOOGLE E NÃO PREENCHEU WHATSAPP
+      if (data.funcao === "cliente" && (!data.whatsapp || data.whatsapp.trim() === '')) {
+        setTimeout(() => {
+          abrirModalEditarCliente();
+          mostrarAviso("Complete seu Perfil 📱", "Por favor, cadastre seu WhatsApp para resgatar cupons sem problemas.", "ℹ️");
+        }, 1200);
+      }
       
       if (data.funcao === "lojista" && data.ativo === false) {
         document.getElementById('modal-empresa-desativada').classList.add('active');
@@ -293,18 +334,39 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// FUNÇÃO DE GEOLOCALIZAÇÃO / GPS PARA EMPRESAS PRÓXIMAS
+// FUNÇÃO DE GEOLOCALIZAÇÃO / GPS REAL PARA ORDENAR EMPRESAS POR PROXIMIDADE
 window.ativarBuscaProximidadeGps = function() {
   if (!navigator.geolocation) {
     return mostrarAviso("GPS Indisponível", "Seu navegador não suporta geolocalização.", "⚠️");
   }
 
-  mostrarAviso("Localizando...", "Buscando parceiros próximos de você...", "📍");
+  mostrarAviso("Localizando...", "Buscando parceiros próximos de você em Pelotas...", "📍");
 
   navigator.geolocation.getCurrentPosition(
     (position) => {
+      const userLat = position.coords.latitude;
+      const userLon = position.coords.longitude;
       fecharModal('modal-alert');
-      mostrarAviso("GPS Ativo! 🎯", "Filtro por proximidade ativado com sucesso.", "✅");
+      mostrarAviso("GPS Ativo! 🎯", "Exibindo estabelecimentos ordenados por proximidade.", "✅");
+
+      const cards = document.querySelectorAll('.company-card');
+      cards.forEach(card => {
+        const latEmp = parseFloat(card.dataset.lat);
+        const lonEmp = parseFloat(card.dataset.lon);
+        if (!isNaN(latEmp) && !isNaN(lonEmp)) {
+          const dist = calcularDistanciaKm(userLat, userLon, latEmp, lonEmp);
+          card.dataset.distance = dist;
+        } else {
+          card.dataset.distance = 9999;
+        }
+      });
+
+      const container = document.getElementById('stores-list-dynamic');
+      if (container) {
+        const cardsArray = Array.from(cards);
+        cardsArray.sort((a, b) => parseFloat(a.dataset.distance) - parseFloat(b.dataset.distance));
+        cardsArray.forEach(card => container.appendChild(card));
+      }
     },
     (error) => {
       fecharModal('modal-alert');
@@ -719,7 +781,7 @@ window.abrirLeitorQrCode = function() {
       qrbox: 250,
       aspectRatio: 1.0,
       videoConstraints: {
-        facingMode: "environment" // Força a câmera traseira do celular
+        facingMode: "environment"
       }
     });
   }
@@ -739,7 +801,8 @@ window.fecharLeitorQrCode = function() {
   document.getElementById('reader-container').style.display = 'none';
 };
 
-window.verificarCodigoDigitadoLojista = async function(codigo) {
+// DEBOUNCE APLICADO NA VALIDAÇÃO DO LOJISTA PARA ECONOMIZAR REQUISIÇÕES AO FIRESTORE
+window.verificarCodigoDigitadoLojista = debounce(async function(codigo) {
   const codLimpo = (codigo || document.getElementById('input-validar-codigo').value).trim().toUpperCase();
   const boxCalculo = document.getElementById('box-calculo-validacao');
   const btnValidar = document.getElementById('btn-validar-baixa-final');
@@ -815,7 +878,7 @@ window.verificarCodigoDigitadoLojista = async function(codigo) {
     boxCalculo.style.display = 'block';
 
   } catch (e) { console.error(e); }
-};
+}, 400);
 
 window.calcularValoresBaixa = function(valorStr) {
   const valOriginal = parseFloat(valorStr) || 0;
@@ -951,6 +1014,8 @@ function carregarCuponsVitrine() {
           telefone: cupom.telefone || '',
           categoria: cupom.categoria || 'gastronomia',
           imagem: cupom.imagem || '',
+          lat: cupom.empresaLat || null,
+          lon: cupom.empresaLon || null,
           cupons: []
         };
       }
@@ -963,8 +1028,11 @@ function carregarCuponsVitrine() {
     for (const [key, emp] of Object.entries(empresasGrouped)) {
       let imgHtml = emp.imagem ? `<img src="${emp.imagem}" alt="Logo/Foto" style="width:100%; height:130px; object-fit:cover; border-radius:14px; margin-bottom:12px;">` : '';
       
+      const latAttr = emp.lat ? `data-lat="${emp.lat}"` : '';
+      const lonAttr = emp.lon ? `data-lon="${emp.lon}"` : '';
+
       html += `
-        <div class="company-card" data-cat="${emp.categoria}" data-name="${emp.nome.toLowerCase()}" style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:20px; margin-bottom:16px;">
+        <div class="company-card" data-cat="${emp.categoria}" data-name="${emp.nome.toLowerCase()}" ${latAttr} ${lonAttr} style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:20px; margin-bottom:16px;">
           ${imgHtml}
           <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
             <div>
@@ -981,12 +1049,19 @@ function carregarCuponsVitrine() {
         const limiteTxt = cupom.limite === 'daily' ? '1 por dia' : cupom.limite === 'once' ? 'Uso único' : 'Ilimitado';
         const pctTxt = cupom.descontoPct ? `${cupom.descontoPct}% OFF` : (cupom.descontoBadge || 'OFERTA');
 
+        // SEGURANÇA DE ASPAS: ENCODE DOS PARÂMETROS
+        const encNome = encodeURIComponent(emp.nome);
+        const encTitulo = encodeURIComponent(cupom.titulo);
+        const encEnd = encodeURIComponent(emp.endereco);
+        const encTel = encodeURIComponent(emp.telefone);
+        const encRegras = encodeURIComponent(cupom.regras || '');
+
         html += `
           <div style="background:var(--secondary); border:1px solid var(--card-border); padding:12px; border-radius:14px; display:flex; justify-content:space-between; align-items:center;">
             <div style="flex:1; padding-right:8px;">
               <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
                 <span style="font-size:0.85rem; font-weight:800; color:var(--text);">${cupom.titulo}</span>
-                <button style="background:none; border:none; color:var(--primary); font-size:0.9rem; cursor:pointer; padding:0 4px;" title="Ver Regras" onclick="abrirModalRegrasCupom('${encodeURIComponent(cupom.titulo)}', '${encodeURIComponent(emp.nome)}', '${encodeURIComponent(cupom.regras || 'Sem restrições')}')">ℹ️</button>
+                <button style="background:none; border:none; color:var(--primary); font-size:0.9rem; cursor:pointer; padding:0 4px;" title="Ver Regras" onclick="abrirModalRegrasCupom('${encTitulo}', '${encNome}', '${encRegras}')">ℹ️</button>
               </div>
               <div style="font-size:0.75rem; color:var(--muted);">${cupom.descricao}</div>
               <div style="font-size:0.68rem; color:var(--primary); font-weight:700; margin-top:4px;">Regra: ${limiteTxt}</div>
@@ -994,7 +1069,7 @@ function carregarCuponsVitrine() {
 
             <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
               <span class="discount-badge" style="font-size:0.72rem; padding:3px 8px;">${pctTxt}</span>
-              <button class="btn btn-cyan btn-small" style="padding:6px 10px; font-size:0.75rem;" onclick="clicarElesResgatar('${cupom.id}', '${cupom.empresaId}', '${cupom.empresaNome}', '${cupom.titulo}', '${cupom.codigo || 'PRIME'}', ${cupom.valorEconomia || 10.00}, '${cupom.endereco || 'Pelotas / RS'}', '${cupom.telefone || ''}', '${cupom.regras || ''}', '${cupom.limite || 'daily'}', ${cupom.descontoPct || 10})">
+              <button class="btn btn-cyan btn-small" style="padding:6px 10px; font-size:0.75rem;" onclick="clicarElesResgatar('${cupom.id}', '${cupom.empresaId}', '${encNome}', '${encTitulo}', '${cupom.codigo || 'PRIME'}', ${cupom.valorEconomia || 10.00}, '${encEnd}', '${encTel}', '${encRegras}', '${cupom.limite || 'daily'}', ${cupom.descontoPct || 10})">
                 🎟️ Resgatar
               </button>
             </div>
@@ -1023,7 +1098,7 @@ window.abrirModalRegrasCupom = function(titulo, loja, regras) {
   document.getElementById('modal-regras-cupom').classList.add('active');
 };
 
-window.clicarElesResgatar = async function(cupomId, empresaId, empresaNome, titulo, prefixoCodigo, econ, endereco, telefone, regras, limite, descontoPct = 10) {
+window.clicarElesResgatar = async function(cupomId, empresaId, empresaNomeEnc, tituloEnc, prefixoCodigo, econ, enderecoEnc, telefoneEnc, regrasEnc, limite, descontoPct = 10) {
   const user = auth.currentUser;
   if (!user) return mostrarAviso("Atenção", "Faça login para resgatar.", "⚠️");
 
@@ -1062,7 +1137,7 @@ window.clicarElesResgatar = async function(cupomId, empresaId, empresaNome, titu
     });
   } catch (e) { console.error(e); }
 
-  resgatarCupomReal(cupomId, empresaId, empresaNome, titulo, prefixoCodigo, econ, endereco, telefone, regras, descontoPct);
+  resgatarCupomReal(cupomId, empresaId, empresaNomeEnc, tituloEnc, prefixoCodigo, econ, enderecoEnc, telefoneEnc, regrasEnc, descontoPct);
 };
 
 async function carregarEstatisticasLojista(empresaUid) {
@@ -1216,7 +1291,10 @@ async function carregarPainelAdmin() {
     try {
       const snapPix = await getDocs(collection(db, "pagamentos_pix"));
       snapPix.forEach(d => {
-        cachePagamentosPix.push({ id: d.id, ...d.data() });
+        const pixData = d.data();
+        if (!pixData.arquivado) {
+          cachePagamentosPix.push({ id: d.id, ...pixData });
+        }
       });
     } catch (e) { console.error(e); }
 
@@ -1229,16 +1307,6 @@ async function carregarPainelAdmin() {
         totalUsers++;
         if (u.vip) {
           totalVipsReais++;
-          if (cachePagamentosPix.length === 0 && u.origemVip !== "cupom_adm") {
-            cachePagamentosPix.push({
-              id: uid,
-              nome: u.nome || "Cliente VIP",
-              email: u.email || "Não informado",
-              whatsapp: u.whatsapp || "Não cadastrado",
-              valor: PRECO_VIP,
-              dataHora: u.vipAtivadoEm || u.criadoEm || new Date().toISOString()
-            });
-          }
         } else {
           totalFree++;
         }
@@ -1399,21 +1467,22 @@ window.executarExclusaoCliente = async function() {
   }
 };
 
+// PRESERVAÇÃO DE IDEMPOTÊNCIA: ARQUIVAR HISTÓRICO PIX EM VEZ DE DELETAR
 window.confirmarZerarHistoricoPix = async function() {
-  if (confirm("⚠️ Tem certeza que deseja ZERAR o histórico de Pix? Isso limpará todas as entradas financeiras registradas de teste.")) {
+  if (confirm("⚠️ Deseja arquivar o histórico visível de Pix? Os registros serão ocultados do painel, mas a segurança de idempotência contra pagamentos duplicados será preservada.")) {
     try {
       const snapPix = await getDocs(collection(db, "pagamentos_pix"));
       const batchPromises = [];
       snapPix.forEach(d => {
-        batchPromises.push(deleteDoc(doc(db, "pagamentos_pix", d.id)));
+        batchPromises.push(updateDoc(doc(db, "pagamentos_pix", d.id), { arquivado: true }));
       });
       await Promise.all(batchPromises);
 
       cachePagamentosPix = [];
-      mostrarAviso("Histórico Zerado! 🧹", "O histórico de leitura de Pix foi resetado com sucesso.", "✅");
+      mostrarAviso("Histórico Arquivado! 🧹", "O painel financeiro foi limpo mantendo a segurança do sistema.", "✅");
       carregarPainelAdmin();
     } catch(err) {
-      mostrarAviso("Erro ao zerar", err.message, "❌");
+      mostrarAviso("Erro ao arquivar", err.message, "❌");
     }
   }
 };
@@ -1459,6 +1528,7 @@ function renderizarRelatorioFinanceiro(periodo = 'hoje', customStart = null, cus
 
   const agora = new Date();
   let pagamentosFiltrados = cachePagamentosPix.filter(p => {
+    if (p.arquivado) return false;
     const dataP = new Date(p.dataHora);
     if (isNaN(dataP.getTime())) return true;
 
@@ -1705,22 +1775,46 @@ window.salvarEmpresaPeloAdmin = async function() {
   }
 };
 
+// CASCATA AO DESATIVAR EMPRESA: PAUSA TODOS OS CUPONS VINCULADOS
 window.toggleStatusEmpresaAdmin = async function(uid, estadoAtual) {
   try {
-    await updateDoc(doc(db, "usuarios", uid), { ativo: !estadoAtual });
-    mostrarAviso("Sucesso", "Status da empresa alterado.", "✅");
+    const novoEstado = !estadoAtual;
+    await updateDoc(doc(db, "usuarios", uid), { ativo: novoEstado });
+
+    // Se desativou a empresa, desativa todos os cupons dela
+    if (!novoEstado) {
+      const qC = query(collection(db, "cupons"), where("empresaId", "==", uid));
+      const snapC = await getDocs(qC);
+      const batchPromises = [];
+      snapC.forEach(d => {
+        batchPromises.push(updateDoc(doc(db, "cupons", d.id), { ativo: false }));
+      });
+      await Promise.all(batchPromises);
+    }
+
+    mostrarAviso("Sucesso", `Status da empresa e cupons alterado.`, "✅");
     carregarPainelAdmin();
   } catch (err) {
     mostrarAviso("Erro", err.message, "❌");
   }
 };
 
+// CASCATA AO EXCLUIR EMPRESA: APAGA TODOS OS CUPONS VINCULADOS
 window.excluirEmpresaAdmin = async function(uid, nomeEmpresa) {
   const nomeLimpo = decodeURIComponent(nomeEmpresa);
-  if (confirm(`Tem certeza que deseja excluir a empresa "${nomeLimpo}"? Esta ação removerá o cadastro do parceiro.`)) {
+  if (confirm(`Tem certeza que deseja excluir a empresa "${nomeLimpo}"? Esta ação removerá o cadastro do parceiro e todas as suas promoções.`)) {
     try {
       await deleteDoc(doc(db, "usuarios", uid));
-      mostrarAviso("Excluído 🗑️", `A empresa ${nomeLimpo} foi removida.`, "✅");
+      
+      const qC = query(collection(db, "cupons"), where("empresaId", "==", uid));
+      const snapC = await getDocs(qC);
+      const batchPromises = [];
+      snapC.forEach(d => {
+        batchPromises.push(deleteDoc(doc(db, "cupons", d.id)));
+      });
+      await Promise.all(batchPromises);
+
+      mostrarAviso("Excluído 🗑️", `A empresa ${nomeLimpo} e suas promoções foram removidas.`, "✅");
       carregarPainelAdmin();
     } catch (err) {
       mostrarAviso("Erro", err.message, "❌");
@@ -2069,7 +2163,8 @@ window.validarCupomTextoLojista = async function() {
     });
 
     dispararConfetes();
-    mostrarAviso("✅ DESCONTO APLICADO!", `Cupom validado!\nValor Pago pelo cliente: R$ ${valorFinalCalculado.toFixed(2).replace('.', ',')} (Economia de R$ ${valorDescontoCalculado.toFixed(2).replace('.', ',')})`, "🎉");
+    mostrarAviso("✅ DESCONTO APLICADO!", `Cupom validado!
+Valor Pago pelo cliente: R$ ${valorFinalCalculado.toFixed(2).replace('.', ',')} (Economia de R$ ${valorDescontoCalculado.toFixed(2).replace('.', ',')})`, "🎉");
     
     document.getElementById('input-validar-codigo').value = '';
     document.getElementById('box-calculo-validacao').style.display = 'none';
@@ -2355,7 +2450,13 @@ window.verificarStatusVipManual = async function() {
   finally { btn.innerHTML = `🔄 Já Paguei / Checar Agora`; }
 };
 
-window.resgatarCupomReal = async function(cupomId, empresaId, empresaNome, titulo, prefixo, valorEconomia = 10.00, endereco = 'Pelotas / RS', telefone = '', regras = '', descontoPct = 10) {
+window.resgatarCupomReal = async function(cupomId, empresaId, empresaNomeEnc, tituloEnc, prefixo, valorEconomia = 10.00, enderecoEnc = 'Pelotas / RS', telefoneEnc = '', regrasEnc = '', descontoPct = 10) {
+  const empresaNome = decodeURIComponent(empresaNomeEnc);
+  const titulo = decodeURIComponent(tituloEnc);
+  const endereco = decodeURIComponent(enderecoEnc);
+  const telefone = decodeURIComponent(telefoneEnc);
+  const regras = decodeURIComponent(regrasEnc);
+
   document.getElementById('modal-title').innerText = titulo;
   document.getElementById('modal-disc').innerText = empresaNome;
   document.getElementById('modal-address').innerText = endereco || 'Pelotas / RS';
