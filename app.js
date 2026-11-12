@@ -58,14 +58,12 @@ const PRECO_VIP = 19.90;
 let pixChecadoParaUid = null;
 let pixPollingInicio = 0;
 
-// Variáveis temporárias para validação com cálculo de desconto
 let cupomEmValidacao = null;
 let valorServicoCalculado = 0;
 let valorDescontoCalculado = 0;
 let valorFinalCalculado = 0;
 let descontoPctCalculado = 0;
 
-// FUNÇÃO AUXILIAR DE DEBOUNCE PARA EVITAR CONSULTAS EXCESSIVAS NO FIRESTORE
 function debounce(fn, delay) {
   return function (...args) {
     clearTimeout(timerDebounceValidacao);
@@ -73,7 +71,6 @@ function debounce(fn, delay) {
   };
 }
 
-// CÁLCULO DE DISTÂNCIA REAL GPS (FÓRMULA DE HAVERSINE)
 function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -86,7 +83,6 @@ function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-// DETECÇÃO DE MODO OFFLINE / ONLINE
 function checarStatusConexao() {
   const offlineScreen = document.getElementById('offline-screen');
   if (offlineScreen) {
@@ -153,7 +149,6 @@ onAuthStateChanged(auth, async (user) => {
       if (snapshot.exists()) {
         data = snapshot.data();
       } else {
-        // PREVENÇÃO DE LOJISTA ÓRFÃO: Checa se já existe pré-cadastro pelo e-mail criado pelo Admin
         const qOrfao = query(collection(db, "usuarios"), where("email", "==", user.email.toLowerCase()), where("funcao", "==", "lojista"));
         const snapOrfao = await getDocs(qOrfao);
 
@@ -161,12 +156,13 @@ onAuthStateChanged(auth, async (user) => {
           const docOrfao = snapOrfao.docs[0];
           data = { ...docOrfao.data(), uid: user.uid };
           await setDoc(userDocRef, data);
-          await deleteDoc(doc(db, "usuarios", docOrfao.id)); // Migra para o UID real do Auth
+          await deleteDoc(doc(db, "usuarios", docOrfao.id));
         } else {
           data = {
             nome: user.displayName || "Cliente Clube PRIME",
             email: user.email.toLowerCase(),
             whatsapp: "",
+            cpf: "",
             fotoUrl: user.photoURL || null,
             funcao: "cliente",
             vip: false,
@@ -179,11 +175,10 @@ onAuthStateChanged(auth, async (user) => {
 
       window.currentUserData = data;
 
-      // ONBOARDING SE CADASTROU COM GOOGLE E NÃO PREENCHEU WHATSAPP
       if (data.funcao === "cliente" && (!data.whatsapp || data.whatsapp.trim() === '')) {
         setTimeout(() => {
           abrirModalEditarCliente();
-          mostrarAviso("Complete seu Perfil 📱", "Por favor, cadastre seu WhatsApp para resgatar cupons sem problemas.", "ℹ️");
+          mostrarAviso("Complete seu Perfil 📱", "Por favor, cadastre seu WhatsApp e CPF para resgatar cupons e gerar Pix sem problemas.", "ℹ️");
         }, 1200);
       }
       
@@ -221,7 +216,6 @@ onAuthStateChanged(auth, async (user) => {
         return;
       }
 
-      // Checa pagamento pendente só uma vez por login e só se ainda não é VIP
       if (!data.vip && pixChecadoParaUid !== user.uid) {
         pixChecadoParaUid = user.uid;
         fetch(`https://webhook-clubprime.vercel.app/api/checar-pix?email=${encodeURIComponent(user.email)}&userId=${user.uid}`)
@@ -334,7 +328,6 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// FUNÇÃO DE GEOLOCALIZAÇÃO / GPS REAL PARA ORDENAR EMPRESAS POR PROXIMIDADE
 window.ativarBuscaProximidadeGps = function() {
   if (!navigator.geolocation) {
     return mostrarAviso("GPS Indisponível", "Seu navegador não suporta geolocalização.", "⚠️");
@@ -380,6 +373,7 @@ window.abrirModalEditarCliente = function() {
   if (!window.currentUserData) return;
   document.getElementById('edit-client-name').value = window.currentUserData.nome || '';
   document.getElementById('edit-client-whatsapp').value = window.currentUserData.whatsapp || '';
+  document.getElementById('edit-client-cpf').value = window.currentUserData.cpf || '';
   document.getElementById('edit-client-pass').value = '';
   document.getElementById('modal-edit-client').classList.add('active');
 };
@@ -390,14 +384,17 @@ window.salvarAlteracoesCliente = async function() {
 
   const novoNome = document.getElementById('edit-client-name').value.trim();
   const novoWhatsapp = document.getElementById('edit-client-whatsapp').value.trim();
+  const novoCpf = document.getElementById('edit-client-cpf').value.replace(/\D/g, '');
   const novaSenha = document.getElementById('edit-client-pass').value.trim();
 
   if (!novoNome) return mostrarAviso("Atenção", "O nome não pode ficar em branco.", "⚠️");
+  if (novoCpf && novoCpf.length !== 11) return mostrarAviso("Atenção", "O CPF deve conter exatamente 11 dígitos.", "⚠️");
 
   try {
     await updateDoc(doc(db, "usuarios", user.uid), {
       nome: novoNome,
-      whatsapp: novoWhatsapp
+      whatsapp: novoWhatsapp,
+      cpf: novoCpf
     });
 
     if (novaSenha && novaSenha.length >= 6) {
@@ -770,7 +767,6 @@ window.renderizarHistoricoClientePerfil = function() {
   container.innerHTML = html;
 };
 
-// CORREÇÃO DA CÂMERA DO QR CODE (FORÇANDO A CÂMERA TRASEIRA)
 window.abrirLeitorQrCode = function() {
   const container = document.getElementById('reader-container');
   container.style.display = 'block';
@@ -801,7 +797,6 @@ window.fecharLeitorQrCode = function() {
   document.getElementById('reader-container').style.display = 'none';
 };
 
-// DEBOUNCE APLICADO NA VALIDAÇÃO DO LOJISTA PARA ECONOMIZAR REQUISIÇÕES AO FIRESTORE
 window.verificarCodigoDigitadoLojista = debounce(async function(codigo) {
   const codLimpo = (codigo || document.getElementById('input-validar-codigo').value).trim().toUpperCase();
   const boxCalculo = document.getElementById('box-calculo-validacao');
@@ -1049,7 +1044,6 @@ function carregarCuponsVitrine() {
         const limiteTxt = cupom.limite === 'daily' ? '1 por dia' : cupom.limite === 'once' ? 'Uso único' : 'Ilimitado';
         const pctTxt = cupom.descontoPct ? `${cupom.descontoPct}% OFF` : (cupom.descontoBadge || 'OFERTA');
 
-        // SEGURANÇA DE ASPAS: ENCODE DOS PARÂMETROS
         const encNome = encodeURIComponent(emp.nome);
         const encTitulo = encodeURIComponent(cupom.titulo);
         const encEnd = encodeURIComponent(emp.endereco);
@@ -1467,7 +1461,6 @@ window.executarExclusaoCliente = async function() {
   }
 };
 
-// PRESERVAÇÃO DE IDEMPOTÊNCIA: ARQUIVAR HISTÓRICO PIX EM VEZ DE DELETAR
 window.confirmarZerarHistoricoPix = async function() {
   if (confirm("⚠️ Deseja arquivar o histórico visível de Pix? Os registros serão ocultados do painel, mas a segurança de idempotência contra pagamentos duplicados será preservada.")) {
     try {
@@ -1775,13 +1768,11 @@ window.salvarEmpresaPeloAdmin = async function() {
   }
 };
 
-// CASCATA AO DESATIVAR EMPRESA: PAUSA TODOS OS CUPONS VINCULADOS
 window.toggleStatusEmpresaAdmin = async function(uid, estadoAtual) {
   try {
     const novoEstado = !estadoAtual;
     await updateDoc(doc(db, "usuarios", uid), { ativo: novoEstado });
 
-    // Se desativou a empresa, desativa todos os cupons dela
     if (!novoEstado) {
       const qC = query(collection(db, "cupons"), where("empresaId", "==", uid));
       const snapC = await getDocs(qC);
@@ -1799,7 +1790,6 @@ window.toggleStatusEmpresaAdmin = async function(uid, estadoAtual) {
   }
 };
 
-// CASCATA AO EXCLUIR EMPRESA: APAGA TODOS OS CUPONS VINCULADOS
 window.excluirEmpresaAdmin = async function(uid, nomeEmpresa) {
   const nomeLimpo = decodeURIComponent(nomeEmpresa);
   if (confirm(`Tem certeza que deseja excluir a empresa "${nomeLimpo}"? Esta ação removerá o cadastro do parceiro e todas as suas promoções.`)) {
@@ -2163,8 +2153,7 @@ window.validarCupomTextoLojista = async function() {
     });
 
     dispararConfetes();
-    mostrarAviso("✅ DESCONTO APLICADO!", `Cupom validado!
-Valor Pago pelo cliente: R$ ${valorFinalCalculado.toFixed(2).replace('.', ',')} (Economia de R$ ${valorDescontoCalculado.toFixed(2).replace('.', ',')})`, "🎉");
+    mostrarAviso("✅ DESCONTO APLICADO!", `Cupom validado!\nValor Pago pelo cliente: R$ ${valorFinalCalculado.toFixed(2).replace('.', ',')} (Economia de R$ ${valorDescontoCalculado.toFixed(2).replace('.', ',')})`, "🎉");
     
     document.getElementById('input-validar-codigo').value = '';
     document.getElementById('box-calculo-validacao').style.display = 'none';
@@ -2261,6 +2250,7 @@ window.switchAuthTab = function(type) {
   document.getElementById('tab-signup').classList.toggle('active', type === 'signup');
   document.getElementById('group-name').style.display = type === 'signup' ? 'block' : 'none';
   document.getElementById('group-whatsapp').style.display = type === 'signup' ? 'block' : 'none';
+  document.getElementById('group-cpf').style.display = type === 'signup' ? 'block' : 'none';
   document.getElementById('box-merchant-options').style.display = type === 'signup' ? 'block' : 'none';
   document.getElementById('box-privacy-terms').style.display = type === 'signup' ? 'block' : 'none';
   document.getElementById('box-esqueci').style.display = type === 'login' ? 'block' : 'none';
@@ -2312,6 +2302,7 @@ window.executarAuth = async function() {
   if (currentAuthTab === 'signup') {
     const nome = document.getElementById('reg-name').value;
     const whatsapp = document.getElementById('reg-whatsapp')?.value.trim() || '';
+    const cpf = document.getElementById('reg-cpf')?.value.replace(/\D/g, '') || '';
     const email = document.getElementById('reg-email').value;
     const pass = document.getElementById('reg-pass').value;
     const acceptTerms = document.getElementById('chk-privacy-terms').checked;
@@ -2323,6 +2314,7 @@ window.executarAuth = async function() {
     const storeCode = document.getElementById('reg-store-code')?.value.trim().toUpperCase();
 
     if (!email || !pass || !nome) return mostrarAviso("Atenção", "Preencha todos os campos.", "⚠️");
+    if (cpf && cpf.length !== 11) return mostrarAviso("CPF Inválido", "O CPF deve conter exatamente 11 dígitos.", "⚠️");
     if (!acceptTerms) return mostrarAviso("Atenção", "Você precisa aceitar os Termos de Privacidade.", "📜");
 
     let userRole = "cliente";
@@ -2340,6 +2332,7 @@ window.executarAuth = async function() {
         nome: nome,
         email: email.trim().toLowerCase(),
         whatsapp: whatsapp,
+        cpf: cpf,
         funcao: userRole,
         vip: false,
         criadoEm: new Date().toISOString()
@@ -2388,19 +2381,9 @@ window.gerarPixMercadoPago = async function() {
   const emailPix = user ? user.email : "teste@clubprime.com";
   
   let cpf = window.currentUserData?.cpf || '';
-  if (!cpf) {
-    const inputCpf = prompt("Informe o seu CPF (apenas números) para gerar a cobrança Pix do VIP:");
-    if (!inputCpf) return;
-    cpf = inputCpf.replace(/\D/g, '');
-    if (cpf.length !== 11) {
-      return mostrarAviso("CPF Inválido", "O CPF deve conter exatamente 11 dígitos.", "⚠️");
-    }
-    if (user) {
-      try {
-        await updateDoc(doc(db, "usuarios", user.uid), { cpf: cpf });
-        if (window.currentUserData) window.currentUserData.cpf = cpf;
-      } catch (e) { console.error(e); }
-    }
+  if (!cpf || cpf.length !== 11) {
+    mostrarAviso("CPF Necessário 📝", "Por favor, cadastre seu CPF no seu Perfil antes de gerar a cobrança Pix.", "⚠️");
+    return;
   }
 
   const btn = document.getElementById('btn-gerar-pix');
