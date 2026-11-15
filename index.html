@@ -266,6 +266,7 @@
       </details>
 
       <button class="btn" style="margin-bottom:20px;" onclick="abrirModalCriarOferta()">➕ Publicar Nova Oferta / Cupom (Máx. 3)</button>
+      <button class="btn btn-outline" style="margin-bottom:20px;" onclick="abrirPreviewVitrineLojista()">👁️ Ver como o cliente vê</button>
 
       <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:12px;">Suas Promoções Criadas</h3>
       <div id="merchant-offers-list">
@@ -292,11 +293,12 @@
       </button>
 
       <!-- MENU DE ABAS LIMPAS NO ADM -->
-      <div class="auth-tabs" style="margin-bottom:14px; grid-template-columns: repeat(4, 1fr);">
+      <div class="auth-tabs" style="margin-bottom:14px; grid-template-columns: repeat(5, 1fr);">
         <div id="adm-tab-dash" class="auth-tab active" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('dash')">📊 Dash</div>
         <div id="adm-tab-cupons" class="auth-tab" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('cupons')">🎟️ Cupons</div>
         <div id="adm-tab-clientes" class="auth-tab" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('clientes')">👥 Clientes</div>
         <div id="adm-tab-empresas" class="auth-tab" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('empresas')">🏢 Lojas</div>
+        <div id="adm-tab-logs" class="auth-tab" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('logs')">📜 Logs</div>
       </div>
 
       <!-- ABA 1: DASHBOARD & RELATÓRIOS FINANCEIROS -->
@@ -308,75 +310,84 @@
           <button id="btn-subtab-finance" class="btn btn-outline btn-small" style="flex:1;" onclick="switchDashSubTab('finance')">💳 Financeiro & Pix</button>
         </div>
 
-        <!-- VISÃO GERAL -->
+        <!-- VISÃO GERAL (reorganizada) -->
         <div id="dash-sub-overview">
-          <div class="admin-grid" style="gap:8px; margin-bottom:12px;">
-            <div class="admin-stat-card" style="padding:10px;">
-              <div class="admin-stat-lbl" style="font-size:0.6rem;">Usuários</div>
-              <div id="admin-count-users" class="admin-stat-val" style="font-size:1.1rem;">0</div>
+
+          <div style="font-size:0.68rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; margin:4px 2px 6px;">👥 Clientes</div>
+          <div class="admin-grid" style="grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px;">
+            <div class="admin-stat-card" style="padding:8px 4px;">
+              <div class="admin-stat-lbl" style="font-size:0.58rem;">Usuários</div>
+              <div id="admin-count-users" class="admin-stat-val" style="font-size:1.05rem;">0</div>
             </div>
-            <div class="admin-stat-card" style="padding:10px;">
-              <div class="admin-stat-lbl" style="font-size:0.6rem;">VIPs Reais</div>
-              <div id="admin-count-vips" class="admin-stat-val" style="font-size:1.1rem;">0</div>
+            <div class="admin-stat-card" style="padding:8px 4px;">
+              <div class="admin-stat-lbl" style="font-size:0.58rem;">VIPs</div>
+              <div id="admin-count-vips" class="admin-stat-val" style="font-size:1.05rem;">0</div>
             </div>
-            <div class="admin-stat-card" style="padding:10px;">
-              <div class="admin-stat-lbl" style="font-size:0.6rem;">Conversão VIP</div>
-              <div id="admin-vip-conversion-rate" class="admin-stat-val" style="font-size:1.1rem; color:var(--accent);">0%</div>
-            </div>
-            <div class="admin-stat-card" style="padding:10px;">
-              <div class="admin-stat-lbl" style="font-size:0.6rem;">Free</div>
-              <div id="admin-count-free" class="admin-stat-val" style="font-size:1.1rem;">0</div>
-            </div>
-            <div class="admin-stat-card" style="padding:10px;">
-              <div class="admin-stat-lbl" style="font-size:0.6rem;">Lojistas</div>
-              <div id="admin-count-merchants" class="admin-stat-val" style="font-size:1.1rem;">0</div>
-            </div>
-            <div class="admin-stat-card" style="padding:10px;">
-              <div class="admin-stat-lbl" style="font-size:0.6rem;">Ofertas</div>
-              <div id="admin-count-offers" class="admin-stat-val" style="font-size:1.1rem;">0</div>
-            </div>
-            <div class="admin-stat-card" style="padding:10px;">
-              <div class="admin-stat-lbl" style="font-size:0.6rem;">Resgates Usados</div>
-              <div id="admin-count-coupons-used" class="admin-stat-val" style="font-size:1.1rem;">0</div>
-            </div>
-            <div class="admin-stat-card" style="padding:10px;">
-              <div class="admin-stat-lbl" style="font-size:0.6rem;">Pix Aprovados</div>
-              <div id="admin-count-payments-approved" class="admin-stat-val" style="font-size:1.1rem; color:#10b981;">0</div>
+            <div class="admin-stat-card" style="padding:8px 4px;">
+              <div class="admin-stat-lbl" style="font-size:0.58rem;">Free</div>
+              <div id="admin-count-free" class="admin-stat-val" style="font-size:1.05rem;">0</div>
             </div>
           </div>
 
-          <!-- GRÁFICO: CADASTRO DE NOVOS CLIENTES AO LONGO DO TEMPO -->
-          <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:12px;">
-            <h3 style="font-size:0.85rem; font-weight:800; margin-bottom:6px; color:var(--text);">📈 Crescimento de Cadastros de Clientes</h3>
-            <div style="position:relative; width:100%; height:130px;">
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:12px; display:flex; align-items:center; gap:14px;">
+            <div style="position:relative; width:110px; height:110px; flex-shrink:0;">
+              <canvas id="chartUsersVip"></canvas>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:0.68rem; color:var(--muted); font-weight:800; text-transform:uppercase;">Conversão VIP</div>
+              <div id="admin-vip-conversion-rate" style="font-size:1.8rem; font-weight:900; color:var(--accent); line-height:1.1;">0%</div>
+              <div style="font-size:0.7rem; margin-top:6px; color:var(--muted);">
+                <span style="color:#f97316;">●</span> VIP &nbsp; <span style="color:#64748b;">●</span> Free
+              </div>
+            </div>
+          </div>
+
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:14px;">
+            <h3 style="font-size:0.85rem; font-weight:800; margin-bottom:6px; color:var(--text);">📈 Novos cadastros (7 dias)</h3>
+            <div style="position:relative; width:100%; height:120px;">
               <canvas id="chartUsersGrowth"></canvas>
             </div>
           </div>
 
-          <!-- GRÁFICO DE BARRAS: VIP x FREE -->
-          <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:12px;">
-            <h3 style="font-size:0.85rem; font-weight:800; margin-bottom:6px; color:var(--text);">📊 Proporção Free vs VIP</h3>
-            <div style="position:relative; width:100%; height:120px;">
-              <canvas id="chartUsersVip"></canvas>
+          <div style="font-size:0.68rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; margin:4px 2px 6px;">🏢 Parceiros e atividade</div>
+          <div class="admin-grid" style="grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:14px;">
+            <div class="admin-stat-card" style="padding:8px 4px;">
+              <div class="admin-stat-lbl" style="font-size:0.58rem;">Lojas</div>
+              <div id="admin-count-merchants" class="admin-stat-val" style="font-size:1.05rem;">0</div>
+            </div>
+            <div class="admin-stat-card" style="padding:8px 4px;">
+              <div class="admin-stat-lbl" style="font-size:0.58rem;">Ofertas</div>
+              <div id="admin-count-offers" class="admin-stat-val" style="font-size:1.05rem;">0</div>
+            </div>
+            <div class="admin-stat-card" style="padding:8px 4px;">
+              <div class="admin-stat-lbl" style="font-size:0.58rem;">Resgates</div>
+              <div id="admin-count-coupons-used" class="admin-stat-val" style="font-size:1.05rem;">0</div>
+            </div>
+            <div class="admin-stat-card" style="padding:8px 4px;">
+              <div class="admin-stat-lbl" style="font-size:0.58rem;">Pix</div>
+              <div id="admin-count-payments-approved" class="admin-stat-val" style="font-size:1.05rem; color:#10b981;">0</div>
             </div>
           </div>
 
-          <!-- AVISOS GLOBAIS -->
-          <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:12px;">
-            <h3 style="font-size:0.9rem; font-weight:800; margin-bottom:6px;">📢 Aviso para Todos os Clientes</h3>
-            <div class="form-group" style="text-align:left; margin-bottom:6px;">
-              <input type="text" id="admin-global-banner-text" class="form-control" placeholder="Ex: 🔥 Novas ofertas na cidade!">
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <h3 style="font-size:0.85rem; font-weight:800; color:var(--text);">📜 Últimas atividades</h3>
+              <button class="btn btn-outline btn-small" style="padding:4px 8px; font-size:0.68rem;" onclick="switchAdminTab('logs')">Ver tudo</button>
             </div>
-            <button class="btn btn-cyan" style="padding:8px; font-size:0.8rem;" onclick="salvarBannerGlobalAdmin()">💾 Publicar Aviso</button>
+            <div id="admin-recent-activity" style="font-size:0.72rem; color:var(--muted);">Carregando...</div>
           </div>
 
-          <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:16px;">
-            <h3 style="font-size:0.9rem; font-weight:800; margin-bottom:6px;">🏢 Recado Exclusivo para Lojistas</h3>
-            <div class="form-group" style="text-align:left; margin-bottom:6px;">
-              <input type="text" id="admin-merchant-banner-text" class="form-control" placeholder="Ex: ⚠️ Lembre-se de validar os cupons!">
+          <details style="background:var(--card); border:1px solid var(--card-border); padding:12px 14px; border-radius:14px; margin-bottom:16px;">
+            <summary style="font-size:0.85rem; font-weight:800; cursor:pointer;">📢 Avisos e recados</summary>
+            <div style="margin-top:10px;">
+              <label style="font-size:0.72rem; font-weight:800; color:var(--muted);">Para todos os clientes</label>
+              <input type="text" id="admin-global-banner-text" class="form-control" style="margin:4px 0 6px;" placeholder="Ex: 🔥 Novas ofertas na cidade!">
+              <button class="btn btn-cyan" style="padding:8px; font-size:0.8rem; margin-bottom:12px;" onclick="salvarBannerGlobalAdmin()">💾 Publicar Aviso</button>
+              <label style="font-size:0.72rem; font-weight:800; color:var(--muted);">Exclusivo para lojistas</label>
+              <input type="text" id="admin-merchant-banner-text" class="form-control" style="margin:4px 0 6px;" placeholder="Ex: ⚠️ Lembre-se de validar os cupons!">
+              <button class="btn btn-cyan" style="padding:8px; font-size:0.8rem;" onclick="salvarBannerLojistaAdmin()">💾 Publicar Recado</button>
             </div>
-            <button class="btn btn-cyan" style="padding:8px; font-size:0.8rem;" onclick="salvarBannerLojistaAdmin()">💾 Publicar Recado</button>
-          </div>
+          </details>
         </div>
 
         <!-- RELATÓRIO FINANCEIRO E PIX COMPLETO -->
@@ -468,6 +479,28 @@
         </div>
       </div>
 
+      <!-- ABA: LOGS DO SISTEMA -->
+      <div id="adm-section-logs" class="admin-tab-content" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <h3 style="font-size:1rem; font-weight:800;">Registro de Atividades</h3>
+          <button class="btn btn-cyan btn-small" onclick="carregarLogsAdminSistema()">🔄 Atualizar</button>
+        </div>
+        <div style="display:flex; gap:6px; margin-bottom:8px;">
+          <select id="filter-system-log-cat" class="form-control" style="flex:1;" onchange="renderizarLogsSistema()">
+            <option value="all">Todas as categorias</option>
+            <option value="vip">👑 VIP</option>
+            <option value="empresa">🏢 Empresa</option>
+            <option value="cliente">👤 Cliente</option>
+            <option value="cupom">🎟️ Cupom</option>
+            <option value="financeiro">💳 Financeiro</option>
+            <option value="sistema">⚙️ Sistema</option>
+          </select>
+          <input id="filter-system-log-text" class="form-control" style="flex:1;" placeholder="Buscar..." oninput="renderizarLogsSistema()">
+        </div>
+        <div id="admin-system-logs-count" style="font-size:0.7rem; color:var(--muted); margin-bottom:8px;"></div>
+        <div id="admin-system-logs-list" style="max-height:60vh; overflow-y:auto; padding-right:4px;"></div>
+      </div>
+
       <!-- ABA 3: CLIENTES -->
       <div id="adm-section-clientes" class="admin-tab-content" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -550,7 +583,7 @@
         <div class="hero-stats" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.15);">
           <div class="stat-item">
             <div id="user-economy-display" class="stat-val" style="font-size: 0.85rem;">R$ 0,00</div>
-            <div class="stat-lbl" style="font-size: 0.55rem;">Economia Média/mês</div>
+            <div class="stat-lbl" style="font-size: 0.55rem;">Economia total</div>
           </div>
           <div class="stat-item" onclick="abrirModalNiveis()" style="cursor:pointer;" title="Clique para ver detalhes dos níveis">
             <div id="user-level-display" class="stat-val" style="font-size: 0.85rem;">🥉 Bronze</div>
@@ -559,17 +592,11 @@
         </div>
       </div>
 
-      <div id="banner-assinatura" class="card-vip-banner">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <span style="font-size:0.7rem; font-weight:900; color:var(--accent); letter-spacing:1px; text-transform:uppercase;">Plano Membro PRIME</span>
-            <h3 style="font-size:1.15rem; font-weight:900; margin-top:2px;">Seja VIP por R$ 19,90</h3>
-            <p style="font-size:0.78rem; color:var(--muted); margin-top:2px;">Ativação instantânea via Pix (30 dias).</p>
-          </div>
-          <span style="font-weight:900; color:var(--accent); font-size:1.25rem;">ASSINE JÁ!</span>
-        </div>
-        
-        <button id="btn-gerar-pix" class="btn btn-cyan" style="margin-top:14px;" onclick="gerarPixMercadoPago()">⚡ Ativar VIP por R$ 19,90 via PIX</button>
+      <div id="banner-assinatura" class="card-vip-banner" style="padding:12px 14px; margin-bottom:12px;">
+        <span style="font-size:0.65rem; font-weight:900; color:var(--accent); letter-spacing:1px; text-transform:uppercase;">Plano Membro PRIME</span>
+        <h3 style="font-size:1rem; font-weight:900; margin-top:2px;">Libere todos os cupons</h3>
+        <p style="font-size:0.74rem; color:var(--muted); margin-top:2px;">Ativação instantânea via Pix • 30 dias</p>
+        <button id="btn-gerar-pix" class="btn btn-cyan" style="margin-top:10px; padding:10px; font-size:0.85rem;" onclick="gerarPixMercadoPago()">⚡ Ser VIP · R$ 19,90</button>
       </div>
 
       <div style="margin-bottom:18px;">
@@ -578,8 +605,8 @@
 
       <!-- CATEGORIAS EXPANDIDAS + BOTÃO DE GPS (PRÓXIMOS DE MIM) -->
       <div class="categories-bar">
-        <div class="category-pill active" onclick="filterCat('all', this)">Todos Os Cupons</div>
-        <div class="category-pill" style="background:var(--primary); color:#fff; border-color:var(--primary);" onclick="ativarBuscaProximidadeGps()">📍 Próximos de Mim (GPS)</div>
+        <div class="category-pill active" onclick="filterCat('all', this)">Todos os cupons</div>
+        <div class="category-pill" style="background:transparent; color:var(--primary); border:1.5px dashed var(--primary);" onclick="ativarBuscaProximidadeGps()">📍 Próximos de Mim (GPS)</div>
         <div class="category-pill" onclick="filterCat('gastronomia', this)">🍔 Gastronomia & Delivery</div>
         <div class="category-pill" onclick="filterCat('compras', this)">🛍️ Lojas & Compras</div>
         <div class="category-pill" onclick="filterCat('automotivo', this)">🔧 Automotivo</div>
@@ -784,6 +811,15 @@
       </div>
 
       <button class="btn" onclick="fecharModal('modal-regras-cupom')">Fechar</button>
+    </div>
+  </div>
+
+  <div id="modal-preview-vitrine" class="modal">
+    <div class="modal-content" style="text-align:left; max-height:85vh; overflow-y:auto;">
+      <h3 style="font-size:1.1rem; font-weight:900; text-align:center; margin-bottom:4px;">👁️ Visão do Cliente</h3>
+      <p style="font-size:0.72rem; color:var(--muted); text-align:center; margin-bottom:12px;">É assim que sua empresa aparece na vitrine (somente visualização).</p>
+      <div id="preview-vitrine-conteudo"></div>
+      <button class="btn" style="margin-top:14px;" onclick="fecharModal('modal-preview-vitrine')">Fechar</button>
     </div>
   </div>
 

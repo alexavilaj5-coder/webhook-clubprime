@@ -13,7 +13,7 @@ if ('serviceWorker' in navigator) {
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, updatePassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, increment, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, increment, writeBatch, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCTVY6ogF-o7pGuDeHPYCkGfrkeLTvpjKU",
@@ -49,6 +49,7 @@ let timerDebounceValidacao = null;
 let unsubscribeUser = null;
 let unsubscribeCupons = null;
 let unsubscribeMerchantCupons = null;
+let unsubscribeMerchantLogs = null;
 
 let cachePagamentosPix = [];
 let cacheTodosUsuarios = [];
@@ -85,10 +86,31 @@ function encAttr(valor) {
   return encodeURIComponent(valor ?? '').replace(/'/g, '%27');
 }
 
+const ICONES_CATEGORIA = { gastronomia: '🍔', compras: '🛍️', automotivo: '🔧', beleza: '💇', servicos: '⚙️', pet: '🐾', saude: '🏥', lazer: '🎟️' };
+
 function numeroOuNulo(valor) {
   if (valor === null || valor === undefined || valor === '') return null;
   const n = Number(valor);
   return Number.isFinite(n) ? n : null;
+}
+
+async function registrarLogAdmin(categoria, acao, detalhe = '') {
+  try {
+    const u = auth.currentUser;
+    await addDoc(collection(db, "logs_admin"), {
+      categoria, acao,
+      detalhe: String(detalhe ?? '').slice(0, 400),
+      autorUid: u?.uid || null,
+      autorEmail: u?.email || null,
+      autorFuncao: window.currentUserData?.funcao || null,
+      dataHora: new Date().toISOString()
+    });
+  } catch (e) { console.warn('Log não gravado:', e.message); }
+}
+
+function copiarTexto(texto) {
+  if (!navigator.clipboard) return Promise.resolve(false);
+  return navigator.clipboard.writeText(texto).then(() => true).catch(() => false);
 }
 
 let posicaoUsuarioGps = null;
@@ -231,6 +253,8 @@ function resetarEstadoUI() {
   if (unsubscribeUser) { unsubscribeUser(); unsubscribeUser = null; }
   if (unsubscribeCupons) { unsubscribeCupons(); unsubscribeCupons = null; }
   if (unsubscribeMerchantCupons) { unsubscribeMerchantCupons(); unsubscribeMerchantCupons = null; }
+  if (unsubscribeMerchantLogs) { unsubscribeMerchantLogs(); unsubscribeMerchantLogs = null; }
+  window._avisoPerfilMostrado = false;
   
   const boxVoltar = document.getElementById('box-voltar-admin');
   if (boxVoltar) boxVoltar.style.display = 'none';
@@ -241,6 +265,7 @@ function resetarEstadoUI() {
 function celebrarVip(msg) {
   if (Date.now() - (window._ultimaCelebracaoVip || 0) < 15000) return;
   window._ultimaCelebracaoVip = Date.now();
+  registrarLogAdmin('financeiro', 'VIP ativado/renovado por Pix', auth.currentUser?.email || '');
   fecharModal('modal-pix');
   dispararConfetes();
   mostrarAviso("VIP Ativado! 🎉", msg || "Seu acesso VIP foi liberado.", "👑");
@@ -283,7 +308,8 @@ onAuthStateChanged(auth, async (user) => {
 
       window.currentUserData = data;
 
-      if (data.funcao === "cliente" && (!data.whatsapp || data.whatsapp.trim() === '')) {
+      if (data.funcao === "cliente" && (!data.whatsapp || data.whatsapp.trim() === '') && !window._avisoPerfilMostrado) {
+        window._avisoPerfilMostrado = true;
         setTimeout(() => {
           abrirModalEditarCliente();
           mostrarAviso("Complete seu Perfil 📱", "Por favor, cadastre seu WhatsApp e CPF para resgatar cupons e gerar Pix sem problemas.", "ℹ️");
@@ -576,6 +602,7 @@ window.resgatarCupomVipAdm = async function() {
       origemVip: "cupom_adm"
     });
 
+    registrarLogAdmin('vip', 'Cupom VIP resgatado', `${codigoDigitado} por ${user.email}`);
     document.getElementById('input-cupom-vip-adm').value = '';
     dispararConfetes();
     mostrarAviso("VIP Ativado! 🎉", "Parabéns! Você ganhou 30 dias de acesso VIP ao Clube Prime!", "👑");
@@ -599,6 +626,7 @@ window.gerar40CuponsVipAdmin = async function() {
       }));
     }
     await Promise.all(batchPromises);
+    registrarLogAdmin('vip', '40 cupons VIP gerados', '30 dias cada');
     mostrarAviso("Sucesso! 🎁", "40 cupons VIP de 30 dias gerados com sucesso!", "✅");
     carregarPainelAdmin();
   } catch(err) {
@@ -622,7 +650,7 @@ async function carregarCuponsVipAdminList() {
       const statusText = c.usado ? "🔴 UTILIZADO" : "🟢 DISPONÍVEL";
       html += `
         <div style="display:flex; justify-content:space-between; align-items:center; background:var(--card); padding:6px 8px; border-radius:8px; margin-bottom:4px; border:1px solid var(--card-border);">
-          <span style="font-weight:800; font-family:monospace;">${c.codigo}</span>
+          <span style="font-weight:800; font-family:monospace;">${escapeHtml(c.codigo)}</span>
           <span style="color:${statusColor}; font-weight:800; font-size:0.68rem;">${statusText}</span>
         </div>
       `;
@@ -711,7 +739,7 @@ function escutarLeilaoPatrocinado() {
         }
 
         if (instagram) {
-          instaBtn.href = `https://instagram.com/${instagram.replace('@', '')}`;
+          instaBtn.href = `https://instagram.com/${encodeURIComponent(instagram.replace('@', ''))}`;
           instaBtn.style.display = 'inline-flex';
         } else {
           instaBtn.style.display = 'none';
@@ -763,6 +791,7 @@ window.salvarPatrocinadoDaSemana = async function() {
       atualizadoEm: new Date().toISOString()
     }, { merge: true });
 
+    registrarLogAdmin('empresa', 'Patrocinada da semana definida', nome);
     fecharModal('modal-patrocinar-empresa');
     dispararConfetes();
     mostrarAviso("Sucesso! ⭐", `A empresa "${nome}" agora é a Patrocinada da Semana no aplicativo!`, "✅");
@@ -870,10 +899,10 @@ window.renderizarHistoricoClientePerfil = function() {
     html += `
       <div style="background:var(--secondary); border:1px solid var(--card-border); padding:10px; border-radius:12px; margin-bottom:8px;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <strong style="font-size:0.82rem; color:var(--text);">🏢 ${l.empresaNome || 'Loja'}</strong>
+          <strong style="font-size:0.82rem; color:var(--text);">🏢 ${escapeHtml(l.empresaNome || 'Loja')}</strong>
           <span style="font-size:0.75rem; font-weight:900; color:#10b981;">-${desc} ${pct}</span>
         </div>
-        <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">🎟️ ${l.cupomTitulo}</div>
+        <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">🎟️ ${escapeHtml(l.cupomTitulo)}</div>
         <div style="font-size:0.68rem; color:var(--muted); margin-top:4px;">🕒 ${dtStr}</div>
       </div>
     `;
@@ -1085,6 +1114,7 @@ window.salvarBannerGlobalAdmin = async function() {
   const texto = document.getElementById('admin-global-banner-text').value.trim();
   try {
     await setDoc(doc(db, "configuracoes", "banner_global"), { texto: texto });
+    registrarLogAdmin('sistema', 'Aviso de clientes alterado', texto);
     mostrarAviso("Atualizado! 📢", "Aviso de clientes publicado.", "✅");
   } catch (err) {
     mostrarAviso("Erro", err.message, "❌");
@@ -1095,6 +1125,7 @@ window.salvarBannerLojistaAdmin = async function() {
   const texto = document.getElementById('admin-merchant-banner-text').value.trim();
   try {
     await setDoc(doc(db, "configuracoes", "banner_lojistas"), { texto: texto });
+    registrarLogAdmin('sistema', 'Recado de lojistas alterado', texto);
     mostrarAviso("Atualizado! 🏢", "Recado para lojistas publicado.", "✅");
   } catch (err) {
     mostrarAviso("Erro", err.message, "❌");
@@ -1150,7 +1181,7 @@ function carregarCuponsVitrine() {
           ${imgHtml}
           <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
             <div>
-              <h3 style="font-size:1.1rem; font-weight:900; color:var(--text);">🏢 ${escapeHtml(emp.nome)}</h3>
+              <h3 style="font-size:1.1rem; font-weight:900; color:var(--text);">${ICONES_CATEGORIA[emp.categoria] || '🏢'} ${escapeHtml(emp.nome)}</h3>
               <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">📍 ${escapeHtml(emp.endereco)} <span class="distancia-badge" style="font-weight:800; color:var(--primary);"></span></div>
             </div>
             <span style="font-size:0.7rem; font-weight:800; color:var(--primary); background:var(--secondary); padding:4px 8px; border-radius:10px;">${emp.cupons.length} Oferta(s)</span>
@@ -1174,7 +1205,7 @@ function carregarCuponsVitrine() {
             <div style="flex:1; padding-right:8px;">
               <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
                 <span style="font-size:0.85rem; font-weight:800; color:var(--text);">${escapeHtml(cupom.titulo)}</span>
-                <button style="background:none; border:none; color:var(--primary); font-size:0.9rem; cursor:pointer; padding:0 4px;" title="Ver Regras" onclick="abrirModalRegrasCupom('${encTitulo}', '${encNome}', '${encRegras}')">ℹ️</button>
+                <button style="background:none; border:none; color:var(--primary); font-size:1.1rem; cursor:pointer; padding:6px 10px;" title="Ver Regras" onclick="abrirModalRegrasCupom('${encTitulo}', '${encNome}', '${encRegras}')">ℹ️</button>
               </div>
               <div style="font-size:0.75rem; color:var(--muted);">${escapeHtml(cupom.descricao)}</div>
               <div style="font-size:0.68rem; color:var(--primary); font-weight:700; margin-top:4px;">Regra: ${limiteTxt}</div>
@@ -1312,7 +1343,8 @@ function carregarCuponsDoLojista(empresaUid) {
 
 function carregarLogsDoLojista(empresaUid) {
   const q = query(collection(db, "logs_resgates"), where("empresaId", "==", empresaUid));
-  onSnapshot(q, (snapshot) => {
+  if (unsubscribeMerchantLogs) unsubscribeMerchantLogs();
+  unsubscribeMerchantLogs = onSnapshot(q, (snapshot) => {
     const container = document.getElementById('merchant-logs-list');
     if (!container) return;
 
@@ -1325,7 +1357,7 @@ function carregarLogsDoLojista(empresaUid) {
     snapshot.forEach(logSnap => {
       const l = logSnap.data();
       const statusColor = l.status === "usado" ? "#10b981" : "#f59e0b";
-      const wppStr = l.usuarioWhatsapp ? `📱 <a href="https://wa.me/55${l.usuarioWhatsapp.replace(/\D/g, '')}" target="_blank" style="color:var(--primary); text-decoration:underline;">${l.usuarioWhatsapp}</a>` : '📱 Zap não informado';
+      const wppStr = l.usuarioWhatsapp ? `📱 <a href="https://wa.me/55${l.usuarioWhatsapp.replace(/\D/g, '')}" target="_blank" style="color:var(--primary); text-decoration:underline;">${escapeHtml(l.usuarioWhatsapp)}</a>` : '📱 Zap não informado';
       
       let detalhesValores = '';
       if (l.status === "usado" && l.valorOriginal) {
@@ -1341,11 +1373,11 @@ function carregarLogsDoLojista(empresaUid) {
       logsHtml += `
         <div style="background:var(--card); border:1px solid var(--card-border); padding:10px 12px; border-radius:10px; margin-bottom:6px; font-size:0.75rem;">
           <div style="display:flex; justify-content:space-between;">
-            <strong>${l.usuarioNome || 'Cliente'}</strong>
+            <strong>${escapeHtml(l.usuarioNome || 'Cliente')}</strong>
             <span style="color:${statusColor}; font-weight:800;">${(l.status || 'gerado').toUpperCase()}</span>
           </div>
-          <div style="color:var(--muted); font-size:0.7rem; margin-top:2px;">[${l.codigoGerado}] • ${wppStr}</div>
-          <div style="color:var(--muted); font-size:0.68rem; margin-top:2px;">${l.cupomTitulo} • ${new Date(l.dataHora).toLocaleString('pt-BR')}</div>
+          <div style="color:var(--muted); font-size:0.7rem; margin-top:2px;">[${escapeHtml(l.codigoGerado)}] • ${wppStr}</div>
+          <div style="color:var(--muted); font-size:0.68rem; margin-top:2px;">${escapeHtml(l.cupomTitulo)} • ${new Date(l.dataHora).toLocaleString('pt-BR')}</div>
           ${detalhesValores}
         </div>
       `;
@@ -1359,11 +1391,14 @@ window.switchAdminTab = function(tabName) {
   document.getElementById('adm-tab-cupons').classList.toggle('active', tabName === 'cupons');
   document.getElementById('adm-tab-clientes').classList.toggle('active', tabName === 'clientes');
   document.getElementById('adm-tab-empresas').classList.toggle('active', tabName === 'empresas');
+  document.getElementById('adm-tab-logs').classList.toggle('active', tabName === 'logs');
 
   document.getElementById('adm-section-dash').style.display = tabName === 'dash' ? 'block' : 'none';
   document.getElementById('adm-section-cupons').style.display = tabName === 'cupons' ? 'block' : 'none';
   document.getElementById('adm-section-clientes').style.display = tabName === 'clientes' ? 'block' : 'none';
   document.getElementById('adm-section-empresas').style.display = tabName === 'empresas' ? 'block' : 'none';
+  document.getElementById('adm-section-logs').style.display = tabName === 'logs' ? 'block' : 'none';
+  if (tabName === 'logs') carregarLogsAdminSistema();
 };
 
 window.switchDashSubTab = function(subTab) {
@@ -1431,14 +1466,14 @@ async function carregarPainelAdmin() {
 
         const criadoEmData = u.criadoEm ? new Date(u.criadoEm).toLocaleDateString('pt-BR') : 'Não registrada';
         const expiraDataStr = u.vipExpiraEm ? new Date(u.vipExpiraEm).toLocaleDateString('pt-BR') : (u.vip ? 'Ativo (Ilimitado)' : 'Não assinante');
-        const whatsappUserStr = u.whatsapp ? `💬 ${u.whatsapp}` : '💬 Zap não informado';
+        const whatsappUserStr = u.whatsapp ? `💬 ${escapeHtml(u.whatsapp)}` : '💬 Zap não informado';
 
         listUsersHtml += `
           <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:10px;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
               <div>
-                <div style="font-size:0.9rem; font-weight:900;">${u.nome || 'Usuário'}</div>
-                <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">📧 ${u.email}</div>
+                <div style="font-size:0.9rem; font-weight:900;">${escapeHtml(u.nome || 'Usuário')}</div>
+                <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">📧 ${escapeHtml(u.email)}</div>
                 <div style="font-size:0.75rem; color:var(--primary); margin-top:2px; font-weight:700;">${whatsappUserStr}</div>
               </div>
               <span style="font-weight:800; font-size:0.7rem; padding:3px 8px; border-radius:10px; background:var(--secondary); color:var(--primary);">${badgeVipTxt}</span>
@@ -1449,7 +1484,7 @@ async function carregarPainelAdmin() {
             </div>
             <div style="display:flex; gap:6px; margin-top:6px;">
               <button class="btn btn-outline btn-small" style="flex:1;" onclick="adminAlternarVip('${uid}', ${nextVipState})">${btnVipActionText}</button>
-              <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="confirmarExclusaoCliente('${uid}', '${encodeURIComponent(u.nome || 'Cliente')}')">🗑️ Excluir</button>
+              <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="confirmarExclusaoCliente('${uid}', '${encAttr(u.nome || 'Cliente')}')">🗑️ Excluir</button>
             </div>
           </div>
         `;
@@ -1478,8 +1513,8 @@ async function carregarPainelAdmin() {
             <h4 style="font-size:0.95rem; font-weight:900; color:var(--text);">🏢 ${escapeHtml(u.empresaNome || 'Empresa Sem Nome')}</h4>
             <span style="font-size:0.68rem; font-weight:800;">${statusBadgeTxt}</span>
           </div>
-          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">👤 <strong>Responsável:</strong> ${u.nome || '-'}</p>
-          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📧 <strong>E-mail:</strong> ${u.email || '-'}</p>
+          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">👤 <strong>Responsável:</strong> ${escapeHtml(u.nome || '-')}</p>
+          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📧 <strong>E-mail:</strong> ${escapeHtml(u.email || '-')}</p>
           <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📍 <strong>Endereço:</strong> ${escapeHtml(u.empresaEndereco || 'Pelotas / RS')}</p>
           <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📞 <strong>Contato:</strong> ${escapeHtml(u.empresaTelefone || 'Não informado')}</p>
           ${u.empresaInstagram ? `<p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📸 <strong>Instagram:</strong> ${escapeHtml(u.empresaInstagram)}</p>` : ''}
@@ -1487,7 +1522,7 @@ async function carregarPainelAdmin() {
 
           <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
             <button class="btn btn-outline btn-small" style="color:#7c3aed; border-color:#7c3aed55;" onclick="abrirModalPatrocinarEmpresa('${uid}', '${empNomeEncoded}', '${empWppEncoded}', '${empInstaEncoded}')">⭐ Patrocinar</button>
-            <button class="btn btn-outline btn-small" onclick="abrirModalAdminEmpresa('${uid}', '${empNomeEncoded}', '${encAttr(u.email || '')}', '${encAttr(u.empresaDescricao || '')}', '${encAttr(u.empresaEndereco || '')}', '${empWppEncoded}', '${empInstaEncoded}', '${u.empresaCategoria || 'gastronomia'}', '${encAttr(u.fotoUrl || '')}')">✏️ Editar</button>
+            <button class="btn btn-outline btn-small" onclick="abrirModalAdminEmpresa('${uid}', '${empNomeEncoded}', '${encAttr(u.email || '')}', '${encAttr(u.empresaDescricao || '')}', '${encAttr(u.empresaEndereco || '')}', '${empWppEncoded}', '${empInstaEncoded}', '${String(u.empresaCategoria || 'gastronomia').replace(/[^A-Za-z0-9_-]/g, '')}', '${encAttr(u.fotoUrl || '')}')">✏️ Editar</button>
             <button class="btn btn-outline btn-small" onclick="toggleStatusEmpresaAdmin('${uid}', ${statusAtivo})">⏸️ ${btnToggleTxt}</button>
             <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="excluirEmpresaAdmin('${uid}', '${empNomeEncoded}')">🗑️ Excluir</button>
           </div>
@@ -1555,6 +1590,7 @@ async function carregarPainelAdmin() {
     renderizarGraficosAdmin(totalFree, totalVipsReais);
     renderizarGraficoCrescimentoClientes();
     renderizarRelatorioFinanceiro('hoje');
+    carregarUltimasAtividades();
 
   } catch (err) { console.error(err); }
 }
@@ -1572,6 +1608,7 @@ window.executarExclusaoCliente = async function() {
 
   try {
     await deleteDoc(doc(db, "usuarios", uid));
+    registrarLogAdmin('cliente', 'Cliente excluído pelo admin', `${document.getElementById('delete-user-name').innerText} (${uid})`);
     fecharModal('modal-confirm-delete-user');
     mostrarAviso("Excluído 🗑️", "Cadastro do cliente removido com sucesso.", "✅");
     carregarPainelAdmin();
@@ -1592,6 +1629,7 @@ window.confirmarZerarHistoricoPix = async function() {
       await Promise.all(batchPromises);
 
       cachePagamentosPix = [];
+      registrarLogAdmin('financeiro', 'Histórico de Pix arquivado', '');
       mostrarAviso("Histórico Arquivado! 🧹", "O painel financeiro foi limpo mantendo a segurança do sistema.", "✅");
       carregarPainelAdmin();
     } catch(err) {
@@ -1600,7 +1638,7 @@ window.confirmarZerarHistoricoPix = async function() {
   }
 };
 
-window.copiarListaWhatsAppClientes = function() {
+window.copiarListaWhatsAppClientes = async function() {
   const zapList = cacheTodosUsuarios
     .filter(u => u.funcao === "cliente" && u.whatsapp)
     .map(u => u.whatsapp.replace(/\D/g, ''))
@@ -1611,7 +1649,8 @@ window.copiarListaWhatsAppClientes = function() {
   }
 
   const textoFinal = zapList.join("\n");
-  navigator.clipboard.writeText(textoFinal);
+  if (!(await copiarTexto(textoFinal))) return mostrarAviso("Erro", "Não foi possível copiar. Libere a área de transferência no navegador.", "❌");
+  registrarLogAdmin('sistema', 'Lista de WhatsApp copiada', `${zapList.length} números`);
   mostrarAviso("Copiado! 📱", `${zapList.length} número(s) de WhatsApp copiados para a área de transferência.`, "📋");
 };
 
@@ -1684,12 +1723,12 @@ function renderizarRelatorioFinanceiro(periodo = 'hoje', customStart = null, cus
 
   pagamentosFiltrados.forEach(p => {
     const dataStr = new Date(p.dataHora).toLocaleString('pt-BR');
-    const wppStr = p.whatsapp ? p.whatsapp : '-';
+    const wppStr = p.whatsapp ? escapeHtml(p.whatsapp) : '-';
     htmlTable += `
       <tr style="border-bottom:1px solid var(--card-border);">
         <td style="padding:8px 6px;">
-          <div style="font-weight:800;">${p.nome}</div>
-          <div style="font-size:0.65rem; color:var(--muted);">${p.email}</div>
+          <div style="font-weight:800;">${escapeHtml(p.nome)}</div>
+          <div style="font-size:0.65rem; color:var(--muted);">${escapeHtml(p.email)}</div>
         </td>
         <td style="padding:8px 6px; font-weight:700; color:var(--primary);">${wppStr}</td>
         <td style="padding:8px 6px; font-weight:900; color:#10b981;">R$ ${(p.valor || PRECO_VIP).toFixed(2).replace('.', ',')}</td>
@@ -1861,6 +1900,7 @@ window.salvarEmpresaPeloAdmin = async function() {
         empresaCategoria: categoria,
         fotoUrl: logo || null
       });
+      registrarLogAdmin('empresa', 'Empresa editada pelo admin', nome);
       mostrarAviso("Sucesso! 🏢", "Empresa atualizada com sucesso.", "✅");
     } else {
       const novoDocRef = doc(collection(db, "usuarios"));
@@ -1879,6 +1919,7 @@ window.salvarEmpresaPeloAdmin = async function() {
         fotoUrl: logo || null,
         criadoEm: new Date().toISOString()
       });
+      registrarLogAdmin('empresa', 'Empresa criada pelo admin', `${nome} (${email})`);
       mostrarAviso("Sucesso! 🎉", "Nova empresa cadastrada com sucesso.", "✅");
     }
     fecharModal('modal-admin-empresa');
@@ -1903,6 +1944,7 @@ window.toggleStatusEmpresaAdmin = async function(uid, estadoAtual) {
       await Promise.all(batchPromises);
     }
 
+    registrarLogAdmin('empresa', novoEstado ? 'Empresa ativada' : 'Empresa desativada (cupons pausados)', uid);
     mostrarAviso("Sucesso", `Status da empresa e cupons alterado.`, "✅");
     carregarPainelAdmin();
   } catch (err) {
@@ -1924,6 +1966,7 @@ window.excluirEmpresaAdmin = async function(uid, nomeEmpresa) {
       });
       await Promise.all(batchPromises);
 
+            registrarLogAdmin('empresa', 'Empresa excluída pelo admin', nomeLimpo);
       mostrarAviso("Excluído 🗑️", `A empresa ${nomeLimpo} e suas promoções foram removidas.`, "✅");
       carregarPainelAdmin();
     } catch (err) {
@@ -1937,54 +1980,22 @@ function renderizarGraficosAdmin(freeUsers, vipUsers) {
   if (!ctx) return;
   if (window.myAdminChart) window.myAdminChart.destroy();
 
-  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-  const textColor = isDark ? '#94a3b8' : '#64748b';
-  const gridColor = isDark ? '#1e293b' : '#f1f5f9';
-
   window.myAdminChart = new Chart(ctx, {
-    type: 'bar',
+    type: 'doughnut',
     data: {
       labels: ['Free', 'VIP'],
       datasets: [{
-        label: 'Usuários',
         data: [freeUsers, vipUsers],
-        backgroundColor: [
-          'rgba(100, 116, 139, 0.85)',
-          'rgba(249, 115, 22, 0.85)'
-        ],
-        borderColor: [
-          '#64748b',
-          '#f97316'
-        ],
-        borderWidth: 1,
-        borderRadius: 6,
-        barThickness: 30
+        backgroundColor: ['rgba(100, 116, 139, 0.85)', 'rgba(249, 115, 22, 0.85)'],
+        borderColor: ['#64748b', '#f97316'],
+        borderWidth: 1
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#0f172a',
-          titleFont: { size: 11, weight: 'bold' },
-          bodyFont: { size: 10 },
-          padding: 8,
-          cornerRadius: 6
-        }
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { color: textColor, font: { weight: '600', size: 10 } }
-        },
-        y: {
-          beginAtZero: true,
-          grid: { color: gridColor },
-          ticks: { color: textColor, precision: 0, font: { size: 10 } }
-        }
-      }
+      cutout: '65%',
+      plugins: { legend: { display: false } }
     }
   });
 }
@@ -1994,7 +2005,7 @@ function atualizarSelectFiltroEmpresas() {
   if (!selectEl) return;
   let html = `<option value="all">Todas as Empresas</option>`;
   cacheEmpresasAdmin.forEach(emp => {
-    html += `<option value="${emp.id}">${emp.nome}</option>`;
+    html += `<option value="${escapeHtml(emp.id)}">${escapeHtml(emp.nome)}</option>`;
   });
   selectEl.innerHTML = html;
 }
@@ -2033,16 +2044,16 @@ function renderizarLogsAdminFiltrados() {
     logsHtml += `
       <div style="margin-bottom:10px; background:var(--secondary); border:1px solid var(--card-border); padding:8px; border-radius:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <h4 style="font-size:0.8rem; font-weight:900; color:var(--primary);">🏢 ${empresa} (${dataObj.logs.length})</h4>
-          <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455; padding:3px 6px; font-size:0.65rem;" onclick="limparLogsEmpresaAdmin('${dataObj.empresaId}', '${empresa}')">🗑️ Limpar</button>
+          <h4 style="font-size:0.8rem; font-weight:900; color:var(--primary);">🏢 ${escapeHtml(empresa)} (${dataObj.logs.length})</h4>
+          <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455; padding:3px 6px; font-size:0.65rem;" onclick="limparLogsEmpresaAdmin('${escapeHtml(dataObj.empresaId)}', '${encAttr(empresa)}')">🗑️ Limpar</button>
         </div>
     `;
     dataObj.logs.forEach(l => {
       const statusColor = l.status === "usado" ? "#10b981" : "#f59e0b";
       logsHtml += `
         <div style="background:var(--card); border:1px solid var(--card-border); padding:6px 8px; border-radius:6px; margin-bottom:4px; font-size:0.72rem;">
-          <div><strong>${l.usuarioNome || 'Cliente'}</strong> [${l.codigoGerado}] - <span style="color:${statusColor}; font-weight:800;">${(l.status || 'gerado').toUpperCase()}</span></div>
-          <div style="color:var(--muted); font-size:0.65rem; margin-top:2px;">${l.cupomTitulo} • ${new Date(l.dataHora).toLocaleString('pt-BR')}</div>
+          <div><strong>${escapeHtml(l.usuarioNome || 'Cliente')}</strong> [${escapeHtml(l.codigoGerado)}] - <span style="color:${statusColor}; font-weight:800;">${(l.status || 'gerado').toUpperCase()}</span></div>
+          <div style="color:var(--muted); font-size:0.65rem; margin-top:2px;">${escapeHtml(l.cupomTitulo)} • ${new Date(l.dataHora).toLocaleString('pt-BR')}</div>
         </div>
       `;
     });
@@ -2052,6 +2063,7 @@ function renderizarLogsAdminFiltrados() {
 }
 
 window.limparLogsEmpresaAdmin = async function(empresaId, empresaNome) {
+  empresaNome = decodeURIComponent(empresaNome);
   if (confirm(`Deseja realmente excluir/limpar todos os logs de resgate da empresa "${empresaNome}"?`)) {
     try {
       const qLogs = query(collection(db, "logs_resgates"), where("empresaId", "==", empresaId));
@@ -2061,6 +2073,7 @@ window.limparLogsEmpresaAdmin = async function(empresaId, empresaNome) {
         promessas.push(deleteDoc(doc(db, "logs_resgates", docSnap.id)));
       });
       await Promise.all(promessas);
+      registrarLogAdmin('sistema', 'Logs de resgate apagados', empresaNome);
       mostrarAviso("Limpeza Concluída 🗑️", `Os logs da empresa ${empresaNome} foram removidos.`, "✅");
       carregarPainelAdmin();
     } catch (err) { console.error(err); }
@@ -2070,6 +2083,7 @@ window.limparLogsEmpresaAdmin = async function(empresaId, empresaNome) {
 window.toggleStatusCupom = async function(docId, estadoAtual) {
   try {
     await updateDoc(doc(db, "cupons", docId), { ativo: !estadoAtual });
+    registrarLogAdmin('cupom', !estadoAtual ? 'Oferta ativada' : 'Oferta pausada', docId);
     mostrarAviso("Sucesso", "Status alterado.", "✅");
     if (window.currentUserData?.funcao === "admin") carregarPainelAdmin();
   } catch (err) {
@@ -2081,6 +2095,7 @@ window.excluirCupom = async function(docId) {
   if (confirm("Deseja realmente excluir esta oferta?")) {
     try {
       await deleteDoc(doc(db, "cupons", docId));
+      registrarLogAdmin('cupom', 'Oferta excluída', docId);
       mostrarAviso("Excluído", "Oferta removida.", "🗑️");
       if (window.currentUserData?.funcao === "admin") carregarPainelAdmin();
     } catch (err) {
@@ -2116,6 +2131,7 @@ window.salvarDadosEmpresaLojista = async function() {
   try {
     await updateDoc(doc(db, "usuarios", user.uid), dadosEmpresa);
     Object.assign(window.currentUserData, dadosEmpresa);
+    registrarLogAdmin('empresa', 'Lojista atualizou os dados da empresa', novoNome);
     document.getElementById('merchant-store-name').innerText = novoNome;
 
     // Propaga nome, endereço, telefone e localização para os cupons já publicados
@@ -2256,6 +2272,7 @@ window.salvarOfertaGeral = async function() {
 
     if (editId) {
       await updateDoc(doc(db, "cupons", editId), dadosCupom);
+      registrarLogAdmin('cupom', 'Oferta editada', titulo);
       mostrarAviso("Atualizado! 🚀", "Oferta modificada com sucesso.", "✅");
     } else {
       dadosCupom.empresaId = user.uid;
@@ -2273,6 +2290,7 @@ window.salvarOfertaGeral = async function() {
       dadosCupom.criadoEm = new Date().toISOString();
       dadosCupom.ordem = 0;
       await addDoc(collection(db, "cupons"), dadosCupom);
+      registrarLogAdmin('cupom', 'Oferta publicada', titulo);
       mostrarAviso("Publicado! 🎉", "Promoção ativa na vitrine.", "✅");
     }
 
@@ -2292,6 +2310,7 @@ window.adminAlternarVip = async function(userId, novoEstado) {
     }
 
     await updateDoc(doc(db, "usuarios", userId), updateObj);
+    registrarLogAdmin('vip', novoEstado ? 'VIP concedido pelo admin' : 'VIP removido pelo admin', cacheTodosUsuarios.find(u => u.id === userId)?.email || userId);
     mostrarAviso("Atualizado!", "Status VIP alterado.", "👑");
     carregarPainelAdmin();
   } catch (err) { console.error(err); }
@@ -2317,6 +2336,7 @@ window.validarCupomTextoLojista = async function() {
     });
 
     dispararConfetes();
+    registrarLogAdmin('cupom', 'Cupom validado pelo lojista', `${cupomEmValidacao.data.codigoGerado} — pago R$ ${valorFinalCalculado.toFixed(2)}`);
     mostrarAviso("✅ DESCONTO APLICADO!", `Cupom validado!\nValor Pago pelo cliente: R$ ${valorFinalCalculado.toFixed(2).replace('.', ',')} (Economia de R$ ${valorDescontoCalculado.toFixed(2).replace('.', ',')})`, "🎉");
     
     document.getElementById('input-validar-codigo').value = '';
@@ -2517,6 +2537,7 @@ window.executarAuth = async function() {
       }
 
       await setDoc(doc(db, "usuarios", res.user.uid), userData);
+      registrarLogAdmin('cliente', userRole === 'lojista' ? 'Nova empresa cadastrada' : 'Novo cliente cadastrado', `${userData.nome} (${userData.email})`);
       mostrarAviso("Sucesso! 🎉", "Conta criada com sucesso!", "🎉");
     } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
   } else {
@@ -2575,15 +2596,16 @@ window.gerarPixMercadoPago = async function() {
       pixCopiaColaAtual = data.qrCodeCopiaCola;
       fecharModal('modal-coupon');
       document.getElementById('modal-pix').classList.add('active');
+      registrarLogAdmin('financeiro', 'Pix de VIP gerado', emailPix);
       iniciarChecagemAutomatica();
     } else { mostrarAviso("Erro", data.error || "Não foi possível gerar o Pix.", "❌"); }
   } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
-  finally { if (btn) { btn.innerHTML = `⚡ Ativar VIP por R$ 19,90 via PIX`; btn.style.opacity = "1"; btn.style.pointerEvents = "auto"; } }
+  finally { if (btn) { btn.innerHTML = `⚡ Ser VIP · R$ 19,90`; btn.style.opacity = "1"; btn.style.pointerEvents = "auto"; } }
 };
 
-window.copiarPixCode = function() {
+window.copiarPixCode = async function() {
   if (!pixCopiaColaAtual) return;
-  navigator.clipboard.writeText(pixCopiaColaAtual);
+  if (!(await copiarTexto(pixCopiaColaAtual))) return mostrarAviso("Erro", "Não foi possível copiar. Copie o código manualmente.", "❌");
   mostrarAviso("Copiado!", "Código Pix Copia e Cola copiado.", "📋");
 };
 
@@ -2617,7 +2639,7 @@ window.resgatarCupomReal = async function(cupomId, empresaId, empresaNomeEnc, ti
   const phoneContainer = document.getElementById('modal-phone');
   if (telefone) {
     const foneLimpo = telefone.replace(/\D/g, '');
-    phoneContainer.innerHTML = `<a href="https://wa.me/55${foneLimpo}?text=Olá,%20vi%20sua%20oferta%20no%20Clube%20Prime!" target="_blank" style="color:var(--primary); text-decoration:underline; font-weight:700;">${telefone} 📱 (Chamar no Zap)</a>`;
+    phoneContainer.innerHTML = `<a href="https://wa.me/55${foneLimpo}?text=Olá,%20vi%20sua%20oferta%20no%20Clube%20Prime!" target="_blank" style="color:var(--primary); text-decoration:underline; font-weight:700;">${escapeHtml(telefone)} 📱 (Chamar no Zap)</a>`;
   } else {
     phoneContainer.innerText = 'Não informado';
   }
@@ -2663,6 +2685,7 @@ window.resgatarCupomReal = async function(cupomId, empresaId, empresaNomeEnc, ti
           status: "gerado",
           dataHora: new Date().toISOString()
         });
+        registrarLogAdmin('cupom', 'Cupom resgatado (código gerado)', `${codigoUnico} — ${titulo}`);
       } catch(e) { console.error(e); }
     }
 
@@ -2682,8 +2705,135 @@ window.resgatarCupomReal = async function(cupomId, empresaId, empresaNomeEnc, ti
   document.getElementById('modal-coupon').classList.add('active');
 };
 
-window.copiarCodigoCupom = function() {
+window.copiarCodigoCupom = async function() {
   if (!codigoCupomAtual) return;
-  navigator.clipboard.writeText(codigoCupomAtual);
+  if (!(await copiarTexto(codigoCupomAtual))) return mostrarAviso("Erro", "Não foi possível copiar. Copie o código manualmente.", "❌");
   mostrarAviso("Copiado!", "Código único copiado!", "📋");
 };
+
+
+// ===== LOGS DO SISTEMA (aba ADM) =====
+let cacheLogsSistema = [];
+const ROTULOS_LOG = { vip: '👑 VIP', empresa: '🏢 Empresa', cliente: '👤 Cliente', cupom: '🎟️ Cupom', financeiro: '💳 Financeiro', sistema: '⚙️ Sistema' };
+
+window.carregarLogsAdminSistema = async function() {
+  if (window.currentUserData?.funcao !== 'admin') return;
+  const container = document.getElementById('admin-system-logs-list');
+  if (container) container.innerHTML = `<p style="font-size:0.78rem; color:var(--muted); text-align:center; padding:12px;">Carregando...</p>`;
+  try {
+    const snap = await getDocs(query(collection(db, "logs_admin"), orderBy("dataHora", "desc"), limit(300)));
+    cacheLogsSistema = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderizarLogsSistema();
+  } catch (e) {
+    console.error(e);
+    if (container) container.innerHTML = `<p style="font-size:0.78rem; color:var(--danger); text-align:center; padding:12px;">Erro ao carregar os logs: ${escapeHtml(e.message)}</p>`;
+  }
+};
+
+window.renderizarLogsSistema = function() {
+  const container = document.getElementById('admin-system-logs-list');
+  if (!container) return;
+  const cat = document.getElementById('filter-system-log-cat')?.value || 'all';
+  const termo = (document.getElementById('filter-system-log-text')?.value || '').toLowerCase().trim();
+
+  const lista = cacheLogsSistema.filter(l =>
+    (cat === 'all' || l.categoria === cat) &&
+    (!termo || `${l.acao} ${l.detalhe} ${l.autorEmail}`.toLowerCase().includes(termo))
+  );
+
+  const contador = document.getElementById('admin-system-logs-count');
+  if (contador) contador.innerText = `${lista.length} registro(s) — últimos 300`;
+
+  if (lista.length === 0) {
+    container.innerHTML = `<p style="font-size:0.78rem; color:var(--muted); text-align:center; padding:12px;">Nenhum registro encontrado.</p>`;
+    return;
+  }
+
+  container.innerHTML = lista.map(l => {
+    const dt = new Date(l.dataHora);
+    const dataStr = isNaN(dt.getTime()) ? '-' : dt.toLocaleString('pt-BR');
+    return `
+      <div style="background:var(--card); border:1px solid var(--card-border); padding:8px 10px; border-radius:10px; margin-bottom:6px; font-size:0.72rem;">
+        <div style="display:flex; justify-content:space-between; gap:8px;">
+          <strong>${escapeHtml(l.acao)}</strong>
+          <span style="color:var(--primary); font-weight:800; white-space:nowrap;">${escapeHtml(ROTULOS_LOG[l.categoria] || l.categoria || '')}</span>
+        </div>
+        ${l.detalhe ? `<div style="color:var(--text); margin-top:2px; word-break:break-word;">${escapeHtml(l.detalhe)}</div>` : ''}
+        <div style="color:var(--muted); font-size:0.65rem; margin-top:3px;">🕒 ${dataStr} • ${escapeHtml(l.autorEmail || 'sistema')} (${escapeHtml(l.autorFuncao || '-')})</div>
+      </div>`;
+  }).join('');
+};
+
+// ===== PRÉ-VISUALIZAÇÃO DA VITRINE PARA O LOJISTA =====
+window.abrirPreviewVitrineLojista = async function() {
+  const user = auth.currentUser;
+  if (!user || window.currentUserData?.funcao !== 'lojista') return;
+  const box = document.getElementById('preview-vitrine-conteudo');
+  box.innerHTML = `<p style="text-align:center; color:var(--muted); font-size:0.8rem;">Carregando...</p>`;
+  document.getElementById('modal-preview-vitrine').classList.add('active');
+
+  try {
+    const snap = await getDocs(query(collection(db, "cupons"), where("empresaId", "==", user.uid)));
+    const d = window.currentUserData || {};
+    const cupons = snap.docs.map(x => ({ id: x.id, ...x.data() })).sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    const ativos = cupons.filter(c => c.ativo);
+    const imagem = (cupons.find(c => c.imagem) || {}).imagem || '';
+
+    let avisos = '';
+    if (d.ativo === false) avisos += `<p style="color:var(--danger); font-size:0.75rem; font-weight:800;">⚠️ Sua empresa está desativada: nada disso aparece para os clientes.</p>`;
+    if (numeroOuNulo(d.empresaLat) === null) avisos += `<p style="color:var(--muted); font-size:0.72rem;">📍 Sem localização salva: sua empresa não entra na ordenação por proximidade.</p>`;
+    if (cupons.length === 0) {
+      box.innerHTML = avisos + `<p style="text-align:center; color:var(--muted); font-size:0.8rem; padding:12px;">Você ainda não publicou nenhuma oferta.</p>`;
+      return;
+    }
+
+    const itens = cupons.map(c => {
+      const limiteTxt = c.limite === 'daily' ? '1 por dia' : c.limite === 'once' ? 'Uso único' : 'Ilimitado';
+      const pctTxt = c.descontoPct ? `${c.descontoPct}% OFF` : (c.descontoBadge || 'OFERTA');
+      return `
+        <div style="background:var(--secondary); border:1px solid var(--card-border); padding:12px; border-radius:14px; display:flex; justify-content:space-between; align-items:center; opacity:${c.ativo ? 1 : 0.55};">
+          <div style="flex:1; padding-right:8px;">
+            <div style="font-size:0.85rem; font-weight:800; color:var(--text);">${escapeHtml(c.titulo)}</div>
+            <div style="font-size:0.75rem; color:var(--muted);">${escapeHtml(c.descricao)}</div>
+            <div style="font-size:0.68rem; color:var(--primary); font-weight:700; margin-top:4px;">Regra: ${limiteTxt}${c.ativo ? '' : ' • ⏸️ PAUSADA (não aparece)'}</div>
+          </div>
+          <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+            <span class="discount-badge" style="font-size:0.72rem; padding:3px 8px;">${escapeHtml(pctTxt)}</span>
+            <span class="btn btn-cyan btn-small" style="padding:6px 10px; font-size:0.75rem; pointer-events:none;">🎟️ Resgatar</span>
+          </div>
+        </div>`;
+    }).join('');
+
+    box.innerHTML = avisos + `
+      <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:20px;">
+        ${imagem ? `<img src="${escapeHtml(imagem)}" alt="Logo/Foto" style="width:100%; height:130px; object-fit:cover; border-radius:14px; margin-bottom:12px;">` : ''}
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+          <div>
+            <h3 style="font-size:1.1rem; font-weight:900; color:var(--text);">🏢 ${escapeHtml(d.empresaNome || 'Empresa')}</h3>
+            <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">📍 ${escapeHtml(d.empresaEndereco || 'Pelotas / RS')}</div>
+          </div>
+          <span style="font-size:0.7rem; font-weight:800; color:var(--primary); background:var(--secondary); padding:4px 8px; border-radius:10px;">${ativos.length} Oferta(s)</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:10px;">${itens}</div>
+      </div>`;
+  } catch (e) {
+    console.error(e);
+    box.innerHTML = `<p style="color:var(--danger); font-size:0.8rem; text-align:center;">Erro ao carregar: ${escapeHtml(e.message)}</p>`;
+  }
+};
+
+
+async function carregarUltimasAtividades() {
+  const box = document.getElementById('admin-recent-activity');
+  if (!box) return;
+  try {
+    const snap = await getDocs(query(collection(db, "logs_admin"), orderBy("dataHora", "desc"), limit(5)));
+    if (snap.empty) { box.innerText = 'Nenhuma atividade registrada ainda.'; return; }
+    box.innerHTML = snap.docs.map(d => {
+      const l = d.data();
+      const dt = new Date(l.dataHora);
+      const hora = isNaN(dt.getTime()) ? '' : dt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      return `<div style="padding:6px 0; border-bottom:1px solid var(--card-border);"><strong style="color:var(--text);">${escapeHtml(l.acao)}</strong><div style="font-size:0.65rem;">${escapeHtml(l.detalhe || '')} • ${hora}</div></div>`;
+    }).join('');
+  } catch (e) { box.innerText = 'Não foi possível carregar as atividades.'; }
+}
