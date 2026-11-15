@@ -343,6 +343,8 @@ onAuthStateChanged(auth, async (user) => {
         if (document.getElementById('merchant-edit-address')) document.getElementById('merchant-edit-address').value = enderecoEmpresa;
         if (document.getElementById('merchant-edit-phone')) document.getElementById('merchant-edit-phone').value = telefoneEmpresa;
         if (document.getElementById('merchant-edit-instagram')) document.getElementById('merchant-edit-instagram').value = instagramEmpresa;
+        if (document.getElementById('merchant-edit-foto')) document.getElementById('merchant-edit-foto').value = data.fotoUrl || '';
+        atualizarPreviaFotoEmpresa();
 
         const latSalva = numeroOuNulo(data.empresaLat);
         const lonSalva = numeroOuNulo(data.empresaLon);
@@ -687,8 +689,11 @@ async function carregarParceirosCliente() {
       const wppLink = foneLimpo ? `https://wa.me/55${foneLimpo}?text=Olá,%20vim%20pelo%20Clube%20Prime!` : '#';
       const instaLink = u.empresaInstagram ? `https://instagram.com/${encodeURIComponent(u.empresaInstagram.replace('@', ''))}` : '#';
 
+      const fotoParceiro = u.fotoUrl ? `<img src="${escapeHtml(u.fotoUrl)}" alt="Foto da empresa" style="width:100%; height:130px; object-fit:cover; border-radius:14px; margin-bottom:12px;">` : '';
+
       partnersClientHtml += `
         <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:12px;">
+          ${fotoParceiro}
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <h4 style="font-size:1rem; font-weight:900;">🏢 ${escapeHtml(u.empresaNome || 'Empresa')}</h4>
             <span style="font-size:0.7rem; font-weight:800; color:var(--primary);">${escapeHtml(u.empresaCategoria || 'Parceiro')}</span>
@@ -1154,12 +1159,13 @@ function carregarCuponsVitrine() {
           endereco: cupom.endereco || 'Pelotas / RS',
           telefone: cupom.telefone || '',
           categoria: cupom.categoria || 'gastronomia',
-          imagem: cupom.imagem || '',
+          imagem: cupom.empresaFoto || '',
           lat: numeroOuNulo(cupom.empresaLat),
           lon: numeroOuNulo(cupom.empresaLon),
           cupons: []
         };
       }
+      if (!empresasGrouped[key].imagem && cupom.empresaFoto) empresasGrouped[key].imagem = cupom.empresaFoto;
       if (empresasGrouped[key].lat === null || empresasGrouped[key].lon === null) {
         empresasGrouped[key].lat = numeroOuNulo(cupom.empresaLat);
         empresasGrouped[key].lon = numeroOuNulo(cupom.empresaLon);
@@ -1200,8 +1206,11 @@ function carregarCuponsVitrine() {
         const encTel = encAttr(emp.telefone);
         const encRegras = encAttr(cupom.regras || '');
 
+        const imgCupomHtml = cupom.imagem ? `<img src="${escapeHtml(cupom.imagem)}" alt="Foto da oferta" style="width:64px; height:64px; object-fit:cover; border-radius:12px; flex-shrink:0;">` : '';
+
         html += `
-          <div style="background:var(--secondary); border:1px solid var(--card-border); padding:12px; border-radius:14px; display:flex; justify-content:space-between; align-items:center;">
+          <div style="background:var(--secondary); border:1px solid var(--card-border); padding:12px; border-radius:14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            ${imgCupomHtml}
             <div style="flex:1; padding-right:8px;">
               <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
                 <span style="font-size:0.85rem; font-weight:800; color:var(--text);">${escapeHtml(cupom.titulo)}</span>
@@ -1316,6 +1325,7 @@ function carregarCuponsDoLojista(empresaUid) {
     snapshot.forEach((docSnap) => {
       const cupom = docSnap.data();
       const docId = docSnap.id;
+      (window.cacheCuponsPorId = window.cacheCuponsPorId || {})[docId] = cupom;
       const statusText = cupom.ativo ? "🟢 ATIVA" : "🔴 PAUSADA";
       const btnPausaText = cupom.ativo ? "Pausar" : "Ativar";
       const cliques = cupom.cliquesCount || 0;
@@ -1330,7 +1340,7 @@ function carregarCuponsDoLojista(empresaUid) {
           <p style="font-size:0.75rem; color:var(--muted); margin:4px 0;">Desconto: <strong>${pctDescontoStr}</strong> | Prefixo: <strong>${escapeHtml(cupom.codigo || 'PRIME')}</strong> | Cliques: <strong>${cliques}</strong></p>
           <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
             <button class="btn btn-outline btn-small" onclick="toggleStatusCupom('${docId}', ${cupom.ativo})">⏸️ ${btnPausaText}</button>
-            <button class="btn btn-outline btn-small" onclick="abrirModalEditarOferta('${docId}', '${encAttr(cupom.titulo)}', '${encAttr(cupom.descricao)}', '${encAttr(cupom.regras || '')}', '${String(cupom.categoria || '').replace(/[^A-Za-z0-9_-]/g, '')}', '${encAttr(cupom.descontoBadge || '')}', ${cupom.valorEconomia || 10}, '${String(cupom.codigo || 'PRIME').replace(/[^A-Za-z0-9]/g, '') || 'PRIME'}', '${encAttr(cupom.imagem || '')}', '${cupom.limite || 'daily'}', ${cupom.ordem || 0}, ${cupom.descontoPct || 10})">✏️ Editar</button>
+            <button class="btn btn-outline btn-small" onclick="abrirModalEditarOferta('${docId}', '${encAttr(cupom.titulo)}', '${encAttr(cupom.descricao)}', '${encAttr(cupom.regras || '')}', '${String(cupom.categoria || '').replace(/[^A-Za-z0-9_-]/g, '')}', '${encAttr(cupom.descontoBadge || '')}', ${cupom.valorEconomia || 10}, '${String(cupom.codigo || 'PRIME').replace(/[^A-Za-z0-9]/g, '') || 'PRIME'}', '', '${cupom.limite || 'daily'}', ${cupom.ordem || 0}, ${cupom.descontoPct || 10})">✏️ Editar</button>
             <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="excluirCupom('${docId}')">🗑️ Excluir</button>
           </div>
         </div>
@@ -1539,6 +1549,7 @@ async function carregarPainelAdmin() {
     snapCuponsAll.forEach(docSnap => {
       const c = docSnap.data();
       const docId = docSnap.id;
+      (window.cacheCuponsPorId = window.cacheCuponsPorId || {})[docId] = c;
       if (c.ativo) totalCuponsAtivos++;
       const statusText = c.ativo ? "🟢 ATIVA" : "🔴 PAUSADA";
       const btnPausaText = c.ativo ? "Pausar" : "Ativar";
@@ -1552,7 +1563,7 @@ async function carregarPainelAdmin() {
           <div style="font-size:0.7rem; color:var(--muted); margin-top:2px;">Desconto: <strong>${c.descontoPct || 10}%</strong> | Prefixo: <strong>${escapeHtml(c.codigo || 'PRIME')}</strong> | Ordem: <strong>${c.ordem || 0}</strong></div>
           <div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
             <button class="btn btn-outline btn-small" onclick="toggleStatusCupom('${docId}', ${c.ativo})">⏸️ ${btnPausaText}</button>
-            <button class="btn btn-outline btn-small" onclick="abrirModalEditarOferta('${docId}', '${encAttr(c.titulo)}', '${encAttr(c.descricao)}', '${encAttr(c.regras || '')}', '${String(c.categoria || '').replace(/[^A-Za-z0-9_-]/g, '')}', '${encAttr(c.descontoBadge || '')}', ${c.valorEconomia || 10}, '${String(c.codigo || 'PRIME').replace(/[^A-Za-z0-9]/g, '') || 'PRIME'}', '${encAttr(c.imagem || '')}', '${c.limite || 'daily'}', ${c.ordem || 0}, ${c.descontoPct || 10})">✏️ Editar</button>
+            <button class="btn btn-outline btn-small" onclick="abrirModalEditarOferta('${docId}', '${encAttr(c.titulo)}', '${encAttr(c.descricao)}', '${encAttr(c.regras || '')}', '${String(c.categoria || '').replace(/[^A-Za-z0-9_-]/g, '')}', '${encAttr(c.descontoBadge || '')}', ${c.valorEconomia || 10}, '${String(c.codigo || 'PRIME').replace(/[^A-Za-z0-9]/g, '') || 'PRIME'}', '', '${c.limite || 'daily'}', ${c.ordem || 0}, ${c.descontoPct || 10})">✏️ Editar</button>
             <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="excluirCupom('${docId}')">🗑️ Excluir</button>
           </div>
         </div>
@@ -1900,6 +1911,16 @@ window.salvarEmpresaPeloAdmin = async function() {
         empresaCategoria: categoria,
         fotoUrl: logo || null
       });
+      try {
+        const snapCuponsEmp = await getDocs(query(collection(db, "cupons"), where("empresaId", "==", id)));
+        if (!snapCuponsEmp.empty) {
+          const batchEmp = writeBatch(db);
+          snapCuponsEmp.forEach(c => batchEmp.update(c.ref, { empresaFoto: logo || '' }));
+          await batchEmp.commit();
+        }
+      } catch (e) {
+        console.error('Falha ao atualizar a foto nos cupons da empresa:', e);
+      }
       registrarLogAdmin('empresa', 'Empresa editada pelo admin', nome);
       mostrarAviso("Sucesso! 🏢", "Empresa atualizada com sucesso.", "✅");
     } else {
@@ -2111,6 +2132,7 @@ window.salvarDadosEmpresaLojista = async function() {
   const novoEndereco = document.getElementById('merchant-edit-address').value.trim();
   const novoTelefone = document.getElementById('merchant-edit-phone').value.trim();
   const novoInstagram = document.getElementById('merchant-edit-instagram').value.trim();
+  const novaFoto = (document.getElementById('merchant-edit-foto')?.value || '').trim();
   const novaLat = numeroOuNulo(document.getElementById('merchant-edit-lat')?.value);
   const novaLon = numeroOuNulo(document.getElementById('merchant-edit-lon')?.value);
 
@@ -2120,7 +2142,8 @@ window.salvarDadosEmpresaLojista = async function() {
     empresaNome: novoNome,
     empresaEndereco: novoEndereco || 'Pelotas / RS',
     empresaTelefone: novoTelefone || '',
-    empresaInstagram: novoInstagram || ''
+    empresaInstagram: novoInstagram || '',
+    fotoUrl: novaFoto || null
   };
   const temLocalizacao = novaLat !== null && novaLon !== null;
   if (temLocalizacao) {
@@ -2143,7 +2166,8 @@ window.salvarDadosEmpresaLojista = async function() {
         const camposCupom = {
           empresaNome: novoNome,
           endereco: dadosEmpresa.empresaEndereco,
-          telefone: dadosEmpresa.empresaTelefone
+          telefone: dadosEmpresa.empresaTelefone,
+          empresaFoto: novaFoto
         };
         if (temLocalizacao) {
           camposCupom.empresaLat = novaLat;
@@ -2173,6 +2197,61 @@ window.salvarDadosEmpresaLojista = async function() {
   }
 };
 
+function atualizarPreviaFotoEmpresa() {
+  const valor = document.getElementById('merchant-edit-foto')?.value || '';
+  const img = document.getElementById('merchant-edit-foto-preview');
+  const btnRem = document.getElementById('merchant-edit-foto-remover');
+  if (img) {
+    if (valor) { img.src = valor; img.style.display = 'block'; }
+    else { img.removeAttribute('src'); img.style.display = 'none'; }
+  }
+  if (btnRem) btnRem.style.display = valor ? 'block' : 'none';
+}
+
+// Foto da EMPRESA (separada da foto de cada cupom): reduz no celular e guarda no cadastro da loja.
+window.processarFotoEmpresa = function(input) {
+  const file = input.files && input.files[0];
+  const status = document.getElementById('merchant-edit-foto-status');
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { status.innerText = '❌ Escolha um arquivo de imagem.'; input.value = ''; return; }
+  status.innerText = '⏳ Preparando a foto...';
+
+  const reader = new FileReader();
+  reader.onerror = () => { status.innerText = '❌ Não foi possível ler a foto.'; };
+  reader.onload = () => {
+    const img = new Image();
+    img.onerror = () => { status.innerText = '❌ Imagem inválida. Tente outra.'; };
+    img.onload = () => {
+      const escala = Math.min(1, 640 / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.width * escala));
+      canvas.height = Math.max(1, Math.round(img.height * escala));
+      const ctx2d = canvas.getContext('2d');
+      ctx2d.fillStyle = '#ffffff';
+      ctx2d.fillRect(0, 0, canvas.width, canvas.height);
+      ctx2d.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      let q = 0.75;
+      let dataUrl = canvas.toDataURL('image/jpeg', q);
+      while (dataUrl.length > 140000 && q > 0.4) { q -= 0.1; dataUrl = canvas.toDataURL('image/jpeg', q); }
+      if (dataUrl.length > 200000) { status.innerText = '❌ Foto muito pesada. Escolha outra.'; return; }
+
+      document.getElementById('merchant-edit-foto').value = dataUrl;
+      status.innerText = `✅ Foto pronta (${Math.round(dataUrl.length / 1024)} KB). Toque em "Salvar Alterações da Empresa".`;
+      atualizarPreviaFotoEmpresa();
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+};
+
+window.removerFotoEmpresa = function() {
+  document.getElementById('merchant-edit-foto').value = '';
+  document.getElementById('merchant-edit-foto-status').innerText = 'Foto removida. Toque em "Salvar Alterações da Empresa".';
+  atualizarPreviaFotoEmpresa();
+};
+
 window.abrirModalCriarOferta = async function() {
   const user = auth.currentUser;
   if (user && window.currentUserData?.funcao === "lojista") {
@@ -2190,6 +2269,8 @@ window.abrirModalCriarOferta = async function() {
   document.getElementById('offer-rules').value = "";
   document.getElementById('offer-desconto-pct').value = "";
   document.getElementById('offer-image').value = "";
+  document.getElementById('offer-image-link').value = "";
+  document.getElementById('offer-image-status').innerText = "";
   document.getElementById('offer-badge').value = "";
   document.getElementById('offer-econ').value = "";
   document.getElementById('offer-code').value = "";
@@ -2200,6 +2281,7 @@ window.abrirModalCriarOferta = async function() {
     boxAdmin.style.display = window.currentUserData?.funcao === "admin" ? "block" : "none";
   }
 
+  atualizarPreviaOferta();
   document.getElementById('modal-add-offer').classList.add('active');
 };
 
@@ -2210,7 +2292,10 @@ window.abrirModalEditarOferta = function(id, titulo, desc, regras, cat, badge, e
   document.getElementById('offer-desc').value = decodeURIComponent(desc);
   document.getElementById('offer-rules').value = decodeURIComponent(regras);
   document.getElementById('offer-desconto-pct').value = descontoPct;
-  document.getElementById('offer-image').value = decodeURIComponent(imagem || '');
+  const imgAtual = (window.cacheCuponsPorId && window.cacheCuponsPorId[id] && window.cacheCuponsPorId[id].imagem) || decodeURIComponent(imagem || '');
+  document.getElementById('offer-image').value = imgAtual;
+  document.getElementById('offer-image-link').value = imgAtual.startsWith('data:') ? '' : imgAtual;
+  document.getElementById('offer-image-status').innerText = imgAtual.startsWith('data:') ? '📷 Foto enviada anteriormente.' : '';
   document.getElementById('offer-cat').value = cat;
   document.getElementById('offer-badge').value = decodeURIComponent(badge);
   document.getElementById('offer-econ').value = econ;
@@ -2227,6 +2312,7 @@ window.abrirModalEditarOferta = function(id, titulo, desc, regras, cat, badge, e
     }
   }
 
+  atualizarPreviaOferta();
   document.getElementById('modal-add-offer').classList.add('active');
 };
 
@@ -2279,6 +2365,7 @@ window.salvarOfertaGeral = async function() {
       dadosCupom.empresaNome = window.currentUserData?.empresaNome || 'Parceiro Local Pelotas';
       dadosCupom.endereco = window.currentUserData?.empresaEndereco || 'Pelotas / RS';
       dadosCupom.telefone = window.currentUserData?.empresaTelefone || '';
+      dadosCupom.empresaFoto = window.currentUserData?.fotoUrl || '';
       const latEmp = numeroOuNulo(window.currentUserData?.empresaLat);
       const lonEmp = numeroOuNulo(window.currentUserData?.empresaLon);
       if (latEmp !== null && lonEmp !== null) {
@@ -2777,7 +2864,7 @@ window.abrirPreviewVitrineLojista = async function() {
     const d = window.currentUserData || {};
     const cupons = snap.docs.map(x => ({ id: x.id, ...x.data() })).sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
     const ativos = cupons.filter(c => c.ativo);
-    const imagem = (cupons.find(c => c.imagem) || {}).imagem || '';
+    const imagem = d.fotoUrl || '';
 
     let avisos = '';
     if (d.ativo === false) avisos += `<p style="color:var(--danger); font-size:0.75rem; font-weight:800;">⚠️ Sua empresa está desativada: nada disso aparece para os clientes.</p>`;
@@ -2790,8 +2877,10 @@ window.abrirPreviewVitrineLojista = async function() {
     const itens = cupons.map(c => {
       const limiteTxt = c.limite === 'daily' ? '1 por dia' : c.limite === 'once' ? 'Uso único' : 'Ilimitado';
       const pctTxt = c.descontoPct ? `${c.descontoPct}% OFF` : (c.descontoBadge || 'OFERTA');
+      const imgCupom = c.imagem ? `<img src="${escapeHtml(c.imagem)}" alt="Foto da oferta" style="width:64px; height:64px; object-fit:cover; border-radius:12px; flex-shrink:0;">` : '';
       return `
-        <div style="background:var(--secondary); border:1px solid var(--card-border); padding:12px; border-radius:14px; display:flex; justify-content:space-between; align-items:center; opacity:${c.ativo ? 1 : 0.55};">
+        <div style="background:var(--secondary); border:1px solid var(--card-border); padding:12px; border-radius:14px; display:flex; justify-content:space-between; align-items:center; gap:10px; opacity:${c.ativo ? 1 : 0.55};">
+          ${imgCupom}
           <div style="flex:1; padding-right:8px;">
             <div style="font-size:0.85rem; font-weight:800; color:var(--text);">${escapeHtml(c.titulo)}</div>
             <div style="font-size:0.75rem; color:var(--muted);">${escapeHtml(c.descricao)}</div>
@@ -2837,3 +2926,73 @@ async function carregarUltimasAtividades() {
     }).join('');
   } catch (e) { box.innerText = 'Não foi possível carregar as atividades.'; }
 }
+
+
+// ===== FORMULÁRIO DE OFERTA: PRÉVIA AO VIVO E ENVIO DE FOTO =====
+window.atualizarPreviaOferta = function() {
+  const v = (id) => (document.getElementById(id)?.value || '');
+  const titulo = v('offer-title').trim();
+  const desc = v('offer-desc').trim();
+  const pct = parseFloat(v('offer-desconto-pct'));
+  const badge = v('offer-badge').trim() || (pct > 0 ? `${pct}% OFF` : 'OFERTA');
+  const lim = v('offer-limit');
+  const limTxt = lim === 'daily' ? '1 por dia' : lim === 'once' ? 'Uso único' : 'Ilimitado';
+  const regras = v('offer-rules').trim();
+
+  document.getElementById('pv-title').innerText = titulo || 'Título da promoção';
+  document.getElementById('pv-desc').innerText = desc || 'Descrição curta';
+  document.getElementById('pv-badge').innerText = badge;
+  document.getElementById('pv-rule').innerText = `Regra: ${limTxt}${regras ? ' • ' + regras : ''}`;
+
+  const img = v('offer-image').trim();
+  const imgEl = document.getElementById('pv-img');
+  if (img) { imgEl.src = img; imgEl.style.display = 'block'; } else { imgEl.removeAttribute('src'); imgEl.style.display = 'none'; }
+  const btnRem = document.getElementById('btn-remover-foto');
+  if (btnRem) btnRem.style.display = img ? 'block' : 'none';
+};
+
+// Reduz a foto no próprio celular e guarda junto da oferta (sem precisar de Storage).
+window.processarFotoOferta = function(input) {
+  const file = input.files && input.files[0];
+  const status = document.getElementById('offer-image-status');
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { status.innerText = '❌ Escolha um arquivo de imagem.'; input.value = ''; return; }
+  status.innerText = '⏳ Preparando a foto...';
+
+  const reader = new FileReader();
+  reader.onerror = () => { status.innerText = '❌ Não foi possível ler a foto.'; };
+  reader.onload = () => {
+    const img = new Image();
+    img.onerror = () => { status.innerText = '❌ Imagem inválida. Tente outra.'; };
+    img.onload = () => {
+      const escala = Math.min(1, 640 / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.width * escala));
+      canvas.height = Math.max(1, Math.round(img.height * escala));
+      const ctx2d = canvas.getContext('2d');
+      ctx2d.fillStyle = '#ffffff';
+      ctx2d.fillRect(0, 0, canvas.width, canvas.height);
+      ctx2d.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      let q = 0.75;
+      let dataUrl = canvas.toDataURL('image/jpeg', q);
+      while (dataUrl.length > 140000 && q > 0.4) { q -= 0.1; dataUrl = canvas.toDataURL('image/jpeg', q); }
+      if (dataUrl.length > 200000) { status.innerText = '❌ Foto muito pesada. Escolha outra.'; return; }
+
+      document.getElementById('offer-image').value = dataUrl;
+      document.getElementById('offer-image-link').value = '';
+      status.innerText = `✅ Foto pronta (${Math.round(dataUrl.length / 1024)} KB).`;
+      atualizarPreviaOferta();
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+};
+
+window.removerFotoOferta = function() {
+  document.getElementById('offer-image').value = '';
+  document.getElementById('offer-image-link').value = '';
+  document.getElementById('offer-image-status').innerText = '';
+  atualizarPreviaOferta();
+};

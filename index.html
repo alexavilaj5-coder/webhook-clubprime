@@ -238,6 +238,17 @@
           <span style="font-size:0.8rem; color:var(--muted);">▼</span>
         </summary>
         <div style="padding:16px; border-top:1px solid var(--card-border);">
+          <div class="form-group" style="text-align:left; margin-bottom:12px;">
+            <label>FOTO DA EMPRESA (aparece para os clientes)</label>
+            <img id="merchant-edit-foto-preview" alt="Foto da empresa" style="display:none; width:100%; height:130px; object-fit:cover; border-radius:14px; margin-bottom:8px;">
+            <input type="hidden" id="merchant-edit-foto" value="">
+            <input type="file" id="merchant-edit-foto-file" accept="image/*" style="display:none;" onchange="processarFotoEmpresa(this)">
+            <div style="display:flex; gap:8px;">
+              <button type="button" class="btn btn-outline btn-small" style="flex:1;" onclick="document.getElementById('merchant-edit-foto-file').click()">📷 Escolher foto</button>
+              <button type="button" id="merchant-edit-foto-remover" class="btn btn-outline btn-small" style="flex:1; display:none; color:var(--danger); border-color:#ef444455;" onclick="removerFotoEmpresa()">🗑️ Remover</button>
+            </div>
+            <div id="merchant-edit-foto-status" style="font-size:0.7rem; color:var(--muted); margin-top:4px;">Depois de escolher, toque em "Salvar Alterações da Empresa".</div>
+          </div>
           <div class="form-group" style="text-align:left; margin-bottom:8px;">
             <label>NOME DA EMPRESA</label>
             <input type="text" id="merchant-edit-name" class="form-control" placeholder="Nome da Loja">
@@ -988,46 +999,56 @@
 
   <div id="modal-add-offer" class="modal">
     <div class="modal-content">
-      <h3 id="modal-offer-heading" style="font-size:1.2rem; font-weight:800; margin-bottom:12px;">➕ Nova Oferta</h3>
+      <h3 id="modal-offer-heading" style="font-size:1.2rem; font-weight:800; margin-bottom:10px;">➕ Nova Oferta</h3>
       <input type="hidden" id="edit-offer-id" value="">
+      <input type="hidden" id="offer-image" value="">
 
-      <div class="form-group" style="text-align:left;">
-        <label>TÍTULO DA PROMOÇÃO</label>
-        <input type="text" id="offer-title" class="form-control" placeholder="Ex: 20% OFF na Troca de Óleo">
+      <!-- PRÉVIA AO VIVO -->
+      <div style="position:sticky; top:-24px; z-index:5; background:var(--bg); padding:14px 0 10px;">
+        <div style="font-size:0.65rem; font-weight:800; color:var(--muted); margin-bottom:4px; text-align:left;">👁️ ASSIM O CLIENTE VÊ</div>
+        <div style="background:var(--secondary); border:1px solid var(--card-border); border-radius:14px; overflow:hidden; text-align:left;">
+          <img id="pv-img" alt="" style="display:none; width:100%; height:64px; object-fit:cover;">
+          <div style="padding:10px 12px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div style="flex:1; min-width:0;">
+              <div id="pv-title" style="font-size:0.85rem; font-weight:800; color:var(--text); word-break:break-word;">Título da promoção</div>
+              <div id="pv-desc" style="font-size:0.75rem; color:var(--muted); word-break:break-word;">Descrição curta</div>
+              <div id="pv-rule" style="font-size:0.68rem; color:var(--primary); font-weight:700; margin-top:4px;"></div>
+            </div>
+            <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+              <span id="pv-badge" class="discount-badge" style="font-size:0.72rem; padding:3px 8px;">OFERTA</span>
+              <span class="btn btn-cyan btn-small" style="padding:6px 10px; font-size:0.75rem; pointer-events:none;">🎟️ Resgatar</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="form-group" style="text-align:left;">
-        <label>DESCRIÇÃO CURTA</label>
-        <input type="text" id="offer-desc" class="form-control" placeholder="Ex: Válido para pagamentos no Pix ou Dinheiro">
+        <label>TÍTULO DA PROMOÇÃO *</label>
+        <input type="text" id="offer-title" class="form-control" placeholder="Ex: Troca de óleo com desconto" oninput="atualizarPreviaOferta()">
       </div>
 
       <div class="form-group" style="text-align:left;">
-        <label>DIAS E HORÁRIOS DE VALIDADE (REGRAS)</label>
-        <input type="text" id="offer-rules" class="form-control" placeholder="Ex: Terça a Quinta, das 14h às 18h">
+        <label>DESCRIÇÃO CURTA *</label>
+        <input type="text" id="offer-desc" class="form-control" placeholder="Ex: Válido no Pix ou dinheiro" oninput="atualizarPreviaOferta()">
       </div>
 
       <div class="form-group" style="text-align:left;">
-        <label>PORCENTAGEM DE DESCONTO (%)</label>
-        <input type="number" id="offer-desconto-pct" class="form-control" min="1" max="100" step="1" placeholder="Ex: 15 (para 15% de desconto)">
+        <label>DESCONTO (%) *</label>
+        <input type="number" id="offer-desconto-pct" class="form-control" min="1" max="100" step="1" placeholder="Ex: 15" oninput="atualizarPreviaOferta()">
       </div>
 
       <div class="form-group" style="text-align:left;">
-        <label>PREFIXO DO CÓDIGO (PREFIXO INICIAL)</label>
-        <input type="text" id="offer-code" class="form-control" placeholder="Ex: BARBER (O app vai gerar BARBER-8F2K)" style="text-transform:uppercase;">
+        <label>DIAS E HORÁRIOS (OPCIONAL)</label>
+        <input type="text" id="offer-rules" class="form-control" placeholder="Ex: Terça a quinta, 14h às 18h" oninput="atualizarPreviaOferta()">
       </div>
 
       <div class="form-group" style="text-align:left;">
         <label>LIMITE DE USO POR PESSOA</label>
-        <select id="offer-limit" class="form-control">
+        <select id="offer-limit" class="form-control" onchange="atualizarPreviaOferta()">
           <option value="daily">1 cupom por dia por pessoa</option>
           <option value="once">Apenas 1 cupom por pessoa (Uso Único)</option>
           <option value="unlimited">Ilimitado</option>
         </select>
-      </div>
-
-      <div class="form-group" style="text-align:left;">
-        <label>LINK DA FOTO / LOGÓTIPO DA EMPRESA</label>
-        <input type="text" id="offer-image" class="form-control" placeholder="Ex: https://i.imgur.com/foto.jpg">
       </div>
 
       <div class="form-group" style="text-align:left;">
@@ -1045,19 +1066,42 @@
       </div>
 
       <div class="form-group" style="text-align:left;">
-        <label>TEXTO DO SELO (BADGE)</label>
-        <input type="text" id="offer-badge" class="form-control" placeholder="Ex: 20% OFF / BRINDE">
+        <label>FOTO DA OFERTA (OPCIONAL)</label>
+        <input type="file" id="offer-image-file" accept="image/*" style="display:none;" onchange="processarFotoOferta(this)">
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-outline btn-small" style="flex:1;" onclick="document.getElementById('offer-image-file').click()">📷 Escolher foto</button>
+          <button type="button" id="btn-remover-foto" class="btn btn-outline btn-small" style="display:none; color:var(--danger); border-color:#ef444455;" onclick="removerFotoOferta()">🗑️ Remover</button>
+        </div>
+        <div id="offer-image-status" style="font-size:0.7rem; color:var(--muted); margin-top:4px;"></div>
       </div>
 
-      <div class="form-group" style="text-align:left;">
-        <label>ESTIMATIVA DE ECONOMIA (R$)</label>
-        <input type="number" id="offer-econ" class="form-control" placeholder="15.00">
-      </div>
-
-      <div class="form-group" style="text-align:left; display:none;" id="box-admin-order">
-        <label>ORDEM DE POSICIONAMENTO (MENOR = TOPO - APENAS ADM)</label>
-        <input type="number" id="offer-order" class="form-control" value="0" placeholder="Ex: 1, 2, 3...">
-      </div>
+      <details style="background:var(--secondary); border:1px solid var(--card-border); border-radius:12px; padding:10px 12px; margin-top:6px; text-align:left;">
+        <summary style="font-size:0.8rem; font-weight:800; cursor:pointer;">⚙️ Opções avançadas</summary>
+        <div style="margin-top:10px;">
+          <div class="form-group" style="text-align:left;">
+            <label>PREFIXO DO CÓDIGO</label>
+            <input type="text" id="offer-code" class="form-control" placeholder="Ex: BARBER" style="text-transform:uppercase;">
+            <div style="font-size:0.65rem; color:var(--muted); margin-top:3px;">O app gera códigos como BARBER-X7K2.</div>
+          </div>
+          <div class="form-group" style="text-align:left;">
+            <label>TEXTO DO SELO (SE QUISER OUTRO)</label>
+            <input type="text" id="offer-badge" class="form-control" placeholder="Ex: BRINDE" oninput="atualizarPreviaOferta()">
+            <div style="font-size:0.65rem; color:var(--muted); margin-top:3px;">Vazio = usa o desconto (ex: 15% OFF).</div>
+          </div>
+          <div class="form-group" style="text-align:left;">
+            <label>ECONOMIA ESTIMADA (R$) — SÓ REFERÊNCIA</label>
+            <input type="number" id="offer-econ" class="form-control" placeholder="15.00">
+          </div>
+          <div class="form-group" style="text-align:left;">
+            <label>LINK DA FOTO (ALTERNATIVA AO ENVIO)</label>
+            <input type="text" id="offer-image-link" class="form-control" placeholder="https://..." oninput="document.getElementById('offer-image').value = this.value.trim(); atualizarPreviaOferta()">
+          </div>
+          <div class="form-group" style="text-align:left; display:none;" id="box-admin-order">
+            <label>ORDEM DE POSICIONAMENTO (MENOR = TOPO - APENAS ADM)</label>
+            <input type="number" id="offer-order" class="form-control" value="0" placeholder="Ex: 1, 2, 3...">
+          </div>
+        </div>
+      </details>
 
       <button class="btn btn-cyan" style="margin-top:12px;" onclick="salvarOfertaGeral()">💾 Salvar e Publicar</button>
       <button class="btn btn-outline" style="margin-top:8px;" onclick="fecharModal('modal-add-offer')">Cancelar</button>
