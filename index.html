@@ -13,7 +13,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Clube Prime">
 
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=3">
+  <!-- Blindagem do jogo secreto: vale mesmo se o style.css do aparelho estiver desatualizado -->
+  <style>
+    .offline-overlay { position: fixed; inset: 0; z-index: 5000; }
+    .offline-overlay:not(.active) { display: none !important; }
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <!-- Chart.js para gráficos do Admin -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -22,7 +27,7 @@
   <!-- QRCode.js para gerar o QR Code no modal do Cliente -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.js?v=3"></script>
 </head>
 <body>
 
