@@ -71,6 +71,114 @@ function debounce(fn, delay) {
   };
 }
 
+function escapeHtml(valor) {
+  return String(valor ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// encodeURIComponent não codifica o apóstrofo, o que quebrava onclick="...('D'Ouro')"
+function encAttr(valor) {
+  return encodeURIComponent(valor ?? '').replace(/'/g, '%27');
+}
+
+function numeroOuNulo(valor) {
+  if (valor === null || valor === undefined || valor === '') return null;
+  const n = Number(valor);
+  return Number.isFinite(n) ? n : null;
+}
+
+let posicaoUsuarioGps = null;
+
+function formatarDistancia(km) {
+  if (km < 1) return `${Math.max(1, Math.round(km * 1000))} m`;
+  return `${km.toFixed(1).replace('.', ',')} km`;
+}
+
+function mensagemErroGps(error) {
+  if (error && error.code === 1) return "Permissão de localização negada. Libere a localização para este site/aplicativo nas configurações e tente de novo.";
+  if (error && error.code === 2) return "Sua localização não está disponível agora. Verifique se o GPS do celular está ligado.";
+  if (error && error.code === 3) return "Demorou demais para obter a localização. Tente de novo em um local com melhor sinal.";
+  return "Não foi possível obter a localização.";
+}
+
+function atualizarStatusGps(prefix, lat, lon) {
+  const el = document.getElementById(`${prefix}-gps-status`);
+  if (!el) return;
+  if (lat !== null && lon !== null) {
+    el.textContent = `✅ Localização salva (${lat.toFixed(5)}, ${lon.toFixed(5)}).`;
+  } else {
+    el.textContent = "⚠️ Localização ainda não informada. Sem ela sua empresa não aparece na busca por proximidade.";
+  }
+}
+
+window.capturarLocalizacaoEmpresa = function(prefix) {
+  const latEl = document.getElementById(`${prefix}-lat`);
+  const lonEl = document.getElementById(`${prefix}-lon`);
+  const statusEl = document.getElementById(`${prefix}-gps-status`);
+  if (!latEl || !lonEl) return;
+
+  if (!navigator.geolocation) {
+    return mostrarAviso("GPS Indisponível", "Seu navegador não suporta geolocalização.", "⚠️");
+  }
+  if (!window.isSecureContext) {
+    return mostrarAviso("GPS Indisponível", "A localização só funciona em conexão segura (https).", "🔒");
+  }
+
+  if (statusEl) statusEl.textContent = "⏳ Obtendo localização...";
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      latEl.value = lat;
+      lonEl.value = lon;
+      const precisao = Math.round(position.coords.accuracy || 0);
+      if (statusEl) {
+        statusEl.textContent = precisao > 150
+          ? `⚠️ Localização capturada, mas com pouca precisão (~${precisao} m). Tente de novo ao ar livre ou perto de uma janela.`
+          : `✅ Localização capturada (~${precisao} m de precisão).${prefix === 'merchant-edit' ? ' Toque em "Salvar Alterações da Empresa".' : ''}`;
+      }
+    },
+    (error) => {
+      if (statusEl) statusEl.textContent = "❌ " + mensagemErroGps(error);
+      mostrarAviso("Erro no GPS", mensagemErroGps(error), "❌");
+    },
+    { timeout: 15000, enableHighAccuracy: true, maximumAge: 0 }
+  );
+};
+
+function aplicarOrdenacaoGps() {
+  if (!posicaoUsuarioGps) return;
+  const container = document.getElementById('stores-list-dynamic');
+  if (!container) return;
+
+  const cards = Array.from(container.querySelectorAll('.company-card'));
+  cards.forEach(card => {
+    const lat = numeroOuNulo(card.dataset.lat);
+    const lon = numeroOuNulo(card.dataset.lon);
+    const badge = card.querySelector('.distancia-badge');
+    if (lat !== null && lon !== null) {
+      const dist = calcularDistanciaKm(posicaoUsuarioGps.lat, posicaoUsuarioGps.lon, lat, lon);
+      card.dataset.distance = dist;
+      if (badge) badge.textContent = `• ${formatarDistancia(dist)}`;
+    } else {
+      card.dataset.distance = '';
+      if (badge) badge.textContent = '';
+    }
+  });
+
+  cards.sort((a, b) => {
+    const dA = parseFloat(a.dataset.distance);
+    const dB = parseFloat(b.dataset.distance);
+    return (isNaN(dA) ? Infinity : dA) - (isNaN(dB) ? Infinity : dB);
+  });
+  cards.forEach(card => container.appendChild(card));
+}
+
 function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -210,6 +318,12 @@ onAuthStateChanged(auth, async (user) => {
         if (document.getElementById('merchant-edit-phone')) document.getElementById('merchant-edit-phone').value = telefoneEmpresa;
         if (document.getElementById('merchant-edit-instagram')) document.getElementById('merchant-edit-instagram').value = instagramEmpresa;
 
+        const latSalva = numeroOuNulo(data.empresaLat);
+        const lonSalva = numeroOuNulo(data.empresaLon);
+        if (document.getElementById('merchant-edit-lat')) document.getElementById('merchant-edit-lat').value = latSalva ?? '';
+        if (document.getElementById('merchant-edit-lon')) document.getElementById('merchant-edit-lon').value = lonSalva ?? '';
+        atualizarStatusGps('merchant-edit', latSalva, lonSalva);
+
         carregarEstatisticasLojista(user.uid);
         carregarCuponsDoLojista(user.uid);
         carregarLogsDoLojista(user.uid);
@@ -332,40 +446,41 @@ window.ativarBuscaProximidadeGps = function() {
   if (!navigator.geolocation) {
     return mostrarAviso("GPS Indisponível", "Seu navegador não suporta geolocalização.", "⚠️");
   }
+  if (!window.isSecureContext) {
+    return mostrarAviso("GPS Indisponível", "A localização só funciona em conexão segura (https).", "🔒");
+  }
 
   mostrarAviso("Localizando...", "Buscando parceiros próximos de você em Pelotas...", "📍");
 
   navigator.geolocation.getCurrentPosition(
     (position) => {
-      const userLat = position.coords.latitude;
-      const userLon = position.coords.longitude;
-      fecharModal('modal-alert');
-      mostrarAviso("GPS Ativo! 🎯", "Exibindo estabelecimentos ordenados por proximidade.", "✅");
+      posicaoUsuarioGps = {
+        lat: position.coords.latitude,
+        lon: position.coords.longitude,
+        precisao: position.coords.accuracy
+      };
+      aplicarOrdenacaoGps();
 
-      const cards = document.querySelectorAll('.company-card');
-      cards.forEach(card => {
-        const latEmp = parseFloat(card.dataset.lat);
-        const lonEmp = parseFloat(card.dataset.lon);
-        if (!isNaN(latEmp) && !isNaN(lonEmp)) {
-          const dist = calcularDistanciaKm(userLat, userLon, latEmp, lonEmp);
-          card.dataset.distance = dist;
-        } else {
-          card.dataset.distance = 9999;
-        }
-      });
+      const cards = Array.from(document.querySelectorAll('#stores-list-dynamic .company-card'));
+      const comLocal = cards.filter(c => numeroOuNulo(c.dataset.lat) !== null && numeroOuNulo(c.dataset.lon) !== null).length;
+      const semLocal = cards.length - comLocal;
 
-      const container = document.getElementById('stores-list-dynamic');
-      if (container) {
-        const cardsArray = Array.from(cards);
-        cardsArray.sort((a, b) => parseFloat(a.dataset.distance) - parseFloat(b.dataset.distance));
-        cardsArray.forEach(card => container.appendChild(card));
+      let msg;
+      if (cards.length > 0 && comLocal === 0) {
+        msg = "Nenhum parceiro cadastrou a localização ainda, então não dá para ordenar por distância.";
+      } else {
+        msg = "Estabelecimentos ordenados por proximidade.";
+        if (semLocal > 0) msg += ` ${semLocal} parceiro(s) sem localização aparecem no final.`;
       }
+
+      fecharModal('modal-alert');
+      mostrarAviso("GPS Ativo! 🎯", msg, "✅");
     },
     (error) => {
       fecharModal('modal-alert');
-      mostrarAviso("Erro no GPS", "Não foi possível obter sua localização. Verifique as permissões.", "❌");
+      mostrarAviso("Erro no GPS", mensagemErroGps(error), "❌");
     },
-    { timeout: 10000, enableHighAccuracy: true }
+    { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 }
   );
 };
 
@@ -542,17 +657,17 @@ async function carregarParceirosCliente() {
 
       const foneLimpo = (u.empresaTelefone || '').replace(/\D/g, '');
       const wppLink = foneLimpo ? `https://wa.me/55${foneLimpo}?text=Olá,%20vim%20pelo%20Clube%20Prime!` : '#';
-      const instaLink = u.empresaInstagram ? `https://instagram.com/${u.empresaInstagram.replace('@', '')}` : '#';
+      const instaLink = u.empresaInstagram ? `https://instagram.com/${encodeURIComponent(u.empresaInstagram.replace('@', ''))}` : '#';
 
       partnersClientHtml += `
         <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:12px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <h4 style="font-size:1rem; font-weight:900;">🏢 ${u.empresaNome || 'Empresa'}</h4>
-            <span style="font-size:0.7rem; font-weight:800; color:var(--primary);">${u.empresaCategoria || 'Parceiro'}</span>
+            <h4 style="font-size:1rem; font-weight:900;">🏢 ${escapeHtml(u.empresaNome || 'Empresa')}</h4>
+            <span style="font-size:0.7rem; font-weight:800; color:var(--primary);">${escapeHtml(u.empresaCategoria || 'Parceiro')}</span>
           </div>
-          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📍 <strong>Endereço:</strong> ${u.empresaEndereco || 'Pelotas / RS'}</p>
-          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📞 <strong>Contato:</strong> ${u.empresaTelefone || 'Não informado'}</p>
-          ${u.empresaInstagram ? `<p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px;">📸 <strong>Instagram:</strong> ${u.empresaInstagram}</p>` : ''}
+          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📍 <strong>Endereço:</strong> ${escapeHtml(u.empresaEndereco || 'Pelotas / RS')}</p>
+          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📞 <strong>Contato:</strong> ${escapeHtml(u.empresaTelefone || 'Não informado')}</p>
+          ${u.empresaInstagram ? `<p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px;">📸 <strong>Instagram:</strong> ${escapeHtml(u.empresaInstagram)}</p>` : ''}
           <div style="display:flex; gap:8px; margin-top:10px;">
             ${foneLimpo ? `<a href="${wppLink}" target="_blank" class="btn btn-cyan" style="flex:1; padding:8px; font-size:0.78rem; text-decoration:none; text-align:center;">💬 WhatsApp</a>` : ''}
             ${u.empresaInstagram ? `<a href="${instaLink}" target="_blank" class="btn btn-cyan" style="flex:1; padding:8px; font-size:0.78rem; text-decoration:none; text-align:center; background:linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);">📸 Instagram</a>` : ''}
@@ -1009,10 +1124,14 @@ function carregarCuponsVitrine() {
           telefone: cupom.telefone || '',
           categoria: cupom.categoria || 'gastronomia',
           imagem: cupom.imagem || '',
-          lat: cupom.empresaLat || null,
-          lon: cupom.empresaLon || null,
+          lat: numeroOuNulo(cupom.empresaLat),
+          lon: numeroOuNulo(cupom.empresaLon),
           cupons: []
         };
+      }
+      if (empresasGrouped[key].lat === null || empresasGrouped[key].lon === null) {
+        empresasGrouped[key].lat = numeroOuNulo(cupom.empresaLat);
+        empresasGrouped[key].lon = numeroOuNulo(cupom.empresaLon);
       }
       if (empresasGrouped[key].cupons.length < 3) {
         empresasGrouped[key].cupons.push(cupom);
@@ -1021,18 +1140,18 @@ function carregarCuponsVitrine() {
 
     let html = '';
     for (const [key, emp] of Object.entries(empresasGrouped)) {
-      let imgHtml = emp.imagem ? `<img src="${emp.imagem}" alt="Logo/Foto" style="width:100%; height:130px; object-fit:cover; border-radius:14px; margin-bottom:12px;">` : '';
+      let imgHtml = emp.imagem ? `<img src="${escapeHtml(emp.imagem)}" alt="Logo/Foto" style="width:100%; height:130px; object-fit:cover; border-radius:14px; margin-bottom:12px;">` : '';
       
-      const latAttr = emp.lat ? `data-lat="${emp.lat}"` : '';
-      const lonAttr = emp.lon ? `data-lon="${emp.lon}"` : '';
+      const latAttr = emp.lat !== null && emp.lon !== null ? `data-lat="${emp.lat}"` : '';
+      const lonAttr = emp.lat !== null && emp.lon !== null ? `data-lon="${emp.lon}"` : '';
 
       html += `
-        <div class="company-card" data-cat="${emp.categoria}" data-name="${emp.nome.toLowerCase()}" ${latAttr} ${lonAttr} style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:20px; margin-bottom:16px;">
+        <div class="company-card" data-cat="${escapeHtml(emp.categoria)}" data-name="${escapeHtml(String(emp.nome || '').toLowerCase())}" ${latAttr} ${lonAttr} style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:20px; margin-bottom:16px;">
           ${imgHtml}
           <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
             <div>
-              <h3 style="font-size:1.1rem; font-weight:900; color:var(--text);">🏢 ${emp.nome}</h3>
-              <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">📍 ${emp.endereco}</div>
+              <h3 style="font-size:1.1rem; font-weight:900; color:var(--text);">🏢 ${escapeHtml(emp.nome)}</h3>
+              <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">📍 ${escapeHtml(emp.endereco)} <span class="distancia-badge" style="font-weight:800; color:var(--primary);"></span></div>
             </div>
             <span style="font-size:0.7rem; font-weight:800; color:var(--primary); background:var(--secondary); padding:4px 8px; border-radius:10px;">${emp.cupons.length} Oferta(s)</span>
           </div>
@@ -1044,26 +1163,26 @@ function carregarCuponsVitrine() {
         const limiteTxt = cupom.limite === 'daily' ? '1 por dia' : cupom.limite === 'once' ? 'Uso único' : 'Ilimitado';
         const pctTxt = cupom.descontoPct ? `${cupom.descontoPct}% OFF` : (cupom.descontoBadge || 'OFERTA');
 
-        const encNome = encodeURIComponent(emp.nome);
-        const encTitulo = encodeURIComponent(cupom.titulo);
-        const encEnd = encodeURIComponent(emp.endereco);
-        const encTel = encodeURIComponent(emp.telefone);
-        const encRegras = encodeURIComponent(cupom.regras || '');
+        const encNome = encAttr(emp.nome);
+        const encTitulo = encAttr(cupom.titulo);
+        const encEnd = encAttr(emp.endereco);
+        const encTel = encAttr(emp.telefone);
+        const encRegras = encAttr(cupom.regras || '');
 
         html += `
           <div style="background:var(--secondary); border:1px solid var(--card-border); padding:12px; border-radius:14px; display:flex; justify-content:space-between; align-items:center;">
             <div style="flex:1; padding-right:8px;">
               <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
-                <span style="font-size:0.85rem; font-weight:800; color:var(--text);">${cupom.titulo}</span>
+                <span style="font-size:0.85rem; font-weight:800; color:var(--text);">${escapeHtml(cupom.titulo)}</span>
                 <button style="background:none; border:none; color:var(--primary); font-size:0.9rem; cursor:pointer; padding:0 4px;" title="Ver Regras" onclick="abrirModalRegrasCupom('${encTitulo}', '${encNome}', '${encRegras}')">ℹ️</button>
               </div>
-              <div style="font-size:0.75rem; color:var(--muted);">${cupom.descricao}</div>
+              <div style="font-size:0.75rem; color:var(--muted);">${escapeHtml(cupom.descricao)}</div>
               <div style="font-size:0.68rem; color:var(--primary); font-weight:700; margin-top:4px;">Regra: ${limiteTxt}</div>
             </div>
 
             <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-              <span class="discount-badge" style="font-size:0.72rem; padding:3px 8px;">${pctTxt}</span>
-              <button class="btn btn-cyan btn-small" style="padding:6px 10px; font-size:0.75rem;" onclick="clicarElesResgatar('${cupom.id}', '${cupom.empresaId}', '${encNome}', '${encTitulo}', '${cupom.codigo || 'PRIME'}', ${cupom.valorEconomia || 10.00}, '${encEnd}', '${encTel}', '${encRegras}', '${cupom.limite || 'daily'}', ${cupom.descontoPct || 10})">
+              <span class="discount-badge" style="font-size:0.72rem; padding:3px 8px;">${escapeHtml(pctTxt)}</span>
+              <button class="btn btn-cyan btn-small" style="padding:6px 10px; font-size:0.75rem;" onclick="clicarElesResgatar('${cupom.id}', '${cupom.empresaId}', '${encNome}', '${encTitulo}', '${String(cupom.codigo || 'PRIME').replace(/[^A-Za-z0-9]/g, '') || 'PRIME'}', ${cupom.valorEconomia || 10.00}, '${encEnd}', '${encTel}', '${encRegras}', '${cupom.limite || 'daily'}', ${cupom.descontoPct || 10})">
                 🎟️ Resgatar
               </button>
             </div>
@@ -1079,6 +1198,7 @@ function carregarCuponsVitrine() {
 
     if (html !== '') {
       container.innerHTML = html;
+      aplicarOrdenacaoGps();
     } else {
       container.innerHTML = `<p style="font-size:0.8rem; color:var(--muted); text-align:center; padding:20px;">Nenhum cupom ativo no momento.</p>`;
     }
@@ -1173,13 +1293,13 @@ function carregarCuponsDoLojista(empresaUid) {
       html += `
         <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:10px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h4 style="font-size:0.9rem; font-weight:800;">${cupom.titulo}</h4>
+            <h4 style="font-size:0.9rem; font-weight:800;">${escapeHtml(cupom.titulo)}</h4>
             <span style="font-size:0.7rem; font-weight:800;">${statusText}</span>
           </div>
-          <p style="font-size:0.75rem; color:var(--muted); margin:4px 0;">Desconto: <strong>${pctDescontoStr}</strong> | Prefixo: <strong>${cupom.codigo || 'PRIME'}</strong> | Cliques: <strong>${cliques}</strong></p>
+          <p style="font-size:0.75rem; color:var(--muted); margin:4px 0;">Desconto: <strong>${pctDescontoStr}</strong> | Prefixo: <strong>${escapeHtml(cupom.codigo || 'PRIME')}</strong> | Cliques: <strong>${cliques}</strong></p>
           <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
             <button class="btn btn-outline btn-small" onclick="toggleStatusCupom('${docId}', ${cupom.ativo})">⏸️ ${btnPausaText}</button>
-            <button class="btn btn-outline btn-small" onclick="abrirModalEditarOferta('${docId}', '${encodeURIComponent(cupom.titulo)}', '${encodeURIComponent(cupom.descricao)}', '${encodeURIComponent(cupom.regras || '')}', '${cupom.categoria}', '${encodeURIComponent(cupom.descontoBadge || '')}', ${cupom.valorEconomia || 10}, '${cupom.codigo || 'PRIME'}', '${encodeURIComponent(cupom.imagem || '')}', '${cupom.limite || 'daily'}', ${cupom.ordem || 0}, ${cupom.descontoPct || 10})">✏️ Editar</button>
+            <button class="btn btn-outline btn-small" onclick="abrirModalEditarOferta('${docId}', '${encAttr(cupom.titulo)}', '${encAttr(cupom.descricao)}', '${encAttr(cupom.regras || '')}', '${String(cupom.categoria || '').replace(/[^A-Za-z0-9_-]/g, '')}', '${encAttr(cupom.descontoBadge || '')}', ${cupom.valorEconomia || 10}, '${String(cupom.codigo || 'PRIME').replace(/[^A-Za-z0-9]/g, '') || 'PRIME'}', '${encAttr(cupom.imagem || '')}', '${cupom.limite || 'daily'}', ${cupom.ordem || 0}, ${cupom.descontoPct || 10})">✏️ Editar</button>
             <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="excluirCupom('${docId}')">🗑️ Excluir</button>
           </div>
         </div>
@@ -1348,26 +1468,26 @@ async function carregarPainelAdmin() {
       const statusBadgeTxt = statusAtivo ? "🟢 ATIVA" : "🔴 DESATIVADA";
       const btnToggleTxt = statusAtivo ? "Desativar" : "Ativar";
 
-      const empNomeEncoded = encodeURIComponent(u.empresaNome || 'Empresa');
-      const empWppEncoded = encodeURIComponent(u.empresaTelefone || '');
-      const empInstaEncoded = encodeURIComponent(u.empresaInstagram || '');
+      const empNomeEncoded = encAttr(u.empresaNome || 'Empresa');
+      const empWppEncoded = encAttr(u.empresaTelefone || '');
+      const empInstaEncoded = encAttr(u.empresaInstagram || '');
 
       listMerchantsHtml += `
         <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:10px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <h4 style="font-size:0.95rem; font-weight:900; color:var(--text);">🏢 ${u.empresaNome || 'Empresa Sem Nome'}</h4>
+            <h4 style="font-size:0.95rem; font-weight:900; color:var(--text);">🏢 ${escapeHtml(u.empresaNome || 'Empresa Sem Nome')}</h4>
             <span style="font-size:0.68rem; font-weight:800;">${statusBadgeTxt}</span>
           </div>
           <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">👤 <strong>Responsável:</strong> ${u.nome || '-'}</p>
           <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📧 <strong>E-mail:</strong> ${u.email || '-'}</p>
-          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📍 <strong>Endereço:</strong> ${u.empresaEndereco || 'Pelotas / RS'}</p>
-          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📞 <strong>Contato:</strong> ${u.empresaTelefone || 'Não informado'}</p>
-          ${u.empresaInstagram ? `<p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📸 <strong>Instagram:</strong> ${u.empresaInstagram}</p>` : ''}
+          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📍 <strong>Endereço:</strong> ${escapeHtml(u.empresaEndereco || 'Pelotas / RS')}</p>
+          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📞 <strong>Contato:</strong> ${escapeHtml(u.empresaTelefone || 'Não informado')}</p>
+          ${u.empresaInstagram ? `<p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📸 <strong>Instagram:</strong> ${escapeHtml(u.empresaInstagram)}</p>` : ''}
           <p style="font-size:0.75rem; color:var(--muted); margin-bottom:6px;">📅 <strong>Cadastrado em:</strong> <span style="color:var(--primary); font-weight:700;">${empresaCadastradaEm}</span></p>
 
           <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
             <button class="btn btn-outline btn-small" style="color:#7c3aed; border-color:#7c3aed55;" onclick="abrirModalPatrocinarEmpresa('${uid}', '${empNomeEncoded}', '${empWppEncoded}', '${empInstaEncoded}')">⭐ Patrocinar</button>
-            <button class="btn btn-outline btn-small" onclick="abrirModalAdminEmpresa('${uid}', '${empNomeEncoded}', '${encodeURIComponent(u.email || '')}', '${encodeURIComponent(u.empresaDescricao || '')}', '${encodeURIComponent(u.empresaEndereco || '')}', '${empWppEncoded}', '${empInstaEncoded}', '${u.empresaCategoria || 'gastronomia'}', '${encodeURIComponent(u.fotoUrl || '')}')">✏️ Editar</button>
+            <button class="btn btn-outline btn-small" onclick="abrirModalAdminEmpresa('${uid}', '${empNomeEncoded}', '${encAttr(u.email || '')}', '${encAttr(u.empresaDescricao || '')}', '${encAttr(u.empresaEndereco || '')}', '${empWppEncoded}', '${empInstaEncoded}', '${u.empresaCategoria || 'gastronomia'}', '${encAttr(u.fotoUrl || '')}')">✏️ Editar</button>
             <button class="btn btn-outline btn-small" onclick="toggleStatusEmpresaAdmin('${uid}', ${statusAtivo})">⏸️ ${btnToggleTxt}</button>
             <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="excluirEmpresaAdmin('${uid}', '${empNomeEncoded}')">🗑️ Excluir</button>
           </div>
@@ -1391,13 +1511,13 @@ async function carregarPainelAdmin() {
       allCuponsHtml += `
         <div style="background:var(--card); border:1px solid var(--card-border); padding:10px 12px; border-radius:12px; margin-bottom:6px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div style="font-size:0.8rem; font-weight:800;">${c.titulo} <span style="color:var(--muted); font-weight:600;">(${c.empresaNome})</span></div>
+            <div style="font-size:0.8rem; font-weight:800;">${escapeHtml(c.titulo)} <span style="color:var(--muted); font-weight:600;">(${escapeHtml(c.empresaNome)})</span></div>
             <span style="font-size:0.68rem; font-weight:800;">${statusText}</span>
           </div>
-          <div style="font-size:0.7rem; color:var(--muted); margin-top:2px;">Desconto: <strong>${c.descontoPct || 10}%</strong> | Prefixo: <strong>${c.codigo || 'PRIME'}</strong> | Ordem: <strong>${c.ordem || 0}</strong></div>
+          <div style="font-size:0.7rem; color:var(--muted); margin-top:2px;">Desconto: <strong>${c.descontoPct || 10}%</strong> | Prefixo: <strong>${escapeHtml(c.codigo || 'PRIME')}</strong> | Ordem: <strong>${c.ordem || 0}</strong></div>
           <div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
             <button class="btn btn-outline btn-small" onclick="toggleStatusCupom('${docId}', ${c.ativo})">⏸️ ${btnPausaText}</button>
-            <button class="btn btn-outline btn-small" onclick="abrirModalEditarOferta('${docId}', '${encodeURIComponent(c.titulo)}', '${encodeURIComponent(c.descricao)}', '${encodeURIComponent(c.regras || '')}', '${c.categoria}', '${encodeURIComponent(c.descontoBadge || '')}', ${c.valorEconomia || 10}, '${c.codigo || 'PRIME'}', '${encodeURIComponent(c.imagem || '')}', '${c.limite || 'daily'}', ${c.ordem || 0}, ${c.descontoPct || 10})">✏️ Editar</button>
+            <button class="btn btn-outline btn-small" onclick="abrirModalEditarOferta('${docId}', '${encAttr(c.titulo)}', '${encAttr(c.descricao)}', '${encAttr(c.regras || '')}', '${String(c.categoria || '').replace(/[^A-Za-z0-9_-]/g, '')}', '${encAttr(c.descontoBadge || '')}', ${c.valorEconomia || 10}, '${String(c.codigo || 'PRIME').replace(/[^A-Za-z0-9]/g, '') || 'PRIME'}', '${encAttr(c.imagem || '')}', '${c.limite || 'daily'}', ${c.ordem || 0}, ${c.descontoPct || 10})">✏️ Editar</button>
             <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="excluirCupom('${docId}')">🗑️ Excluir</button>
           </div>
         </div>
@@ -1976,24 +2096,62 @@ window.salvarDadosEmpresaLojista = async function() {
   const novoEndereco = document.getElementById('merchant-edit-address').value.trim();
   const novoTelefone = document.getElementById('merchant-edit-phone').value.trim();
   const novoInstagram = document.getElementById('merchant-edit-instagram').value.trim();
+  const novaLat = numeroOuNulo(document.getElementById('merchant-edit-lat')?.value);
+  const novaLon = numeroOuNulo(document.getElementById('merchant-edit-lon')?.value);
 
   if (!novoNome) return mostrarAviso("Atenção", "Informe o nome da empresa.", "⚠️");
 
+  const dadosEmpresa = {
+    empresaNome: novoNome,
+    empresaEndereco: novoEndereco || 'Pelotas / RS',
+    empresaTelefone: novoTelefone || '',
+    empresaInstagram: novoInstagram || ''
+  };
+  const temLocalizacao = novaLat !== null && novaLon !== null;
+  if (temLocalizacao) {
+    dadosEmpresa.empresaLat = novaLat;
+    dadosEmpresa.empresaLon = novaLon;
+  }
+
   try {
-    await updateDoc(doc(db, "usuarios", user.uid), {
-      empresaNome: novoNome,
-      empresaEndereco: novoEndereco || 'Pelotas / RS',
-      empresaTelefone: novoTelefone || '',
-      empresaInstagram: novoInstagram || ''
-    });
-
-    window.currentUserData.empresaNome = novoNome;
-    window.currentUserData.empresaEndereco = novoEndereco;
-    window.currentUserData.empresaTelefone = novoTelefone;
-    window.currentUserData.empresaInstagram = novoInstagram;
-
+    await updateDoc(doc(db, "usuarios", user.uid), dadosEmpresa);
+    Object.assign(window.currentUserData, dadosEmpresa);
     document.getElementById('merchant-store-name').innerText = novoNome;
-    mostrarAviso("Sucesso! 🏢", "Informações da empresa salvas com sucesso.", "✅");
+
+    // Propaga nome, endereço, telefone e localização para os cupons já publicados
+    let propagou = true;
+    try {
+      const snapCupons = await getDocs(query(collection(db, "cupons"), where("empresaId", "==", user.uid)));
+      if (!snapCupons.empty) {
+        const batch = writeBatch(db);
+        const camposCupom = {
+          empresaNome: novoNome,
+          endereco: dadosEmpresa.empresaEndereco,
+          telefone: dadosEmpresa.empresaTelefone
+        };
+        if (temLocalizacao) {
+          camposCupom.empresaLat = novaLat;
+          camposCupom.empresaLon = novaLon;
+        }
+        snapCupons.forEach(c => batch.update(c.ref, camposCupom));
+        await batch.commit();
+      }
+    } catch (e) {
+      console.error('Falha ao atualizar cupons da empresa:', e);
+      propagou = false;
+    }
+
+    atualizarStatusGps('merchant-edit',
+      numeroOuNulo(window.currentUserData.empresaLat),
+      numeroOuNulo(window.currentUserData.empresaLon));
+
+    if (!propagou) {
+      mostrarAviso("Salvo em parte ⚠️", "Os dados da empresa foram salvos, mas não foi possível atualizar suas ofertas já publicadas. Tente salvar de novo.", "⚠️");
+    } else if (!temLocalizacao && numeroOuNulo(window.currentUserData.empresaLat) === null) {
+      mostrarAviso("Sucesso! 🏢", "Informações salvas. Dica: toque em \"Usar minha localização atual\" para aparecer na busca por proximidade.", "✅");
+    } else {
+      mostrarAviso("Sucesso! 🏢", "Informações da empresa salvas com sucesso.", "✅");
+    }
   } catch (err) {
     mostrarAviso("Erro", err.message, "❌");
   }
@@ -2104,6 +2262,12 @@ window.salvarOfertaGeral = async function() {
       dadosCupom.empresaNome = window.currentUserData?.empresaNome || 'Parceiro Local Pelotas';
       dadosCupom.endereco = window.currentUserData?.empresaEndereco || 'Pelotas / RS';
       dadosCupom.telefone = window.currentUserData?.empresaTelefone || '';
+      const latEmp = numeroOuNulo(window.currentUserData?.empresaLat);
+      const lonEmp = numeroOuNulo(window.currentUserData?.empresaLon);
+      if (latEmp !== null && lonEmp !== null) {
+        dadosCupom.empresaLat = latEmp;
+        dadosCupom.empresaLon = lonEmp;
+      }
       dadosCupom.ativo = true;
       dadosCupom.cliquesCount = 0;
       dadosCupom.criadoEm = new Date().toISOString();
@@ -2343,6 +2507,12 @@ window.executarAuth = async function() {
         userData.empresaEndereco = storeAddress;
         userData.empresaTelefone = storePhone;
         userData.empresaInstagram = storeInstagram;
+        const regLat = numeroOuNulo(document.getElementById('reg-store-lat')?.value);
+        const regLon = numeroOuNulo(document.getElementById('reg-store-lon')?.value);
+        if (regLat !== null && regLon !== null) {
+          userData.empresaLat = regLat;
+          userData.empresaLon = regLon;
+        }
         userData.ativo = true;
       }
 
