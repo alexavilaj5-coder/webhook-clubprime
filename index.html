@@ -1160,5 +1160,16 @@
     </div>
   </div>
 
+  <!-- EASTER EGG: jogo secreto -->
+  <div id="offline-overlay" class="offline-overlay">
+    <h2 style="font-weight:900; margin-bottom:4px;">🎮 Você achou o jogo secreto!</h2>
+    <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Toque na tela para pular os obstáculos. Quanto mais longe, mais rápido!</p>
+    <canvas id="offline-canvas" width="320" height="180"></canvas>
+    <div style="font-size:0.8rem; font-weight:800; margin-top:10px;">Pontos: <span id="offline-pontos">0</span> &nbsp;•&nbsp; Recorde: <span id="offline-recorde">0</span></div>
+    <div style="display:flex; gap:8px; margin-top:14px; width:100%; max-width:360px;">
+      <button type="button" class="btn btn-small" style="flex:1;" onclick="fecharJogoSecreto()">Fechar</button>
+    </div>
+  </div>
+
 </body>
 </html>

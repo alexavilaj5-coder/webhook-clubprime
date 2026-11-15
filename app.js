@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.documentElement.setAttribute('data-theme', savedTheme);
   const themeBtn = document.querySelector('.theme-toggle-btn');
   if (themeBtn) {
-    const icones = { light: '🌙', dark: '🌿', emerald: '🔮', purple: '🌅', sunset: '🌌', midnight: '☀️' };
+    const icones = { light: '🌙', dark: '🌿', emerald: '🔮', purple: '🌅', sunset: '🌌', midnight: '🎄', natal: '☀️' };
     themeBtn.innerText = icones[savedTheme] || '🌙';
   }
   escutarBannerGlobal();
@@ -2442,7 +2442,7 @@ window.validarCupomTextoLojista = async function() {
 };
 
 window.toggleTheme = function() {
-  const temas = ['light', 'dark', 'emerald', 'purple', 'sunset', 'midnight'];
+  const temas = ['light', 'dark', 'emerald', 'purple', 'sunset', 'midnight', 'natal'];
   const atual = document.documentElement.getAttribute('data-theme') || 'light';
   const proximoIndice = (temas.indexOf(atual) + 1) % temas.length;
   const proximoTema = temas[proximoIndice];
@@ -2456,7 +2456,8 @@ window.toggleTheme = function() {
     emerald: '🔮',
     purple: '🌅',
     sunset: '🌌',
-    midnight: '☀️'
+    midnight: '🎄',
+    natal: '☀️'
   };
   
   const themeBtn = document.querySelector('.theme-toggle-btn');
@@ -2996,3 +2997,143 @@ window.removerFotoOferta = function() {
   document.getElementById('offer-image-status').innerText = '';
   atualizarPreviaOferta();
 };
+
+// ===== EASTER EGG: jogo secreto (toque 5x no logo do topo) =====
+(function() {
+  const overlay = document.getElementById('offline-overlay');
+  const canvas = document.getElementById('offline-canvas');
+  if (!overlay || !canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = 320, H = 180, CHAO = 140, GRAV = 1400, PULO = -430;
+  let raf = 0, ultimo = 0;
+  let jogador, obstaculos, velocidade, pontos, proximo, fim;
+  let recorde = 0;
+  try { recorde = parseInt(localStorage.getItem('clube_recorde_offline')) || 0; } catch (e) {}
+
+  function resetar() {
+    jogador = { y: CHAO, vy: 0 };
+    obstaculos = [];
+    velocidade = 180;
+    pontos = 0;
+    proximo = 1;
+    fim = false;
+    document.getElementById('offline-pontos').innerText = '0';
+  }
+
+  function pular() {
+    if (fim) { resetar(); return; }
+    if (jogador.y >= CHAO) jogador.vy = PULO;
+  }
+
+  function cor(nome, padrao) {
+    return getComputedStyle(document.documentElement).getPropertyValue(nome).trim() || padrao;
+  }
+
+  function atualizar(dt) {
+    if (fim) return;
+    jogador.vy += GRAV * dt;
+    jogador.y = Math.min(CHAO, jogador.y + jogador.vy * dt);
+    if (jogador.y >= CHAO) jogador.vy = 0;
+
+    velocidade = Math.min(420, velocidade + 6 * dt);
+    pontos += dt * 10;
+    document.getElementById('offline-pontos').innerText = Math.floor(pontos);
+
+    proximo -= dt;
+    if (proximo <= 0) {
+      obstaculos.push({ x: W + 10, w: 22, h: 24, emoji: Math.random() < 0.5 ? '🌵' : '📦' });
+      proximo = 0.9 + Math.random() * 1.0;
+    }
+    obstaculos.forEach(o => { o.x -= velocidade * dt; });
+    obstaculos = obstaculos.filter(o => o.x + o.w > -10);
+
+    const px = 40, pw = 22, ph = 24;
+    for (const o of obstaculos) {
+      const bate = px + pw - 4 > o.x + 3 && px + 4 < o.x + o.w - 3 && jogador.y > CHAO - o.h + 4;
+      if (bate) {
+        fim = true;
+        const final = Math.floor(pontos);
+        if (final > recorde) {
+          recorde = final;
+          try { localStorage.setItem('clube_recorde_offline', String(recorde)); } catch (e) {}
+        }
+        document.getElementById('offline-recorde').innerText = recorde;
+        break;
+      }
+    }
+  }
+
+  function desenhar() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.strokeStyle = cor('--muted', '#64748b');
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, CHAO + 2); ctx.lineTo(W, CHAO + 2); ctx.stroke();
+
+    ctx.font = '28px serif';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('🐶', 36, jogador.y + 2);
+    obstaculos.forEach(o => ctx.fillText(o.emoji, o.x - 2, CHAO + 2));
+
+    if (fim) {
+      ctx.fillStyle = cor('--text', '#0f172a');
+      ctx.font = '800 15px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Fim de jogo!', W / 2, 70);
+      ctx.font = '600 12px sans-serif';
+      ctx.fillText('Toque para jogar de novo', W / 2, 92);
+      ctx.textAlign = 'start';
+    }
+  }
+
+  function loop(t) {
+    const dt = Math.min(0.05, (t - ultimo) / 1000 || 0);
+    ultimo = t;
+    atualizar(dt);
+    desenhar();
+    raf = requestAnimationFrame(loop);
+  }
+
+  function abrir() {
+    if (overlay.classList.contains('active')) return;
+    resetar();
+    document.getElementById('offline-recorde').innerText = recorde;
+    overlay.classList.add('active');
+    ultimo = performance.now();
+    raf = requestAnimationFrame(loop);
+  }
+
+  function fechar() {
+    overlay.classList.remove('active');
+    cancelAnimationFrame(raf);
+  }
+
+  canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); pular(); });
+  document.addEventListener('keydown', (e) => {
+    if (!overlay.classList.contains('active')) return;
+    if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); pular(); }
+  });
+
+  window.fecharJogoSecreto = fechar;
+
+  // Easter egg: toque 5 vezes seguidas no "⚡ CLUBE PRIME" do topo para abrir o jogo
+  const logo = document.querySelector('.top-header .brand-title');
+  if (logo) {
+    logo.style.userSelect = 'none';
+    logo.style.webkitTapHighlightColor = 'transparent';
+    let toques = 0, timer = null;
+    logo.addEventListener('click', () => {
+      if (window.currentUserData?.funcao === 'lojista') return; // jogo é só para clientes
+      toques++;
+      clearTimeout(timer);
+      timer = setTimeout(() => { toques = 0; }, 2000);
+      if (toques >= 5) {
+        toques = 0;
+        clearTimeout(timer);
+        if (typeof window.confetti === 'function') {
+          try { window.confetti({ particleCount: 60, spread: 70, origin: { y: 0.2 } }); } catch (e) {}
+        }
+        abrir();
+      }
+    });
+  }
+})();
