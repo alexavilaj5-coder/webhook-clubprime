@@ -1,3 +1,4 @@
+import "./cidades.js?v=1";
 // Registro do Service Worker para permitir a instalação como App PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -298,6 +299,7 @@ onAuthStateChanged(auth, async (user) => {
             cpf: "",
             fotoUrl: user.photoURL || null,
             funcao: "cliente",
+            cidadeId: window.Cidades.id(),
             vip: false,
             vipExpiraEm: null,
             criadoEm: new Date().toISOString()
@@ -334,7 +336,7 @@ onAuthStateChanged(auth, async (user) => {
         document.querySelector('.bottom-nav').style.display = 'none';
         
         const nomeEmpresa = data.empresaNome || "Empresa Parceira";
-        const enderecoEmpresa = data.empresaEndereco || "Pelotas / RS";
+        const enderecoEmpresa = data.empresaEndereco || window.Cidades.rotulo();
         const telefoneEmpresa = data.empresaTelefone || "";
         const instagramEmpresa = data.empresaInstagram || "";
 
@@ -478,7 +480,7 @@ window.ativarBuscaProximidadeGps = function() {
     return mostrarAviso("GPS Indisponível", "A localização só funciona em conexão segura (https).", "🔒");
   }
 
-  mostrarAviso("Localizando...", "Buscando parceiros próximos de você em Pelotas...", "📍");
+  mostrarAviso("Localizando...", "Buscando parceiros próximos de você...", "📍");
 
   navigator.geolocation.getCurrentPosition(
     (position) => {
@@ -698,7 +700,7 @@ async function carregarParceirosCliente() {
             <h4 style="font-size:1rem; font-weight:900;">🏢 ${escapeHtml(u.empresaNome || 'Empresa')}</h4>
             <span style="font-size:0.7rem; font-weight:800; color:var(--primary);">${escapeHtml(u.empresaCategoria || 'Parceiro')}</span>
           </div>
-          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📍 <strong>Endereço:</strong> ${escapeHtml(u.empresaEndereco || 'Pelotas / RS')}</p>
+          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📍 <strong>Endereço:</strong> ${escapeHtml(u.empresaEndereco || window.Cidades.rotulo())}</p>
           <p style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">📞 <strong>Contato:</strong> ${escapeHtml(u.empresaTelefone || 'Não informado')}</p>
           ${u.empresaInstagram ? `<p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px;">📸 <strong>Instagram:</strong> ${escapeHtml(u.empresaInstagram)}</p>` : ''}
           <div style="display:flex; gap:8px; margin-top:10px;">
@@ -1149,6 +1151,7 @@ function carregarCuponsVitrine() {
     });
 
     cuponsArray.sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    cuponsArray = window.Cidades.filtrar(cuponsArray);
 
     let empresasGrouped = {};
     cuponsArray.forEach(cupom => {
@@ -1156,7 +1159,7 @@ function carregarCuponsVitrine() {
       if (!empresasGrouped[key]) {
         empresasGrouped[key] = {
           nome: cupom.empresaNome,
-          endereco: cupom.endereco || 'Pelotas / RS',
+          endereco: cupom.endereco || window.Cidades.rotulo(),
           telefone: cupom.telefone || '',
           categoria: cupom.categoria || 'gastronomia',
           imagem: cupom.empresaFoto || '',
@@ -1183,7 +1186,7 @@ function carregarCuponsVitrine() {
       const lonAttr = emp.lat !== null && emp.lon !== null ? `data-lon="${emp.lon}"` : '';
 
       html += `
-        <div class="company-card" data-cat="${escapeHtml(emp.categoria)}" data-name="${escapeHtml(String(emp.nome || '').toLowerCase())}" ${latAttr} ${lonAttr} style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:20px; margin-bottom:16px;">
+        <div class="company-card" data-key="${escapeHtml(String(key))}" data-cat="${escapeHtml(emp.categoria)}" data-name="${escapeHtml(String(emp.nome || '').toLowerCase())}" ${latAttr} ${lonAttr} style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:20px; margin-bottom:16px;">
           ${imgHtml}
           <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
             <div>
@@ -1239,11 +1242,16 @@ function carregarCuponsVitrine() {
     if (html !== '') {
       container.innerHTML = html;
       aplicarOrdenacaoGps();
+      window.Cidades.pos();
     } else {
       container.innerHTML = `<p style="font-size:0.8rem; color:var(--muted); text-align:center; padding:20px;">Nenhum cupom ativo no momento.</p>`;
     }
   });
 }
+
+window.recarregarVitrine = function() {
+  if (unsubscribeCupons) { unsubscribeCupons(); carregarCuponsVitrine(); }
+};
 
 window.abrirModalRegrasCupom = function(titulo, loja, regras) {
   document.getElementById('modal-regra-titulo').innerText = decodeURIComponent(titulo);
@@ -1433,6 +1441,14 @@ window.switchDashSubTab = function(subTab) {
 let cacheLogsAdmin = [];
 let cacheEmpresasAdmin = [];
 
+// Filtro por cidade do painel ADM ('todas' ou o id da cidade; registros antigos sem cidadeId = Pelotas)
+window.admCidadeFiltro = window.admCidadeFiltro || 'todas';
+const admDentro = o => window.admCidadeFiltro === 'todas' || (o.cidadeId || 'pelotas-rs') === window.admCidadeFiltro;
+window.filtrarAdminCidade = function(v) {
+  window.admCidadeFiltro = v || 'todas';
+  carregarPainelAdmin();
+};
+
 async function carregarPainelAdmin() {
   try {
     const snapUsers = await getDocs(collection(db, "usuarios"));
@@ -1446,6 +1462,7 @@ async function carregarPainelAdmin() {
     cacheEmpresasAdmin = [];
     cacheTodosUsuarios = [];
     cachePagamentosPix = [];
+    const idsCidade = new Set(), emailsCidade = new Set();
 
     try {
       const snapPix = await getDocs(collection(db, "pagamentos_pix"));
@@ -1460,6 +1477,9 @@ async function carregarPainelAdmin() {
     snapUsers.forEach(docSnap => {
       const u = docSnap.data();
       const uid = docSnap.id;
+      if (u.funcao !== 'admin' && !admDentro(u)) return;
+      idsCidade.add(uid);
+      if (u.email) emailsCidade.add(String(u.email).toLowerCase());
       cacheTodosUsuarios.push({ id: uid, ...u });
 
       if (u.funcao === "cliente") {
@@ -1505,6 +1525,10 @@ async function carregarPainelAdmin() {
       }
     });
 
+    if (window.admCidadeFiltro !== 'todas') {
+      cachePagamentosPix = cachePagamentosPix.filter(p => emailsCidade.has(String(p.email || '').toLowerCase()));
+    }
+
     cacheEmpresasAdmin.forEach(emp => {
       const u = emp.data;
       const uid = emp.id;
@@ -1523,9 +1547,10 @@ async function carregarPainelAdmin() {
             <h4 style="font-size:0.95rem; font-weight:900; color:var(--text);">🏢 ${escapeHtml(u.empresaNome || 'Empresa Sem Nome')}</h4>
             <span style="font-size:0.68rem; font-weight:800;">${statusBadgeTxt}</span>
           </div>
+          <div style="font-size:0.7rem; font-weight:800; color:var(--primary); margin-bottom:4px;">🏙️ ${escapeHtml(window.Cidades.rotuloDe(u.cidadeId || 'pelotas-rs'))}</div>
           <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">👤 <strong>Responsável:</strong> ${escapeHtml(u.nome || '-')}</p>
           <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📧 <strong>E-mail:</strong> ${escapeHtml(u.email || '-')}</p>
-          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📍 <strong>Endereço:</strong> ${escapeHtml(u.empresaEndereco || 'Pelotas / RS')}</p>
+          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📍 <strong>Endereço:</strong> ${escapeHtml(u.empresaEndereco || window.Cidades.rotulo())}</p>
           <p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📞 <strong>Contato:</strong> ${escapeHtml(u.empresaTelefone || 'Não informado')}</p>
           ${u.empresaInstagram ? `<p style="font-size:0.75rem; color:var(--muted); margin-bottom:2px;">📸 <strong>Instagram:</strong> ${escapeHtml(u.empresaInstagram)}</p>` : ''}
           <p style="font-size:0.75rem; color:var(--muted); margin-bottom:6px;">📅 <strong>Cadastrado em:</strong> <span style="color:var(--primary); font-weight:700;">${empresaCadastradaEm}</span></p>
@@ -1549,6 +1574,7 @@ async function carregarPainelAdmin() {
     snapCuponsAll.forEach(docSnap => {
       const c = docSnap.data();
       const docId = docSnap.id;
+      if (!admDentro(c)) return;
       (window.cacheCuponsPorId = window.cacheCuponsPorId || {})[docId] = c;
       if (c.ativo) totalCuponsAtivos++;
       const statusText = c.ativo ? "🟢 ATIVA" : "🔴 PAUSADA";
@@ -1576,6 +1602,7 @@ async function carregarPainelAdmin() {
 
     snapLogs.forEach(logSnap => {
       const dataLog = logSnap.data();
+      if (window.admCidadeFiltro !== 'todas' && !idsCidade.has(dataLog.empresaId)) return;
       if (dataLog.status === "usado") countCuponsUsados++;
       cacheLogsAdmin.push({ id: logSnap.id, ...dataLog });
     });
@@ -1905,7 +1932,7 @@ window.salvarEmpresaPeloAdmin = async function() {
       await updateDoc(doc(db, "usuarios", id), {
         empresaNome: nome,
         empresaDescricao: desc,
-        empresaEndereco: endereco || 'Pelotas / RS',
+        empresaEndereco: endereco || window.Cidades.rotulo(),
         empresaTelefone: telefone,
         empresaInstagram: instagram,
         empresaCategoria: categoria,
@@ -1933,7 +1960,7 @@ window.salvarEmpresaPeloAdmin = async function() {
         ativo: true,
         empresaNome: nome,
         empresaDescricao: desc,
-        empresaEndereco: endereco || 'Pelotas / RS',
+        empresaEndereco: endereco || window.Cidades.rotulo(),
         empresaTelefone: telefone,
         empresaInstagram: instagram,
         empresaCategoria: categoria,
@@ -2140,7 +2167,7 @@ window.salvarDadosEmpresaLojista = async function() {
 
   const dadosEmpresa = {
     empresaNome: novoNome,
-    empresaEndereco: novoEndereco || 'Pelotas / RS',
+    empresaEndereco: novoEndereco || window.Cidades.rotulo(),
     empresaTelefone: novoTelefone || '',
     empresaInstagram: novoInstagram || '',
     fotoUrl: novaFoto || null
@@ -2362,8 +2389,9 @@ window.salvarOfertaGeral = async function() {
       mostrarAviso("Atualizado! 🚀", "Oferta modificada com sucesso.", "✅");
     } else {
       dadosCupom.empresaId = user.uid;
-      dadosCupom.empresaNome = window.currentUserData?.empresaNome || 'Parceiro Local Pelotas';
-      dadosCupom.endereco = window.currentUserData?.empresaEndereco || 'Pelotas / RS';
+      dadosCupom.cidadeId = window.currentUserData?.cidadeId || 'pelotas-rs';
+      dadosCupom.empresaNome = window.currentUserData?.empresaNome || 'Parceiro Local';
+      dadosCupom.endereco = window.currentUserData?.empresaEndereco || window.Cidades.rotulo();
       dadosCupom.telefone = window.currentUserData?.empresaTelefone || '';
       dadosCupom.empresaFoto = window.currentUserData?.fotoUrl || '';
       const latEmp = numeroOuNulo(window.currentUserData?.empresaLat);
@@ -2523,6 +2551,7 @@ window.switchAuthTab = function(type) {
   document.getElementById('group-name').style.display = type === 'signup' ? 'block' : 'none';
   document.getElementById('group-whatsapp').style.display = type === 'signup' ? 'block' : 'none';
   document.getElementById('group-cpf').style.display = type === 'signup' ? 'block' : 'none';
+  document.getElementById('group-cidade').style.display = type === 'signup' ? 'block' : 'none';
   document.getElementById('box-merchant-options').style.display = type === 'signup' ? 'block' : 'none';
   document.getElementById('box-privacy-terms').style.display = type === 'signup' ? 'block' : 'none';
   document.getElementById('box-esqueci').style.display = type === 'login' ? 'block' : 'none';
@@ -2580,7 +2609,8 @@ window.executarAuth = async function() {
     const acceptTerms = document.getElementById('chk-privacy-terms').checked;
     const isMerchant = document.getElementById('chk-is-merchant').checked;
     const storeName = document.getElementById('reg-store-name')?.value;
-    const storeAddress = document.getElementById('reg-store-address')?.value || 'Pelotas / RS';
+    const cidadeSel = document.getElementById('reg-cidade')?.value || window.Cidades.id();
+    const storeAddress = document.getElementById('reg-store-address')?.value || window.Cidades.rotuloDe(cidadeSel);
     const storePhone = document.getElementById('reg-store-phone')?.value || '';
     const storeInstagram = document.getElementById('reg-store-instagram')?.value.trim() || '';
     const storeCode = document.getElementById('reg-store-code')?.value.trim().toUpperCase();
@@ -2607,6 +2637,7 @@ window.executarAuth = async function() {
         cpf: cpf,
         funcao: userRole,
         vip: false,
+        cidadeId: cidadeSel,
         criadoEm: new Date().toISOString()
       };
 
@@ -2625,6 +2656,7 @@ window.executarAuth = async function() {
       }
 
       await setDoc(doc(db, "usuarios", res.user.uid), userData);
+      window.Cidades.set(cidadeSel);
       registrarLogAdmin('cliente', userRole === 'lojista' ? 'Nova empresa cadastrada' : 'Novo cliente cadastrado', `${userData.nome} (${userData.email})`);
       mostrarAviso("Sucesso! 🎉", "Conta criada com sucesso!", "🎉");
     } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
@@ -2713,7 +2745,7 @@ window.verificarStatusVipManual = async function() {
   finally { btn.innerHTML = `🔄 Já Paguei / Checar Agora`; }
 };
 
-window.resgatarCupomReal = async function(cupomId, empresaId, empresaNomeEnc, tituloEnc, prefixo, valorEconomia = 10.00, enderecoEnc = 'Pelotas / RS', telefoneEnc = '', regrasEnc = '', descontoPct = 10) {
+window.resgatarCupomReal = async function(cupomId, empresaId, empresaNomeEnc, tituloEnc, prefixo, valorEconomia = 10.00, enderecoEnc = window.Cidades.rotulo(), telefoneEnc = '', regrasEnc = '', descontoPct = 10) {
   const empresaNome = decodeURIComponent(empresaNomeEnc);
   const titulo = decodeURIComponent(tituloEnc);
   const endereco = decodeURIComponent(enderecoEnc);
@@ -2722,7 +2754,7 @@ window.resgatarCupomReal = async function(cupomId, empresaId, empresaNomeEnc, ti
 
   document.getElementById('modal-title').innerText = titulo;
   document.getElementById('modal-disc').innerText = empresaNome;
-  document.getElementById('modal-address').innerText = endereco || 'Pelotas / RS';
+  document.getElementById('modal-address').innerText = endereco || window.Cidades.rotulo();
   
   const phoneContainer = document.getElementById('modal-phone');
   if (telefone) {
@@ -2900,7 +2932,7 @@ window.abrirPreviewVitrineLojista = async function() {
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
           <div>
             <h3 style="font-size:1.1rem; font-weight:900; color:var(--text);">🏢 ${escapeHtml(d.empresaNome || 'Empresa')}</h3>
-            <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">📍 ${escapeHtml(d.empresaEndereco || 'Pelotas / RS')}</div>
+            <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">📍 ${escapeHtml(d.empresaEndereco || window.Cidades.rotulo())}</div>
           </div>
           <span style="font-size:0.7rem; font-weight:800; color:var(--primary); background:var(--secondary); padding:4px 8px; border-radius:10px;">${ativos.length} Oferta(s)</span>
         </div>

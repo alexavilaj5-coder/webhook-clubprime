@@ -27,7 +27,7 @@
   <!-- QRCode.js para gerar o QR Code no modal do Cliente -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
-  <script type="module" src="app.js?v=3"></script>
+  <script type="module" src="app.js?v=4"></script>
 </head>
 <body>
 
@@ -71,6 +71,12 @@
       <div id="group-whatsapp" class="form-group" style="display:none;">
         <label>WHATSAPP / CELULAR</label>
         <input type="tel" id="reg-whatsapp" class="form-control" placeholder="(53) 99999-9999">
+      </div>
+
+      <div id="group-cidade" class="form-group" style="display:none;">
+        <label>CIDADE</label>
+        <select id="reg-cidade" class="form-control"></select>
+        <div style="font-size:0.7rem; color:var(--muted); margin-top:4px;">Parceiros ficam disponíveis só na cidade escolhida. Clientes podem trocar depois no topo do app.</div>
       </div>
 
       <div id="group-cpf" class="form-group" style="display:none;">
@@ -301,6 +307,10 @@
             <h2 style="font-size:1.15rem; font-weight:900;">Gestão Geral ADM</h2>
           </div>
           <div class="status-badge admin" style="padding:4px 10px; font-size:0.6rem;">ADMIN</div>
+        </div>
+        <div style="margin-top:10px;">
+          <label style="font-size:0.68rem; font-weight:800; color:var(--muted);">🏙️ FILTRAR PAINEL POR CIDADE</label>
+          <select id="adm-filtro-cidade" class="form-control" onchange="filtrarAdminCidade(this.value)"><option value="todas">🌎 Todas as cidades</option></select>
         </div>
       </div>
 
