@@ -27,6 +27,43 @@
   <!-- QRCode.js para gerar o QR Code no modal do Cliente -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
+  <!-- Botão "Instalar app" (PWA) -->
+  <script>
+    window.deferredInstallPrompt = null;
+    function appJaInstalado() {
+      return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    }
+    function ehIOS() {
+      return /iphone|ipad|ipod/i.test(navigator.userAgent);
+    }
+    function atualizarBotaoInstalar() {
+      var btn = document.getElementById('btn-install-app');
+      if (!btn) return;
+      var mostrar = !appJaInstalado() && (window.deferredInstallPrompt || ehIOS());
+      btn.style.display = mostrar ? 'inline-flex' : 'none';
+    }
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window.deferredInstallPrompt = e;
+      atualizarBotaoInstalar();
+    });
+    window.addEventListener('appinstalled', function () {
+      window.deferredInstallPrompt = null;
+      atualizarBotaoInstalar();
+    });
+    window.instalarApp = async function () {
+      if (window.deferredInstallPrompt) {
+        window.deferredInstallPrompt.prompt();
+        try { await window.deferredInstallPrompt.userChoice; } catch (e) {}
+        window.deferredInstallPrompt = null;
+        atualizarBotaoInstalar();
+      } else if (ehIOS()) {
+        alert('Para instalar no iPhone: toque em Compartilhar (quadrado com seta) e depois em "Adicionar à Tela de Início".');
+      }
+    };
+    document.addEventListener('DOMContentLoaded', atualizarBotaoInstalar);
+  </script>
+
   <script type="module" src="app.js?v=4"></script>
 </head>
 <body>
@@ -46,6 +83,7 @@
         <span>⚡ CLUBE PRIME</span>
       </div>
       <div class="header-actions">
+        <button id="btn-install-app" class="btn btn-small" style="display:none; width:auto; padding:6px 10px; font-size:0.72rem; white-space:nowrap; align-items:center;" onclick="instalarApp()">📲 Instalar app</button>
         <button class="theme-toggle-btn" onclick="toggleTheme()" title="Alternar Modo Escuro">🌙</button>
         <div class="location-badge">📍 Pelotas, RS</div>
       </div>
