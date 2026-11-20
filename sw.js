@@ -1,5 +1,5 @@
-const CACHE = 'clube-prime-v3';
-const BASICO = ['/', '/index.html', '/style.css', '/app.js', '/manifest.json'];
+const CACHE = 'clube-prime-v4';
+const BASICO = ['/', '/index.html', '/style.css', '/app.js', '/cidades.js', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(BASICO)).catch(() => {}));
