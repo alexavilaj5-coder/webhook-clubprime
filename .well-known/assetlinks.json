@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "br.com.primelabs.clubeprime",
+        "sha256_cert_fingerprints": ["64:97:C3:3A:8F:5F:D9:6F:88:2B:71:2F:A8:98:E1:D9:7A:31:6D:EF:C8:A0:E4:2F:AE:8A:35:A2:C9:E9:7A:BC"]
+      }
+    }]
