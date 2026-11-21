@@ -67,7 +67,7 @@
     document.addEventListener('DOMContentLoaded', atualizarBotaoInstalar);
   </script>
 
-  <script type="module" src="app.js?v=6"></script>
+  <script type="module" src="app.js?v=7"></script>
 </head>
 <body>
 
@@ -205,7 +205,7 @@
       <div class="dev-credits">
         🚀 Powered by: <strong>Prime Labs</strong> • Pelotas / RS<br>
         <a href="https://wa.me/555384052112?text=Olá,%20preciso%20de%20suporte%20no%20Clube%20Prime!" target="_blank" style="display:inline-flex; align-items:center; gap:4px; margin-top:6px; color:var(--primary); text-decoration:none; font-weight:800;">
-          💬 Suporte via WhatsApp (53 8405-2112)
+          💬 Suporte via WhatsApp
         </a>
       </div>
     </div>
@@ -340,6 +340,7 @@
       <div id="merchant-offers-list">
         <p style="font-size:0.8rem; color:var(--muted);">Carregando suas promoções...</p>
       </div>
+        <button class="btn btn-outline" style="margin-top:16px; padding:8px; font-size:0.75rem; color:var(--muted); border-color:var(--card-border);" onclick="abrirModalExcluirConta()">🗑️ Excluir minha conta e empresa</button>
       </div><!-- /merchant-extra -->
 
       <button class="btn btn-outline" style="color:var(--danger); border-color:#ef444455; margin-top:20px;" onclick="deslogar()">Sair do Painel</button>
@@ -798,11 +799,12 @@
       </div>
 
       <button class="btn btn-outline" style="color:var(--danger); border-color:#ef444455;" onclick="deslogar()">Sair da Conta</button>
+      <button class="btn btn-outline" style="margin-top:10px; padding:8px; font-size:0.75rem; color:var(--muted); border-color:var(--card-border);" onclick="abrirModalExcluirConta()">🗑️ Excluir minha conta</button>
 
       <div class="dev-credits">
         🚀 Desenvolvido por: <strong>Prime Labs</strong> • Pelotas / RS<br>
         <a href="https://wa.me/555384052112?text=Olá,%20preciso%20de%20suporte%20no%20Clube%20Prime!" target="_blank" style="display:inline-flex; align-items:center; gap:4px; margin-top:6px; color:var(--primary); text-decoration:none; font-weight:800;">
-          💬 Suporte via WhatsApp (53 8405-2112)
+          💬 Suporte via WhatsApp
         </a>
       </div>
     </div>
@@ -922,6 +924,24 @@
 
       <button class="btn btn-cyan" style="margin-top:12px;" onclick="salvarAlteracoesCliente()">💾 Salvar Alterações</button>
       <button class="btn btn-outline" style="margin-top:8px;" onclick="fecharModal('modal-edit-client')">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="modal-excluir-conta" class="modal">
+    <div class="modal-content" style="text-align:left;">
+      <div style="font-size:2.5rem; margin-bottom:6px; text-align:center;">⚠️</div>
+      <h3 style="font-size:1.15rem; font-weight:900; color:var(--danger); text-align:center;">Excluir minha conta?</h3>
+      <p id="excluir-conta-aviso" style="font-size:0.8rem; color:var(--muted); margin-top:6px; margin-bottom:14px; line-height:1.4;"></p>
+      <div class="form-group" id="box-excluir-senha" style="text-align:left;">
+        <label>SUA SENHA</label>
+        <input type="password" id="excluir-conta-senha" class="form-control" placeholder="Digite sua senha" autocomplete="current-password">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>DIGITE EXCLUIR PARA CONFIRMAR</label>
+        <input type="text" id="excluir-conta-confirmacao" class="form-control" placeholder="EXCLUIR" autocomplete="off" style="text-transform:uppercase;">
+      </div>
+      <button id="btn-excluir-conta-final" class="btn" style="background:var(--danger); color:#ffffff; margin-bottom:8px;" onclick="executarExclusaoPropriaConta()">🗑️ Excluir definitivamente</button>
+      <button class="btn btn-outline" onclick="fecharModal('modal-excluir-conta')">Cancelar</button>
     </div>
   </div>
 

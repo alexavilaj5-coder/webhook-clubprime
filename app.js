@@ -13,7 +13,7 @@ if ('serviceWorker' in navigator) {
 }
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, updatePassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, updatePassword, updateProfile, deleteUser, reauthenticateWithCredential, reauthenticateWithPopup, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, addDoc, increment, writeBatch, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -2709,6 +2709,91 @@ window.deslogar = async function() {
   pararChecagemAutomatica();
   resetarEstadoUI();
   if (auth.currentUser) await signOut(auth);
+};
+
+window.abrirModalExcluirConta = function() {
+  const user = auth.currentUser;
+  if (!user) return;
+  if (window.currentUserData?.funcao === 'admin') {
+    return mostrarAviso("Atenção", "A conta de administrador não pode ser excluída por aqui.", "⚠️");
+  }
+  const lojista = window.currentUserData?.funcao === 'lojista';
+  const usaSenha = user.providerData.some(p => p.providerId === 'password');
+
+  document.getElementById('excluir-conta-aviso').innerText = lojista
+    ? "Isso apaga para sempre o seu acesso, os dados da empresa e todos os seus cupons. Essa ação não pode ser desfeita."
+    : "Isso apaga para sempre o seu acesso, o seu perfil e o seu histórico de economia. Seu VIP, se estiver ativo, será perdido. Essa ação não pode ser desfeita.";
+  document.getElementById('box-excluir-senha').style.display = usaSenha ? 'block' : 'none';
+  document.getElementById('excluir-conta-senha').value = '';
+  document.getElementById('excluir-conta-confirmacao').value = '';
+  document.getElementById('modal-excluir-conta').classList.add('active');
+};
+
+window.executarExclusaoPropriaConta = async function() {
+  const user = auth.currentUser;
+  if (!user) return;
+  if (window.currentUserData?.funcao === 'admin') return;
+
+  if (document.getElementById('excluir-conta-confirmacao').value.trim().toUpperCase() !== 'EXCLUIR') {
+    return mostrarAviso("Atenção", "Digite EXCLUIR para confirmar.", "⚠️");
+  }
+
+  const usaSenha = user.providerData.some(p => p.providerId === 'password');
+  const senha = document.getElementById('excluir-conta-senha').value;
+  if (usaSenha && !senha) {
+    return mostrarAviso("Atenção", "Digite sua senha para confirmar.", "🔑");
+  }
+
+  const btn = document.getElementById('btn-excluir-conta-final');
+  const textoBtn = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner"></span> Excluindo...';
+  btn.style.pointerEvents = 'none';
+  btn.style.opacity = '0.7';
+  const restaurarBtn = () => { btn.innerHTML = textoBtn; btn.style.pointerEvents = ''; btn.style.opacity = ''; };
+
+  // 1) Confirma que é mesmo a pessoa (o Firebase exige login recente para excluir a conta)
+  try {
+    if (usaSenha) {
+      await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, senha));
+    } else {
+      await reauthenticateWithPopup(user, new GoogleAuthProvider());
+    }
+  } catch (err) {
+    restaurarBtn();
+    const senhaErrada = ['auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-login-credentials'].includes(err.code);
+    return mostrarAviso("Não foi possível confirmar", senhaErrada ? "Senha incorreta." : "Não conseguimos confirmar a sua identidade. Tente de novo.", "❌");
+  }
+
+  // 2) Apaga os dados e depois o login
+  try {
+    const uid = user.uid;
+    const lojista = window.currentUserData?.funcao === 'lojista';
+    const nome = window.currentUserData?.empresaNome || window.currentUserData?.nome || user.email;
+
+    try { await registrarLogAdmin(lojista ? 'empresa' : 'cliente', lojista ? 'Lojista excluiu a própria conta' : 'Cliente excluiu a própria conta', `${nome} (${uid})`); } catch (e) {}
+
+    // Para os listeners antes de apagar: senão o app recria um perfil vazio quando o documento some
+    if (unsubscribeUser) { unsubscribeUser(); unsubscribeUser = null; }
+    if (unsubscribeCupons) { unsubscribeCupons(); unsubscribeCupons = null; }
+    if (unsubscribeMerchantCupons) { unsubscribeMerchantCupons(); unsubscribeMerchantCupons = null; }
+    if (unsubscribeMerchantLogs) { unsubscribeMerchantLogs(); unsubscribeMerchantLogs = null; }
+
+    if (lojista) {
+      const snapC = await getDocs(query(collection(db, "cupons"), where("empresaId", "==", uid)));
+      await Promise.all(snapC.docs.map(d => deleteDoc(doc(db, "cupons", d.id))));
+    }
+    await deleteDoc(doc(db, "usuarios", uid));
+    await deleteUser(user);
+
+    restaurarBtn();
+    fecharModal('modal-excluir-conta');
+    resetarEstadoUI();
+    mostrarAviso("Conta excluída", "Sua conta foi apagada. Esperamos te ver de novo!", "👋");
+  } catch (err) {
+    restaurarBtn();
+    mostrarAviso("Erro ao excluir", err.message, "❌");
+    setTimeout(() => location.reload(), 2500);
+  }
 };
 
 window.gerarPixMercadoPago = async function() {
