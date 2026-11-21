@@ -186,6 +186,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 6px;
   gap: 8px;
   padding: 12px 16px;
   background: var(--bg);
@@ -211,7 +213,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0;
+  margin-left: auto;
   min-width: 0;
 }
 
@@ -906,17 +908,20 @@ body {
 
 /* Botão "Instalar app": só o ícone, mesmo tamanho do botão de tema */
 .install-mini {
-  width: 2.4rem;
-  height: 2.4rem;
   flex-shrink: 0;
+  height: 2.4rem;
+  padding: 0 10px;
   border: none;
-  border-radius: 50%;
+  border-radius: 20px;
   background: var(--primary);
   color: #ffffff;
-  font-size: 0.9rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  white-space: nowrap;
   cursor: pointer;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   box-shadow: 0 2px 8px var(--primary-glow);
 }
 
