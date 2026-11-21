@@ -762,6 +762,97 @@ body {
   .bottom-nav { border-radius: 0 0 28px 28px; position: absolute; }
 }
 
+/* ===== MODO COMPUTADOR (tela larga, a partir de 1024px) =====
+   No celular e no tablet nada muda: continua a moldura de app. */
+@media (min-width: 1024px) {
+  body {
+    display: block;
+    background-color: var(--bg);
+  }
+
+  .app-shell {
+    max-width: none;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding-bottom: 96px;
+  }
+
+  .top-header {
+    padding: 14px max(32px, calc((100% - 1160px) / 2));
+    border-radius: 0;
+  }
+
+  /* telas centralizadas, com largura confortável de leitura */
+  .screen {
+    width: 100%;
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 28px 32px;
+  }
+
+  #screen-auth { max-width: 460px; }
+  #screen-merchant,
+  #screen-admin,
+  #screen-profile { max-width: 980px; }
+
+  /* vitrine de cupons e lista de parceiros em colunas */
+  #stores-list-dynamic,
+  #partners-list-all,
+  #merchant-offers-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+
+  #stores-list-dynamic > p,
+  #partners-list-all > p,
+  #merchant-offers-list > p {
+    grid-column: 1 / -1;
+  }
+
+  #stores-list-dynamic .company-card,
+  #partners-list-all .company-card,
+  #merchant-offers-list .company-card {
+    margin-bottom: 0;
+  }
+
+  /* filtros quebram em linhas em vez de rolar de lado */
+  .categories-bar {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  /* menu inferior vira um "dock" flutuante centralizado */
+  .bottom-nav {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    width: min(520px, calc(100% - 48px));
+    max-width: none;
+    padding: 8px 0;
+    border: 1px solid var(--card-border);
+    border-radius: 22px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  }
+
+  .nav-item {
+    cursor: pointer;
+    border-radius: 14px;
+    padding: 4px 0;
+  }
+
+  .nav-item:hover { background: var(--secondary); }
+
+  .modal-content { max-width: 460px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
