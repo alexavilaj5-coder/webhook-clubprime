@@ -67,7 +67,7 @@
     document.addEventListener('DOMContentLoaded', atualizarBotaoInstalar);
   </script>
 
-  <script type="module" src="app.js?v=8"></script>
+  <script type="module" src="app.js?v=9"></script>
 </head>
 <body>
 
@@ -360,8 +360,8 @@
           <label style="font-size:0.68rem; font-weight:800; color:var(--muted);">🏙️ FILTRAR PAINEL POR CIDADE</label>
           <select id="adm-filtro-cidade" class="form-control" onchange="filtrarAdminCidade(this.value)"><option value="todas">🌎 Todas as cidades</option></select>
         </div>
-        <details style="margin-top:10px; background:var(--secondary); border:1px solid var(--card-border); border-radius:14px; padding:10px 12px;">
-          <summary style="font-size:0.8rem; font-weight:800; cursor:pointer;">➕ Adicionar nova cidade</summary>
+        <details style="margin-top:10px; background:var(--secondary); border:1px solid var(--card-border); border-radius:14px; padding:10px 12px;" ontoggle="if(this.open) renderizarCidadesAdmin()">
+          <summary style="font-size:0.8rem; font-weight:800; cursor:pointer;">🏙️ Gerenciar cidades</summary>
           <div style="margin-top:10px; text-align:left;">
             <div class="form-group" style="margin-bottom:8px;">
               <label style="font-size:0.68rem;">NOME DA CIDADE *</label>
@@ -378,7 +378,10 @@
                 <input type="number" step="any" id="nova-cidade-lon" class="form-control" placeholder="Longitude">
               </div>
             </details>
-            <button id="btn-add-cidade" class="btn btn-cyan" style="padding:10px; font-size:0.82rem;" onclick="adicionarCidadeAdmin()">✅ Adicionar cidade</button>
+            <button id="btn-add-cidade" class="btn btn-cyan" style="padding:10px; font-size:0.82rem;" onclick="adicionarCidadeAdmin()">➕ Adicionar cidade</button>
+
+            <div style="font-size:0.68rem; font-weight:800; color:var(--muted); margin:16px 0 6px;">CIDADES CADASTRADAS</div>
+            <div id="admin-lista-cidades"></div>
           </div>
         </details>
       </div>

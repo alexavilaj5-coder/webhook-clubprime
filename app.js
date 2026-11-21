@@ -2711,6 +2711,80 @@ window.deslogar = async function() {
   if (auth.currentUser) await signOut(auth);
 };
 
+// Na primeira vez que mexe nas cidades, grava a lista padrão no Firestore (senão ela sumiria ao criar/apagar a primeira)
+async function garantirCidadesNoFirestore() {
+  const snap = await getDocs(collection(db, "cidades"));
+  if (!snap.empty) return;
+  await Promise.all(window.Cidades.lista().map((c, i) => setDoc(doc(db, "cidades", c.id), {
+    nome: c.nome, uf: c.uf, lat: c.lat ?? null, lon: c.lon ?? null, ativa: c.ativa !== false, ordem: i
+  })));
+}
+
+window.renderizarCidadesAdmin = function() {
+  const box = document.getElementById('admin-lista-cidades');
+  if (!box) return;
+  box.innerHTML = window.Cidades.lista().map(c => {
+    const padrao = c.id === 'pelotas-rs';
+    return `
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px; background:var(--card); border:1px solid var(--card-border); border-radius:12px; margin-bottom:6px;">
+        <div style="min-width:0;">
+          <strong style="font-size:0.85rem;">${escapeHtml(c.nome)}</strong>
+          <span style="color:var(--muted); font-size:0.72rem;">${escapeHtml(c.uf)}</span>
+          <div style="font-size:0.68rem; font-weight:700; color:${c.ativa ? '#10b981' : 'var(--muted)'};">${c.ativa ? '● Ativa' : '○ Pausada (aparece como "Em breve")'}${padrao ? ' • Padrão' : ''}</div>
+        </div>
+        ${padrao ? '' : `
+        <div style="display:flex; gap:6px; flex-shrink:0;">
+          <button class="btn btn-outline btn-small" style="padding:6px 10px;" onclick="alternarCidadeAdmin('${c.id}')">${c.ativa ? '⏸️' : '▶️'}</button>
+          <button class="btn btn-outline btn-small" style="padding:6px 10px; color:var(--danger); border-color:#ef444455;" onclick="excluirCidadeAdmin('${c.id}')">🗑️</button>
+        </div>`}
+      </div>`;
+  }).join('');
+};
+
+window.alternarCidadeAdmin = async function(id) {
+  if (window.currentUserData?.funcao !== 'admin') return;
+  const c = window.Cidades.lista().find(x => x.id === id);
+  if (!c || id === 'pelotas-rs') return;
+  try {
+    await garantirCidadesNoFirestore();
+    await updateDoc(doc(db, "cidades", id), { ativa: !c.ativa });
+    try { await registrarLogAdmin('sistema', c.ativa ? 'Cidade pausada' : 'Cidade ativada', `${c.nome} / ${c.uf}`); } catch (e) {}
+    await window.Cidades.recarregar();
+    renderizarCidadesAdmin();
+  } catch (err) {
+    mostrarAviso("Erro", err.message, "❌");
+  }
+};
+
+window.excluirCidadeAdmin = async function(id) {
+  if (window.currentUserData?.funcao !== 'admin') return;
+  const c = window.Cidades.lista().find(x => x.id === id);
+  if (!c) return;
+  if (id === 'pelotas-rs') {
+    return mostrarAviso("Não dá pra excluir", "Pelotas é a cidade padrão do app e precisa continuar na lista.", "ℹ️");
+  }
+  if (!confirm(`Excluir a cidade ${c.nome} / ${c.uf}? Ela some do cadastro e da troca de cidade.`)) return;
+
+  try {
+    // Não deixa apagar cidade que ainda tem gente ou cupom: eles ficariam invisíveis no app
+    const [snapU, snapC] = await Promise.all([
+      getDocs(query(collection(db, "usuarios"), where("cidadeId", "==", id))),
+      getDocs(query(collection(db, "cupons"), where("cidadeId", "==", id)))
+    ]);
+    if (!snapU.empty || !snapC.empty) {
+      return mostrarAviso("Cidade em uso", `${c.nome} ainda tem ${snapU.size} cadastro(s) e ${snapC.size} cupom(ns). Use o botão de pausar (⏸️) em vez de excluir.`, "⚠️");
+    }
+    await garantirCidadesNoFirestore();
+    await deleteDoc(doc(db, "cidades", id));
+    try { await registrarLogAdmin('sistema', 'Cidade excluída', `${c.nome} / ${c.uf}`); } catch (e) {}
+    await window.Cidades.recarregar();
+    renderizarCidadesAdmin();
+    mostrarAviso("Cidade excluída 🗑️", `${c.nome} / ${c.uf} foi removida da lista.`, "✅");
+  } catch (err) {
+    mostrarAviso("Erro", err.message, "❌");
+  }
+};
+
 window.adicionarCidadeAdmin = async function() {
   if (window.currentUserData?.funcao !== 'admin') return;
 
@@ -2737,13 +2811,7 @@ window.adicionarCidadeAdmin = async function() {
 
   try {
     const atuais = window.Cidades.lista();
-    const snap = await getDocs(collection(db, "cidades"));
-    if (snap.empty) {
-      // Primeira vez: grava antes a lista padrão (Pelotas etc.), senão ela sumiria ao criar a primeira cidade
-      await Promise.all(atuais.map((c, i) => setDoc(doc(db, "cidades", c.id), {
-        nome: c.nome, uf: c.uf, lat: c.lat ?? null, lon: c.lon ?? null, ativa: c.ativa !== false, ordem: i
-      })));
-    }
+    await garantirCidadesNoFirestore();
     await setDoc(doc(db, "cidades", slug), {
       nome, uf, lat, lon, ativa: true, ordem: atuais.length, criadoEm: new Date().toISOString()
     });
@@ -2754,6 +2822,7 @@ window.adicionarCidadeAdmin = async function() {
     document.getElementById('nova-cidade-nome').value = '';
     document.getElementById('nova-cidade-lat').value = '';
     document.getElementById('nova-cidade-lon').value = '';
+    renderizarCidadesAdmin();
     mostrarAviso("Cidade adicionada! 🏙️", `${nome} / ${uf} já aparece no cadastro e na troca de cidade.`, "✅");
   } catch (err) {
     mostrarAviso("Erro", err.message, "❌");
