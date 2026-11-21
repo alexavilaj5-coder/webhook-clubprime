@@ -296,11 +296,12 @@
         <div style="padding:16px; border-top:1px solid var(--card-border);">
           <div class="form-group" style="text-align:left; margin-bottom:12px;">
             <label>FOTO DA EMPRESA (aparece para os clientes)</label>
-            <img id="merchant-edit-foto-preview" alt="Foto da empresa" style="display:none; width:100%; height:130px; object-fit:cover; border-radius:14px; margin-bottom:8px;">
+            <img id="merchant-edit-foto-preview" alt="Foto da empresa" style="display:none; width:100%; aspect-ratio:12/5; height:auto; object-fit:cover; border-radius:14px; margin-bottom:8px;">
             <input type="hidden" id="merchant-edit-foto" value="">
             <input type="file" id="merchant-edit-foto-file" accept="image/*" style="display:none;" onchange="processarFotoEmpresa(this)">
             <div style="display:flex; gap:8px;">
               <button type="button" class="btn btn-outline btn-small" style="flex:1;" onclick="document.getElementById('merchant-edit-foto-file').click()">📷 Escolher foto</button>
+              <button type="button" id="merchant-edit-foto-ajustar" class="btn btn-outline btn-small" style="flex:1; display:none;" onclick="ajustarFotoEmpresa()">🔍 Ajustar</button>
               <button type="button" id="merchant-edit-foto-remover" class="btn btn-outline btn-small" style="flex:1; display:none; color:var(--danger); border-color:#ef444455;" onclick="removerFotoEmpresa()">🗑️ Remover</button>
             </div>
             <div id="merchant-edit-foto-status" style="font-size:0.7rem; color:var(--muted); margin-top:4px;">Depois de escolher, toque em "Salvar Alterações da Empresa".</div>
@@ -859,6 +860,27 @@
 
   <!-- MODAIS DO SISTEMA -->
 
+  <!-- EDITOR DE FOTO (reposicionar / zoom) -->
+  <div id="modal-editor-foto" class="modal" style="z-index:8000;">
+    <div class="modal-content" style="text-align:left;">
+      <h3 style="font-size:1.1rem; font-weight:900; text-align:center; margin-bottom:4px;">🖼️ Ajustar foto</h3>
+      <p style="font-size:0.72rem; color:var(--muted); text-align:center; margin-bottom:10px;">Arraste para reposicionar. Use o controle (ou pinça) para dar zoom.</p>
+      <div style="border-radius:14px; overflow:hidden; border:1px solid var(--card-border); background:#ffffff; line-height:0;">
+        <canvas id="editor-foto-canvas" width="720" height="300" style="width:100%; height:auto; display:block; touch-action:none; cursor:grab;"></canvas>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; margin:14px 2px 4px;">
+        <button type="button" class="btn btn-outline btn-small" style="width:44px; flex:0 0 44px; font-size:1.1rem; padding:6px;" onclick="editorFotoPasso(-8)">−</button>
+        <input type="range" id="editor-foto-zoom" min="0" max="100" step="0.5" value="0" style="flex:1;" oninput="editorFotoZoomSlider(this.value)">
+        <button type="button" class="btn btn-outline btn-small" style="width:44px; flex:0 0 44px; font-size:1.1rem; padding:6px;" onclick="editorFotoPasso(8)">+</button>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button type="button" class="btn btn-outline btn-small" style="flex:1;" onclick="editorFotoReset()">↺ Centralizar</button>
+      </div>
+      <button class="btn btn-cyan" style="margin-top:12px;" onclick="editorFotoConfirmar()">✅ Usar esta foto</button>
+      <button class="btn btn-outline" style="margin-top:8px;" onclick="editorFotoCancelar()">Cancelar</button>
+    </div>
+  </div>
+
   <div id="modal-patrocinar-empresa" class="modal">
     <div class="modal-content" style="text-align:left;">
       <div style="font-size:2.2rem; margin-bottom:4px; text-align:center;">⭐</div>
@@ -1139,7 +1161,7 @@
         <div style="font-size:0.65rem; font-weight:800; color:var(--muted); margin-bottom:4px; text-align:left;">👁️ ASSIM O CLIENTE VÊ</div>
         <div style="background:var(--secondary); border:1px solid var(--card-border); border-radius:14px; overflow:hidden; text-align:left;">
           <div style="padding:10px 12px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
-            <img id="pv-img" alt="" style="display:none; width:44px; height:44px; flex:0 0 44px; border-radius:10px; object-fit:cover;">
+            <img id="pv-img" alt="" style="display:none; width:76px; height:76px; flex:0 0 76px; border-radius:12px; object-fit:cover;">
             <div style="flex:1; min-width:0;">
               <div id="pv-title" style="font-size:0.85rem; font-weight:800; color:var(--text); word-break:break-word;">Título da promoção</div>
               <div id="pv-desc" style="font-size:0.75rem; color:var(--muted); word-break:break-word;">Descrição curta</div>

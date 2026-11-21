@@ -691,7 +691,7 @@ async function carregarParceirosCliente() {
       const wppLink = foneLimpo ? `https://wa.me/55${foneLimpo}?text=Olá,%20vim%20pelo%20Clube%20Prime!` : '#';
       const instaLink = u.empresaInstagram ? `https://instagram.com/${encodeURIComponent(u.empresaInstagram.replace('@', ''))}` : '#';
 
-      const fotoParceiro = u.fotoUrl ? `<img src="${escapeHtml(u.fotoUrl)}" alt="Foto da empresa" style="width:100%; height:130px; object-fit:cover; border-radius:14px; margin-bottom:12px;">` : '';
+      const fotoParceiro = u.fotoUrl ? `<img src="${escapeHtml(u.fotoUrl)}" alt="Foto da empresa" style="width:100%; aspect-ratio:12/5; height:auto; object-fit:cover; border-radius:14px; margin-bottom:12px;">` : '';
 
       partnersClientHtml += `
         <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:18px; margin-bottom:12px;">
@@ -1197,7 +1197,7 @@ function carregarCuponsVitrine() {
 
     let html = '';
     for (const [key, emp] of Object.entries(empresasGrouped)) {
-      let imgHtml = emp.imagem ? `<img src="${escapeHtml(emp.imagem)}" alt="Logo/Foto" style="width:100%; height:110px; object-fit:cover; border-radius:14px; margin-bottom:12px;">` : '';
+      let imgHtml = emp.imagem ? `<img src="${escapeHtml(emp.imagem)}" alt="Logo/Foto" style="width:100%; aspect-ratio:12/5; height:auto; object-fit:cover; border-radius:14px; margin-bottom:12px;">` : '';
       
       const latAttr = emp.lat !== null && emp.lon !== null ? `data-lat="${emp.lat}"` : '';
       const lonAttr = emp.lat !== null && emp.lon !== null ? `data-lon="${emp.lon}"` : '';
@@ -1226,13 +1226,13 @@ function carregarCuponsVitrine() {
         const encTel = encAttr(emp.telefone);
         const encRegras = encAttr(cupom.regras || '');
 
-        const imgCupomHtml = cupom.imagem ? `<img src="${escapeHtml(cupom.imagem)}" alt="Foto da oferta" style="width:64px; height:64px; object-fit:cover; border-radius:12px; flex-shrink:0;">` : '';
+        const imgCupomHtml = cupom.imagem ? `<img src="${escapeHtml(cupom.imagem)}" alt="Foto da oferta" style="width:80px; height:80px; object-fit:cover; border-radius:12px; flex-shrink:0;">` : '';
 
         const pctNum = cupom.descontoPct ? String(cupom.descontoPct) : '';
         const stubHtml = pctNum
           ? `<span class="cupom-pct">${escapeHtml(pctNum)}%</span><span class="cupom-off">OFF</span>`
           : `<span class="cupom-badge-txt">${escapeHtml(cupom.descontoBadge || 'OFERTA')}</span>`;
-        const imgTicket = cupom.imagem ? `<img src="${escapeHtml(cupom.imagem)}" alt="Foto da oferta" style="width:44px; height:44px; object-fit:cover; border-radius:10px; flex-shrink:0;">` : '';
+        const imgTicket = cupom.imagem ? `<img src="${escapeHtml(cupom.imagem)}" alt="Foto da oferta" style="width:76px; height:76px; object-fit:cover; border-radius:12px; flex-shrink:0;">` : '';
 
         html += `
           <div class="cupom">
@@ -2258,9 +2258,162 @@ function atualizarPreviaFotoEmpresa() {
     else { img.removeAttribute('src'); img.style.display = 'none'; }
   }
   if (btnRem) btnRem.style.display = valor ? 'block' : 'none';
+  const btnAj = document.getElementById('merchant-edit-foto-ajustar');
+  if (btnAj) btnAj.style.display = valor.startsWith('data:') ? 'block' : 'none';
 }
 
-// Foto da EMPRESA (separada da foto de cada cupom): reduz no celular e guarda no cadastro da loja.
+// ===== EDITOR DE FOTO (reposicionar + zoom) =====
+// Mostra um quadro com a mesma proporção em que a foto aparece para o cliente (12:5).
+// O recorte escolhido é gravado já pronto no JPEG final.
+const EditorFoto = { img: null, s: 1, cx: 0, cy: 0, sMin: 1, sMax: 4, cover: 1, onDone: null, pointers: new Map(), pinch: null, pronto: false };
+
+function editorFotoLimitar() {
+  const c = document.getElementById('editor-foto-canvas');
+  const W = c.width, H = c.height;
+  const sw = EditorFoto.img.width * EditorFoto.s, sh = EditorFoto.img.height * EditorFoto.s;
+  const eixo = (centro, tam, quadro) => tam >= quadro
+    ? Math.min(tam / 2, Math.max(quadro - tam / 2, centro))
+    : Math.min(quadro - tam / 2, Math.max(tam / 2, centro));
+  EditorFoto.cx = eixo(EditorFoto.cx, sw, W);
+  EditorFoto.cy = eixo(EditorFoto.cy, sh, H);
+}
+
+function editorFotoDesenhar() {
+  const c = document.getElementById('editor-foto-canvas');
+  const ctx = c.getContext('2d');
+  const { img, s, cx, cy } = EditorFoto;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(img, cx - img.width * s / 2, cy - img.height * s / 2, img.width * s, img.height * s);
+  const sl = document.getElementById('editor-foto-zoom');
+  if (sl && EditorFoto.sMax > EditorFoto.sMin) {
+    sl.value = String(100 * Math.log(s / EditorFoto.sMin) / Math.log(EditorFoto.sMax / EditorFoto.sMin));
+  }
+}
+
+function editorFotoDefinirEscala(novaS, px, py) {
+  const c = document.getElementById('editor-foto-canvas');
+  const sNova = Math.min(EditorFoto.sMax, Math.max(EditorFoto.sMin, novaS));
+  const f = sNova / EditorFoto.s;
+  const ox = px === undefined ? c.width / 2 : px;
+  const oy = py === undefined ? c.height / 2 : py;
+  EditorFoto.cx = ox + (EditorFoto.cx - ox) * f;
+  EditorFoto.cy = oy + (EditorFoto.cy - oy) * f;
+  EditorFoto.s = sNova;
+  editorFotoLimitar();
+  editorFotoDesenhar();
+}
+
+window.editorFotoZoomSlider = function(v) {
+  const p = Number(v) / 100;
+  editorFotoDefinirEscala(EditorFoto.sMin * Math.pow(EditorFoto.sMax / EditorFoto.sMin, p));
+};
+
+window.editorFotoPasso = function(delta) {
+  const sl = document.getElementById('editor-foto-zoom');
+  const v = Math.min(100, Math.max(0, Number(sl.value) + delta));
+  sl.value = String(v);
+  window.editorFotoZoomSlider(v);
+};
+
+window.editorFotoReset = function() {
+  const c = document.getElementById('editor-foto-canvas');
+  EditorFoto.s = EditorFoto.cover;
+  EditorFoto.cx = c.width / 2;
+  EditorFoto.cy = c.height / 2;
+  editorFotoLimitar();
+  editorFotoDesenhar();
+};
+
+function editorFotoLigarEventos() {
+  if (EditorFoto.pronto) return;
+  EditorFoto.pronto = true;
+  const c = document.getElementById('editor-foto-canvas');
+  const paraCanvas = (e) => {
+    const r = c.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * c.width / r.width, y: (e.clientY - r.top) * c.height / r.height, k: c.width / r.width };
+  };
+  c.addEventListener('pointerdown', (e) => {
+    c.setPointerCapture(e.pointerId);
+    EditorFoto.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    c.style.cursor = 'grabbing';
+    if (EditorFoto.pointers.size === 2) {
+      const [p1, p2] = [...EditorFoto.pointers.values()];
+      EditorFoto.pinch = { d: Math.hypot(p1.x - p2.x, p1.y - p2.y), s: EditorFoto.s };
+    }
+  });
+  c.addEventListener('pointermove', (e) => {
+    const ant = EditorFoto.pointers.get(e.pointerId);
+    if (!ant) return;
+    const r = c.getBoundingClientRect();
+    const k = c.width / r.width;
+    if (EditorFoto.pointers.size === 1) {
+      EditorFoto.cx += (e.clientX - ant.x) * k;
+      EditorFoto.cy += (e.clientY - ant.y) * k;
+      editorFotoLimitar();
+      editorFotoDesenhar();
+    }
+    EditorFoto.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (EditorFoto.pointers.size === 2 && EditorFoto.pinch) {
+      const [p1, p2] = [...EditorFoto.pointers.values()];
+      const d = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+      const mx = ((p1.x + p2.x) / 2 - r.left) * k, my = ((p1.y + p2.y) / 2 - r.top) * k;
+      if (EditorFoto.pinch.d > 0) editorFotoDefinirEscala(EditorFoto.pinch.s * d / EditorFoto.pinch.d, mx, my);
+    }
+  });
+  const soltar = (e) => {
+    EditorFoto.pointers.delete(e.pointerId);
+    EditorFoto.pinch = null;
+    if (EditorFoto.pointers.size === 0) c.style.cursor = 'grab';
+  };
+  c.addEventListener('pointerup', soltar);
+  c.addEventListener('pointercancel', soltar);
+  c.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const p = paraCanvas(e);
+    editorFotoDefinirEscala(EditorFoto.s * (e.deltaY < 0 ? 1.08 : 1 / 1.08), p.x, p.y);
+  }, { passive: false });
+}
+
+window.abrirEditorFoto = function(img, onDone) {
+  const c = document.getElementById('editor-foto-canvas');
+  editorFotoLigarEventos();
+  EditorFoto.img = img;
+  EditorFoto.onDone = onDone;
+  EditorFoto.pointers.clear();
+  EditorFoto.pinch = null;
+  EditorFoto.cover = Math.max(c.width / img.width, c.height / img.height);
+  EditorFoto.sMin = Math.min(c.width / img.width, c.height / img.height); // foto inteira visível
+  EditorFoto.sMax = Math.max(EditorFoto.cover * 4, EditorFoto.sMin * 1.5);
+  window.editorFotoReset();
+  document.getElementById('modal-editor-foto').classList.add('active');
+};
+
+window.editorFotoCancelar = function() {
+  document.getElementById('modal-editor-foto').classList.remove('active');
+  EditorFoto.img = null;
+  EditorFoto.onDone = null;
+};
+
+window.editorFotoConfirmar = function() {
+  const c = document.getElementById('editor-foto-canvas');
+  let q = 0.8;
+  let dataUrl = c.toDataURL('image/jpeg', q);
+  while (dataUrl.length > 140000 && q > 0.4) { q -= 0.1; dataUrl = c.toDataURL('image/jpeg', q); }
+  const cb = EditorFoto.onDone;
+  window.editorFotoCancelar();
+  if (cb) cb(dataUrl);
+};
+
+// Foto da EMPRESA: abre o editor (reposicionar / zoom) e guarda o recorte final no cadastro da loja.
+function aplicarFotoEmpresaEditada(dataUrl) {
+  const status = document.getElementById('merchant-edit-foto-status');
+  if (dataUrl.length > 200000) { status.innerText = '❌ Foto muito pesada. Escolha outra.'; return; }
+  document.getElementById('merchant-edit-foto').value = dataUrl;
+  status.innerText = `✅ Foto pronta (${Math.round(dataUrl.length / 1024)} KB). Toque em "Salvar Alterações da Empresa".`;
+  atualizarPreviaFotoEmpresa();
+}
+
 window.processarFotoEmpresa = function(input) {
   const file = input.files && input.files[0];
   const status = document.getElementById('merchant-edit-foto-status');
@@ -2274,28 +2427,22 @@ window.processarFotoEmpresa = function(input) {
     const img = new Image();
     img.onerror = () => { status.innerText = '❌ Imagem inválida. Tente outra.'; };
     img.onload = () => {
-      const escala = Math.min(1, 640 / Math.max(img.width, img.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(img.width * escala));
-      canvas.height = Math.max(1, Math.round(img.height * escala));
-      const ctx2d = canvas.getContext('2d');
-      ctx2d.fillStyle = '#ffffff';
-      ctx2d.fillRect(0, 0, canvas.width, canvas.height);
-      ctx2d.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      let q = 0.75;
-      let dataUrl = canvas.toDataURL('image/jpeg', q);
-      while (dataUrl.length > 140000 && q > 0.4) { q -= 0.1; dataUrl = canvas.toDataURL('image/jpeg', q); }
-      if (dataUrl.length > 200000) { status.innerText = '❌ Foto muito pesada. Escolha outra.'; return; }
-
-      document.getElementById('merchant-edit-foto').value = dataUrl;
-      status.innerText = `✅ Foto pronta (${Math.round(dataUrl.length / 1024)} KB). Toque em "Salvar Alterações da Empresa".`;
-      atualizarPreviaFotoEmpresa();
+      status.innerText = 'Ajuste a foto e toque em "Usar esta foto".';
+      window.abrirEditorFoto(img, aplicarFotoEmpresaEditada);
     };
     img.src = reader.result;
   };
   reader.readAsDataURL(file);
   input.value = '';
+};
+
+// Reabre a foto já escolhida para ajustar de novo.
+window.ajustarFotoEmpresa = function() {
+  const valor = document.getElementById('merchant-edit-foto')?.value || '';
+  if (!valor.startsWith('data:')) return;
+  const img = new Image();
+  img.onload = () => window.abrirEditorFoto(img, aplicarFotoEmpresaEditada);
+  img.src = valor;
 };
 
 window.removerFotoEmpresa = function() {
@@ -3313,7 +3460,7 @@ window.abrirPreviewVitrineLojista = async function() {
     const itens = cupons.map(c => {
       const limiteTxt = c.limite === 'daily' ? '1 por dia' : c.limite === 'once' ? 'Uso único' : 'Ilimitado';
       const pctTxt = c.descontoPct ? `${c.descontoPct}% OFF` : (c.descontoBadge || 'OFERTA');
-      const imgCupom = c.imagem ? `<img src="${escapeHtml(c.imagem)}" alt="Foto da oferta" style="width:64px; height:64px; object-fit:cover; border-radius:12px; flex-shrink:0;">` : '';
+      const imgCupom = c.imagem ? `<img src="${escapeHtml(c.imagem)}" alt="Foto da oferta" style="width:80px; height:80px; object-fit:cover; border-radius:12px; flex-shrink:0;">` : '';
       return `
         <div style="background:var(--secondary); border:1px solid var(--card-border); padding:12px; border-radius:14px; display:flex; justify-content:space-between; align-items:center; gap:10px; opacity:${c.ativo ? 1 : 0.55};">
           ${imgCupom}
@@ -3331,7 +3478,7 @@ window.abrirPreviewVitrineLojista = async function() {
 
     box.innerHTML = avisos + `
       <div style="background:var(--card); border:1px solid var(--card-border); padding:16px; border-radius:20px;">
-        ${imagem ? `<img src="${escapeHtml(imagem)}" alt="Logo/Foto" style="width:100%; height:130px; object-fit:cover; border-radius:14px; margin-bottom:12px;">` : ''}
+        ${imagem ? `<img src="${escapeHtml(imagem)}" alt="Logo/Foto" style="width:100%; aspect-ratio:12/5; height:auto; object-fit:cover; border-radius:14px; margin-bottom:12px;">` : ''}
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
           <div>
             <h3 style="font-size:1.1rem; font-weight:900; color:var(--text);">🏢 ${escapeHtml(d.empresaNome || 'Empresa')}</h3>
