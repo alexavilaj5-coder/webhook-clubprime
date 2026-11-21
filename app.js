@@ -918,32 +918,49 @@ window.renderizarHistoricoClientePerfil = function() {
   container.innerHTML = html;
 };
 
-window.abrirLeitorQrCode = function() {
+window.abrirLeitorQrCode = async function() {
   const container = document.getElementById('reader-container');
   container.style.display = 'block';
 
+  // Leitor sem interface: sem botões de trocar câmera, pedir permissão ou escolher imagem.
+  // Ao tocar, o navegador pede permissão (se precisar) e a câmera traseira abre direto.
+  if (html5QrCodeScanner && html5QrCodeScanner.isRunning) return;
   if (!html5QrCodeScanner) {
-    html5QrCodeScanner = new Html5QrcodeScanner("qr-reader", { 
-      fps: 10, 
-      qrbox: 250,
-      aspectRatio: 1.0,
-      videoConstraints: {
-        facingMode: "environment"
-      }
-    });
+    html5QrCodeScanner = new Html5Qrcode("qr-reader");
   }
 
-  html5QrCodeScanner.render((decodedText) => {
-    const val = decodedText.trim().toUpperCase();
-    document.getElementById('input-validar-codigo').value = val;
-    fecharLeitorQrCode();
-    verificarCodigoDigitadoLojista(val);
-  }, (error) => {});
+  try {
+    await html5QrCodeScanner.start(
+      { facingMode: "environment" },
+      {
+        fps: 10,
+        qrbox: (w, h) => {
+          const lado = Math.floor(Math.min(w, h) * 0.8);
+          return { width: lado, height: lado };
+        }
+      },
+      (decodedText) => {
+        const val = decodedText.trim().toUpperCase();
+        document.getElementById('input-validar-codigo').value = val;
+        fecharLeitorQrCode();
+        verificarCodigoDigitadoLojista(val);
+      },
+      () => {}
+    );
+    html5QrCodeScanner.isRunning = true;
+  } catch (e) {
+    container.style.display = 'none';
+    mostrarAviso("Câmera indisponível", "Permita o acesso à câmera nas configurações do navegador ou digite o código manualmente.", "📷");
+  }
 };
 
-window.fecharLeitorQrCode = function() {
-  if (html5QrCodeScanner) {
-    html5QrCodeScanner.clear().catch(e => {});
+window.fecharLeitorQrCode = async function() {
+  if (html5QrCodeScanner && html5QrCodeScanner.isRunning) {
+    html5QrCodeScanner.isRunning = false;
+    try {
+      await html5QrCodeScanner.stop();
+      html5QrCodeScanner.clear();
+    } catch (e) {}
   }
   document.getElementById('reader-container').style.display = 'none';
 };

@@ -67,7 +67,7 @@
     document.addEventListener('DOMContentLoaded', atualizarBotaoInstalar);
   </script>
 
-  <script type="module" src="app.js?v=5"></script>
+  <script type="module" src="app.js?v=6"></script>
 </head>
 <body>
 
@@ -264,6 +264,9 @@
         <button id="btn-validar-baixa-final" class="btn" disabled style="opacity:0.5; pointer-events:none;" onclick="validarCupomTextoLojista()">✅ Validar e Dar Baixa no Caixa</button>
       </div>
 
+      <button id="btn-toggle-painel-lojista" type="button" class="btn btn-outline" style="margin-bottom:16px;" onclick="var b=document.getElementById('merchant-extra');var o=b.style.display==='none';b.style.display=o?'block':'none';this.innerHTML=o?'➖ Ocultar painel':'➕ Abrir painel (cupons, logs e empresa)';">➕ Abrir painel (cupons, logs e empresa)</button>
+
+      <div id="merchant-extra" style="display:none;">
       <div class="admin-grid" style="margin-bottom:16px;">
         <div class="admin-stat-card">
           <div class="admin-stat-lbl">Cliques nas Ofertas</div>
@@ -337,6 +340,7 @@
       <div id="merchant-offers-list">
         <p style="font-size:0.8rem; color:var(--muted);">Carregando suas promoções...</p>
       </div>
+      </div><!-- /merchant-extra -->
 
       <button class="btn btn-outline" style="color:var(--danger); border-color:#ef444455; margin-top:20px;" onclick="deslogar()">Sair do Painel</button>
     </div>
