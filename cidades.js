@@ -210,6 +210,7 @@ window.Cidades = {
   rotuloDe: id => { const c = lista.find(x => x.id === id) || atual(); return c.nome + ' / ' + c.uf; },
   ref: () => lerLS(REF) || '',
   abrir: modal, set: escolher, espera, gps, pos,
+  recarregar: async () => { await carregarLista(); textos(); preencherSelect(); },
   filtrar: arr => arr.filter(c => (c.cidadeId || 'pelotas-rs') === atual().id) // cupons antigos sem cidadeId = Pelotas
 };
 
@@ -217,14 +218,20 @@ window.Cidades = {
 const r = new URLSearchParams(location.search).get('ref');
 if (r) gravaLS(REF, r.toUpperCase().slice(0, 12));
 
-window.addEventListener('load', async () => {
-  const b = document.querySelector('.location-badge');
-  if (b) { b.style.cursor = 'pointer'; b.insertAdjacentHTML('beforeend', ' ▾'); b.onclick = modal; }
+// Lê as cidades do Firestore (coleção "cidades"). Se estiver vazia ou sem permissão, fica a lista padrão.
+async function carregarLista() {
   try {
     const snap = await getDocs(collection(window.firebaseDb, 'cidades'));
     const fs = snap.docs.map(d => ({ id: d.id, ...d.data(), ativa: d.data().ativa !== false })).filter(c => c.nome);
+    fs.sort((a, b) => (a.ordem ?? 999) - (b.ordem ?? 999)); // Pelotas (ordem 0) continua sendo a primeira/padrão
     if (fs.length) lista = fs;
   } catch (e) { /* sem coleção ou sem permissão: usa a lista padrão */ }
+}
+
+window.addEventListener('load', async () => {
+  const b = document.querySelector('.location-badge');
+  if (b) { b.style.cursor = 'pointer'; b.insertAdjacentHTML('beforeend', ' ▾'); b.onclick = modal; }
+  await carregarLista();
   textos();
   preencherSelect();
   if (!lerLS(LS)) modal();

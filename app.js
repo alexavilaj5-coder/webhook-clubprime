@@ -1,4 +1,4 @@
-import "./cidades.js?v=1";
+import "./cidades.js?v=2";
 // Registro do Service Worker para permitir a instalação como App PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -2709,6 +2709,58 @@ window.deslogar = async function() {
   pararChecagemAutomatica();
   resetarEstadoUI();
   if (auth.currentUser) await signOut(auth);
+};
+
+window.adicionarCidadeAdmin = async function() {
+  if (window.currentUserData?.funcao !== 'admin') return;
+
+  const nome = document.getElementById('nova-cidade-nome').value.trim().replace(/\s+/g, ' ');
+  const uf = document.getElementById('nova-cidade-uf').value.trim().toUpperCase();
+  const latTxt = document.getElementById('nova-cidade-lat').value.trim();
+  const lonTxt = document.getElementById('nova-cidade-lon').value.trim();
+
+  if (nome.length < 2) return mostrarAviso("Atenção", "Digite o nome da cidade.", "🏙️");
+  if (!/^[A-Z]{2}$/.test(uf)) return mostrarAviso("Atenção", "Digite a sigla do estado com 2 letras (ex: RS).", "🏙️");
+
+  const slug = (nome + '-' + uf).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  if (window.Cidades.lista().some(c => c.id === slug)) {
+    return mostrarAviso("Já existe", `${nome} / ${uf} já está na lista de cidades.`, "ℹ️");
+  }
+
+  const lat = latTxt !== '' ? parseFloat(latTxt) : null;
+  const lon = lonTxt !== '' ? parseFloat(lonTxt) : null;
+
+  const btn = document.getElementById('btn-add-cidade');
+  const textoBtn = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner"></span> Salvando...';
+  btn.style.pointerEvents = 'none';
+
+  try {
+    const atuais = window.Cidades.lista();
+    const snap = await getDocs(collection(db, "cidades"));
+    if (snap.empty) {
+      // Primeira vez: grava antes a lista padrão (Pelotas etc.), senão ela sumiria ao criar a primeira cidade
+      await Promise.all(atuais.map((c, i) => setDoc(doc(db, "cidades", c.id), {
+        nome: c.nome, uf: c.uf, lat: c.lat ?? null, lon: c.lon ?? null, ativa: c.ativa !== false, ordem: i
+      })));
+    }
+    await setDoc(doc(db, "cidades", slug), {
+      nome, uf, lat, lon, ativa: true, ordem: atuais.length, criadoEm: new Date().toISOString()
+    });
+
+    try { await registrarLogAdmin('sistema', 'Cidade adicionada', `${nome} / ${uf}`); } catch (e) {}
+    await window.Cidades.recarregar();
+
+    document.getElementById('nova-cidade-nome').value = '';
+    document.getElementById('nova-cidade-lat').value = '';
+    document.getElementById('nova-cidade-lon').value = '';
+    mostrarAviso("Cidade adicionada! 🏙️", `${nome} / ${uf} já aparece no cadastro e na troca de cidade.`, "✅");
+  } catch (err) {
+    mostrarAviso("Erro", err.message, "❌");
+  } finally {
+    btn.innerHTML = textoBtn;
+    btn.style.pointerEvents = '';
+  }
 };
 
 window.abrirModalExcluirConta = function() {
