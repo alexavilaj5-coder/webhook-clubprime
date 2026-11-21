@@ -142,6 +142,16 @@ button, input, select, textarea {
 }
 
 /* ===== BASE E LAYOUT ===== */
+html {
+  font-size: 14px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+@media (min-width: 600px) {
+  html { font-size: 16px; }
+}
+
 body {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   background-color: #020617;
@@ -748,6 +758,11 @@ body {
 }
 
 /* ===== DESKTOP E ACESSIBILIDADE ===== */
+@media (max-width: 599px) {
+  .screen { padding: 14px; }
+  .company-card { padding: 16px; margin-bottom: 12px; }
+}
+
 @media (min-width: 600px) {
   body {
     background-color: #090d16;
@@ -894,6 +909,101 @@ body {
   font-size: 0.8rem;
   line-height: 1.2;
   text-align: center;
+}
+
+/* ===== ABAS DO ADM (Dash, Cupons, Clientes, Lojas, Logs) ===== */
+.auth-tab[id^="adm-tab-"] {
+  white-space: nowrap;
+  padding: 8px 2px !important;
+  font-size: 0.7rem !important;
+  letter-spacing: -0.2px;
+}
+
+/* ===== CUPOM EM FORMATO DE TICKET (para usar na vitrine) ===== */
+.cupom {
+  display: flex;
+  align-items: stretch;
+  background: var(--secondary);
+  border: 1.5px dashed var(--accent);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.cupom-stub {
+  position: relative;
+  flex: 0 0 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 4px;
+  background: linear-gradient(160deg, var(--accent), #ea580c);
+  color: #ffffff;
+  text-align: center;
+  line-height: 1.05;
+}
+
+.cupom-stub::before,
+.cupom-stub::after {
+  content: '';
+  position: absolute;
+  right: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--card);
+}
+
+.cupom-stub::before { top: -7px; }
+.cupom-stub::after { bottom: -7px; }
+
+.cupom-pct { font-size: 1.5rem; font-weight: 900; }
+.cupom-off { font-size: 0.7rem; font-weight: 800; letter-spacing: 1px; }
+.cupom-badge-txt { font-size: 0.8rem; font-weight: 900; }
+
+.cupom-body {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border-left: 2px dashed rgba(255, 255, 255, 0.5);
+}
+
+.cupom-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.cupom-info {
+  background: none;
+  border: none;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.cupom-desc {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 2px;
+  word-break: break-word;
+}
+
+.cupom-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cupom-rule {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--primary);
 }
 
 /* ===== COMPONENTES NOVOS (opcionais, usar no HTML/JS quando quiser) ===== */
