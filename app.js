@@ -401,7 +401,7 @@ onAuthStateChanged(auth, async (user) => {
 
       if (data.vip) {
         window.isVipUser = true;
-        document.querySelectorAll('.status-badge').forEach(b => {
+        document.querySelectorAll('.status-badge:not(.admin):not(.lojista)').forEach(b => {
           b.innerText = "ASSINANTE VIP";
           b.className = "status-badge vip";
         });
@@ -451,7 +451,7 @@ onAuthStateChanged(auth, async (user) => {
         window._vipAnterior = false;
         window._vipExpiraAnterior = null;
         if (vipExpiringAlert) vipExpiringAlert.style.display = 'none';
-        document.querySelectorAll('.status-badge').forEach(b => {
+        document.querySelectorAll('.status-badge:not(.admin):not(.lojista)').forEach(b => {
           b.innerText = "PLANO GRATUITO";
           b.className = "status-badge free";
         });
@@ -1180,7 +1180,7 @@ function carregarCuponsVitrine() {
 
     let html = '';
     for (const [key, emp] of Object.entries(empresasGrouped)) {
-      let imgHtml = emp.imagem ? `<img src="${escapeHtml(emp.imagem)}" alt="Logo/Foto" style="width:100%; height:130px; object-fit:cover; border-radius:14px; margin-bottom:12px;">` : '';
+      let imgHtml = emp.imagem ? `<img src="${escapeHtml(emp.imagem)}" alt="Logo/Foto" style="width:100%; height:110px; object-fit:cover; border-radius:14px; margin-bottom:12px;">` : '';
       
       const latAttr = emp.lat !== null && emp.lon !== null ? `data-lat="${emp.lat}"` : '';
       const lonAttr = emp.lat !== null && emp.lon !== null ? `data-lon="${emp.lon}"` : '';
@@ -1193,7 +1193,7 @@ function carregarCuponsVitrine() {
               <h3 style="font-size:1.1rem; font-weight:900; color:var(--text);">${ICONES_CATEGORIA[emp.categoria] || '🏢'} ${escapeHtml(emp.nome)}</h3>
               <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">📍 ${escapeHtml(emp.endereco)} <span class="distancia-badge" style="font-weight:800; color:var(--primary);"></span></div>
             </div>
-            <span style="font-size:0.7rem; font-weight:800; color:var(--primary); background:var(--secondary); padding:4px 8px; border-radius:10px;">${emp.cupons.length} Oferta(s)</span>
+            <span style="font-size:0.7rem; font-weight:800; color:var(--primary); background:var(--secondary); padding:4px 8px; border-radius:10px; white-space:nowrap; flex-shrink:0; margin-left:8px;">${emp.cupons.length} ${emp.cupons.length === 1 ? 'oferta' : 'ofertas'}</span>
           </div>
 
           <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">
@@ -1211,23 +1211,30 @@ function carregarCuponsVitrine() {
 
         const imgCupomHtml = cupom.imagem ? `<img src="${escapeHtml(cupom.imagem)}" alt="Foto da oferta" style="width:64px; height:64px; object-fit:cover; border-radius:12px; flex-shrink:0;">` : '';
 
-        html += `
-          <div style="background:var(--secondary); border:1px solid var(--card-border); padding:12px; border-radius:14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
-            ${imgCupomHtml}
-            <div style="flex:1; padding-right:8px;">
-              <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
-                <span style="font-size:0.85rem; font-weight:800; color:var(--text);">${escapeHtml(cupom.titulo)}</span>
-                <button style="background:none; border:none; color:var(--primary); font-size:1.1rem; cursor:pointer; padding:6px 10px;" title="Ver Regras" onclick="abrirModalRegrasCupom('${encTitulo}', '${encNome}', '${encRegras}')">ℹ️</button>
-              </div>
-              <div style="font-size:0.75rem; color:var(--muted);">${escapeHtml(cupom.descricao)}</div>
-              <div style="font-size:0.68rem; color:var(--primary); font-weight:700; margin-top:4px;">Regra: ${limiteTxt}</div>
-            </div>
+        const pctNum = cupom.descontoPct ? String(cupom.descontoPct) : '';
+        const stubHtml = pctNum
+          ? `<span class="cupom-pct">${escapeHtml(pctNum)}%</span><span class="cupom-off">OFF</span>`
+          : `<span class="cupom-badge-txt">${escapeHtml(cupom.descontoBadge || 'OFERTA')}</span>`;
+        const imgTicket = cupom.imagem ? `<img src="${escapeHtml(cupom.imagem)}" alt="Foto da oferta" style="width:44px; height:44px; object-fit:cover; border-radius:10px; flex-shrink:0;">` : '';
 
-            <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-              <span class="discount-badge" style="font-size:0.72rem; padding:3px 8px;">${escapeHtml(pctTxt)}</span>
-              <button class="btn btn-cyan btn-small" style="padding:6px 10px; font-size:0.75rem;" onclick="clicarElesResgatar('${cupom.id}', '${cupom.empresaId}', '${encNome}', '${encTitulo}', '${String(cupom.codigo || 'PRIME').replace(/[^A-Za-z0-9]/g, '') || 'PRIME'}', ${cupom.valorEconomia || 10.00}, '${encEnd}', '${encTel}', '${encRegras}', '${cupom.limite || 'daily'}', ${cupom.descontoPct || 10})">
-                🎟️ Resgatar
-              </button>
+        html += `
+          <div class="cupom">
+            <div class="cupom-stub">${stubHtml}</div>
+            <div class="cupom-body">
+              <div style="display:flex; align-items:flex-start; gap:8px;">
+                ${imgTicket}
+                <div style="min-width:0; flex:1;">
+                  <div class="cupom-title">
+                    <span>${escapeHtml(cupom.titulo)}</span>
+                    <button class="cupom-info" title="Ver Regras" onclick="abrirModalRegrasCupom('${encTitulo}', '${encNome}', '${encRegras}')">ℹ️</button>
+                  </div>
+                  <div class="cupom-desc">${escapeHtml(cupom.descricao)}</div>
+                </div>
+              </div>
+              <div class="cupom-foot">
+                <span class="cupom-rule">🔁 ${limiteTxt}</span>
+                <button class="btn btn-cyan btn-small" style="padding:7px 12px; font-size:0.78rem;" onclick="clicarElesResgatar('${cupom.id}', '${cupom.empresaId}', '${encNome}', '${encTitulo}', '${String(cupom.codigo || 'PRIME').replace(/[^A-Za-z0-9]/g, '') || 'PRIME'}', ${cupom.valorEconomia || 10.00}, '${encEnd}', '${encTel}', '${encRegras}', '${cupom.limite || 'daily'}', ${cupom.descontoPct || 10})">🎟️ Resgatar</button>
+              </div>
             </div>
           </div>
         `;
@@ -2537,7 +2544,7 @@ async function checarPixSilencioso() {
       pararChecagemAutomatica();
       celebrarVip(data.message);
       window.isVipUser = true;
-      document.querySelectorAll('.status-badge').forEach(b => { b.innerText = "ASSINANTE VIP"; b.className = "status-badge vip"; });
+      document.querySelectorAll('.status-badge:not(.admin):not(.lojista)').forEach(b => { b.innerText = "ASSINANTE VIP"; b.className = "status-badge vip"; });
       document.getElementById('banner-assinatura').style.display = 'none';
       document.getElementById('profile-vip-card').style.display = 'block';
     }
@@ -3030,140 +3037,226 @@ window.removerFotoOferta = function() {
   atualizarPreviaOferta();
 };
 
-// ===== EASTER EGG: jogo secreto (toque 5x no logo do topo) =====
-(function() {
+// ===== EASTER EGG: jogo secreto "Caça-Cupons" (toque 5x no logo do topo) =====
+// Substitui o bloco antigo inteiro (do comentário EASTER EGG até o último "})();").
+(function () {
   const overlay = document.getElementById('offline-overlay');
   const canvas = document.getElementById('offline-canvas');
   if (!overlay || !canvas) return;
   const ctx = canvas.getContext('2d');
-  const W = 320, H = 180, CHAO = 140, GRAV = 1400, PULO = -430;
-  let raf = 0, ultimo = 0;
-  let jogador, obstaculos, velocidade, pontos, proximo, fim;
+  const W = 320, H = 400, CHAO = H - 40;
+  canvas.width = W; canvas.height = H;
+  canvas.style.cssText = 'height:min(400px,56vh);width:auto;max-width:100%;border-radius:18px;touch-action:none;';
+  const titulo = overlay.querySelector('h2'), dica = overlay.querySelector('p');
+  if (titulo) titulo.textContent = '🎟️ Caça-Cupons';
+  if (dica) dica.textContent = 'Arraste para mover o cachorro. Pegue os cupons e fuja das bombas!';
+
+  const el = id => document.getElementById(id);
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const EMOJI = { cupom: '🎟️', diamante: '💎', vip: '👑', vida: '❤️', bomba: '💣' };
   let recorde = 0;
-  try { recorde = parseInt(localStorage.getItem('clube_recorde_offline')) || 0; } catch (e) {}
+  try { recorde = parseInt(localStorage.getItem('clube_recorde_cupons')) || 0; } catch (e) {}
+
+  let raf = 0, ultimo = 0, estado = 'pronto', tFim = 0;
+  let cao, itens, parts, textos, t, pontos, vidas, combo, melhorCombo, vip, tremer, spawn, alvoX, novoRecorde;
+  const teclas = {};
+  const estrelas = Array.from({ length: 45 }, () => ({ x: rnd(0, W), y: rnd(0, H), v: rnd(6, 24), r: rnd(0.5, 1.8) }));
+  const predios = Array.from({ length: 9 }, (_, i) => ({ x: i * 38 - 6, w: 34, h: rnd(40, 95) }));
+
+  function vibrar(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
 
   function resetar() {
-    jogador = { y: CHAO, vy: 0 };
-    obstaculos = [];
-    velocidade = 180;
-    pontos = 0;
-    proximo = 1;
-    fim = false;
-    document.getElementById('offline-pontos').innerText = '0';
+    cao = { x: W / 2 }; alvoX = W / 2;
+    itens = []; parts = []; textos = [];
+    t = 0; pontos = 0; vidas = 3; combo = 0; melhorCombo = 0; vip = 0; tremer = 0; spawn = 0.5; novoRecorde = false;
+    estado = 'pronto';
+    el('offline-pontos').innerText = '0';
   }
 
-  function pular() {
-    if (fim) { resetar(); return; }
-    if (jogador.y >= CHAO) jogador.vy = PULO;
+  function texto(x, y, s, cor) { textos.push({ x, y, s, cor, vida: 0.9 }); }
+  function explodir(x, y, cor, n) {
+    for (let i = 0; i < n; i++) parts.push({ x, y, vx: rnd(-110, 110), vy: rnd(-190, -30), vida: rnd(0.35, 0.7), cor });
   }
 
-  function cor(nome, padrao) {
-    return getComputedStyle(document.documentElement).getPropertyValue(nome).trim() || padrao;
+  function criar() {
+    const dif = Math.min(1, t / 90), r = Math.random(), b = 0.14 + 0.18 * dif;
+    let tipo = 'cupom';
+    if (r < b) tipo = 'bomba';
+    else if (r < b + 0.05) tipo = 'diamante';
+    else if (r < b + 0.085) tipo = 'vip';
+    else if (r < b + 0.115 && vidas < 3) tipo = 'vida';
+    itens.push({ tipo, x: rnd(22, W - 22), y: -20, vy: rnd(95, 135) + dif * 175, rot: rnd(-0.5, 0.5), giro: rnd(-1.5, 1.5) });
+  }
+
+  function coletar(i) {
+    const m = vip > 0 ? 2 : 1;
+    if (i.tipo === 'cupom') {
+      combo++; melhorCombo = Math.max(melhorCombo, combo);
+      const g = 10 * Math.min(5, 1 + Math.floor(combo / 5)) * m;
+      pontos += g; texto(i.x, i.y, '+' + g, '#fde047'); explodir(i.x, i.y, '#fde047', 8);
+    } else if (i.tipo === 'diamante') {
+      pontos += 50 * m; texto(i.x, i.y, '+' + 50 * m, '#67e8f9'); explodir(i.x, i.y, '#67e8f9', 14); vibrar(25);
+    } else if (i.tipo === 'vip') {
+      vip = 8; texto(i.x, i.y, 'VIP! ×2 + ímã', '#d8b4fe'); explodir(i.x, i.y, '#c084fc', 16); vibrar(40);
+    } else if (i.tipo === 'vida') {
+      vidas = Math.min(3, vidas + 1); texto(i.x, i.y, '+1 vida', '#fda4af'); explodir(i.x, i.y, '#fb7185', 10);
+    } else {
+      vidas--; combo = 0; tremer = 9; explodir(i.x, i.y, '#f87171', 22); texto(i.x, i.y, 'BUM!', '#f87171'); vibrar(140);
+      if (vidas <= 0) acabar();
+    }
+    el('offline-pontos').innerText = Math.floor(pontos);
+  }
+
+  function acabar() {
+    estado = 'fim'; tFim = performance.now();
+    const final = Math.floor(pontos);
+    if (final > recorde) {
+      recorde = final; novoRecorde = true;
+      try { localStorage.setItem('clube_recorde_cupons', String(recorde)); } catch (e) {}
+      if (typeof window.confetti === 'function') { try { window.confetti({ particleCount: 90, spread: 80, origin: { y: 0.5 } }); } catch (e) {} }
+    }
+    el('offline-recorde').innerText = recorde;
   }
 
   function atualizar(dt) {
-    if (fim) return;
-    jogador.vy += GRAV * dt;
-    jogador.y = Math.min(CHAO, jogador.y + jogador.vy * dt);
-    if (jogador.y >= CHAO) jogador.vy = 0;
+    estrelas.forEach(s => { s.y += s.v * dt; if (s.y > H) { s.y = 0; s.x = rnd(0, W); } });
+    parts.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 450 * dt; p.vida -= dt; });
+    parts = parts.filter(p => p.vida > 0);
+    textos.forEach(x => { x.y -= 45 * dt; x.vida -= dt; });
+    textos = textos.filter(x => x.vida > 0);
+    tremer = Math.max(0, tremer - dt * 30);
+    if (estado !== 'jogando') return;
 
-    velocidade = Math.min(420, velocidade + 6 * dt);
-    pontos += dt * 10;
-    document.getElementById('offline-pontos').innerText = Math.floor(pontos);
+    t += dt;
+    if (teclas.ArrowLeft || teclas.KeyA) alvoX -= 300 * dt;
+    if (teclas.ArrowRight || teclas.KeyD) alvoX += 300 * dt;
+    alvoX = Math.max(20, Math.min(W - 20, alvoX));
+    cao.x += (alvoX - cao.x) * Math.min(1, dt * 14);
+    if (vip > 0) vip -= dt;
 
-    proximo -= dt;
-    if (proximo <= 0) {
-      obstaculos.push({ x: W + 10, w: 22, h: 24, emoji: Math.random() < 0.5 ? '🌵' : '📦' });
-      proximo = 0.9 + Math.random() * 1.0;
-    }
-    obstaculos.forEach(o => { o.x -= velocidade * dt; });
-    obstaculos = obstaculos.filter(o => o.x + o.w > -10);
+    spawn -= dt;
+    if (spawn <= 0) { criar(); spawn = Math.max(0.26, 0.75 - t * 0.006) * rnd(0.7, 1.2); }
 
-    const px = 40, pw = 22, ph = 24;
-    for (const o of obstaculos) {
-      const bate = px + pw - 4 > o.x + 3 && px + 4 < o.x + o.w - 3 && jogador.y > CHAO - o.h + 4;
-      if (bate) {
-        fim = true;
-        const final = Math.floor(pontos);
-        if (final > recorde) {
-          recorde = final;
-          try { localStorage.setItem('clube_recorde_offline', String(recorde)); } catch (e) {}
-        }
-        document.getElementById('offline-recorde').innerText = recorde;
-        break;
+    for (const i of itens) {
+      if (vip > 0 && i.tipo !== 'bomba') i.x += (cao.x - i.x) * Math.min(1, dt * 3);
+      i.y += i.vy * dt; i.rot += i.giro * dt;
+      if (Math.abs(i.x - cao.x) < 28 && Math.abs(i.y - (CHAO - 14)) < 26) { i.morto = true; coletar(i); if (estado === 'fim') break; }
+      else if (i.y > CHAO + 12) {
+        i.morto = true;
+        if (i.tipo === 'cupom' && combo >= 3) texto(i.x, CHAO - 10, 'combo perdido', '#cbd5e1');
+        if (i.tipo === 'cupom') combo = 0;
       }
     }
+    itens = itens.filter(i => !i.morto);
+  }
+
+  function centro(s, x, y, tam, cor, peso) {
+    ctx.font = (peso || '800') + ' ' + tam + 'px sans-serif'; ctx.fillStyle = cor; ctx.fillText(s, x, y);
   }
 
   function desenhar() {
-    ctx.clearRect(0, 0, W, H);
-    ctx.strokeStyle = cor('--muted', '#64748b');
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(0, CHAO + 2); ctx.lineTo(W, CHAO + 2); ctx.stroke();
+    ctx.save();
+    if (tremer > 0) ctx.translate(rnd(-tremer, tremer) / 2, rnd(-tremer, tremer) / 2);
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#0b1b4d'); g.addColorStop(1, vip > 0 ? '#6d28d9' : '#1d4ed8');
+    ctx.fillStyle = g; ctx.fillRect(-10, -10, W + 20, H + 20);
+    ctx.fillStyle = 'rgba(255,255,255,.65)';
+    estrelas.forEach(s => { ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.3); ctx.fill(); });
+    ctx.fillStyle = 'rgba(8,14,40,.75)';
+    predios.forEach(p => ctx.fillRect(p.x, CHAO - p.h + 14, p.w, p.h + 40));
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(-10, CHAO + 14, W + 20, 60);
+    ctx.fillStyle = '#22d3ee'; ctx.fillRect(-10, CHAO + 14, W + 20, 2);
 
-    ctx.font = '28px serif';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText('🐶', 36, jogador.y + 2);
-    obstaculos.forEach(o => ctx.fillText(o.emoji, o.x - 2, CHAO + 2));
-
-    if (fim) {
-      ctx.fillStyle = cor('--text', '#0f172a');
-      ctx.font = '800 15px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Fim de jogo!', W / 2, 70);
-      ctx.font = '600 12px sans-serif';
-      ctx.fillText('Toque para jogar de novo', W / 2, 92);
-      ctx.textAlign = 'start';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if (vip > 0) {
+      ctx.fillStyle = 'rgba(192,132,252,.28)'; ctx.beginPath(); ctx.arc(cao.x, CHAO - 14, 30 + Math.sin(t * 8) * 3, 0, 6.3); ctx.fill();
     }
+    ctx.font = '34px serif'; ctx.fillText('🐶', cao.x, CHAO - 12);
+    itens.forEach(i => {
+      ctx.save(); ctx.translate(i.x, i.y); ctx.rotate(i.rot);
+      ctx.font = '28px serif'; ctx.fillText(EMOJI[i.tipo], 0, 0); ctx.restore();
+    });
+    parts.forEach(p => { ctx.globalAlpha = Math.max(0, p.vida * 1.8); ctx.fillStyle = p.cor; ctx.fillRect(p.x, p.y, 4, 4); });
+    ctx.globalAlpha = 1;
+    textos.forEach(x => { ctx.globalAlpha = Math.min(1, x.vida * 2); centro(x.s, x.x, x.y, 14, x.cor); });
+    ctx.globalAlpha = 1;
+
+    // HUD
+    ctx.textAlign = 'left'; ctx.font = '16px serif'; ctx.fillStyle = '#fff';
+    ctx.fillText('❤️'.repeat(Math.max(0, vidas)) || '💔', 10, 18);
+    ctx.textAlign = 'right';
+    if (combo >= 2) centro('COMBO ×' + Math.min(5, 1 + Math.floor(combo / 5)) + '  (' + combo + ')', W - 10, 18, 12, '#fde047');
+    if (vip > 0) { ctx.fillStyle = '#c084fc'; ctx.fillRect(10, 32, (W - 20) * (vip / 8), 4); }
+    ctx.textAlign = 'center';
+
+    if (estado !== 'jogando') {
+      ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(-10, -10, W + 20, H + 20);
+      if (estado === 'pronto') {
+        centro('🎟️ Caça-Cupons', W / 2, 120, 24, '#fff');
+        centro('Arraste para mover o cachorro', W / 2, 160, 13, '#e2e8f0', '600');
+        centro('🎟️ pontos   💎 bônus   👑 VIP ×2 + ímã', W / 2, 184, 12, '#e2e8f0', '600');
+        centro('💣 tira uma vida   ❤️ recupera', W / 2, 204, 12, '#e2e8f0', '600');
+        centro('Toque para começar', W / 2, 262, 16, '#fde047');
+      } else {
+        centro('Fim de jogo!', W / 2, 130, 24, '#fff');
+        centro(Math.floor(pontos) + ' pontos', W / 2, 170, 18, '#fde047');
+        centro('Melhor combo: ' + melhorCombo, W / 2, 196, 13, '#e2e8f0', '600');
+        if (novoRecorde) centro('🏆 Novo recorde!', W / 2, 224, 15, '#86efac');
+        centro('Toque para jogar de novo', W / 2, 268, 14, '#fff');
+      }
+    }
+    ctx.restore();
   }
 
-  function loop(t) {
-    const dt = Math.min(0.05, (t - ultimo) / 1000 || 0);
-    ultimo = t;
-    atualizar(dt);
-    desenhar();
+  function loop(ts) {
+    const dt = Math.min(0.05, (ts - ultimo) / 1000 || 0);
+    ultimo = ts; atualizar(dt); desenhar();
     raf = requestAnimationFrame(loop);
   }
 
   function abrir() {
     if (overlay.classList.contains('active')) return;
     resetar();
-    document.getElementById('offline-recorde').innerText = recorde;
+    el('offline-recorde').innerText = recorde;
     overlay.classList.add('active');
     ultimo = performance.now();
     raf = requestAnimationFrame(loop);
   }
-
-  function fechar() {
-    overlay.classList.remove('active');
-    cancelAnimationFrame(raf);
-  }
-
-  canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); pular(); });
-  document.addEventListener('keydown', (e) => {
-    if (!overlay.classList.contains('active')) return;
-    if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); pular(); }
-  });
-
+  function fechar() { overlay.classList.remove('active'); cancelAnimationFrame(raf); }
   window.fecharJogoSecreto = fechar;
 
-  // Easter egg: toque 5 vezes seguidas no "⚡ CLUBE PRIME" do topo para abrir o jogo
+  function iniciar() {
+    if (estado === 'pronto') estado = 'jogando';
+    else if (estado === 'fim' && performance.now() - tFim > 600) { resetar(); estado = 'jogando'; }
+  }
+  function mover(e) {
+    const r = canvas.getBoundingClientRect();
+    alvoX = Math.max(20, Math.min(W - 20, (e.clientX - r.left) * W / r.width));
+  }
+  canvas.addEventListener('pointerdown', e => { e.preventDefault(); mover(e); try { canvas.setPointerCapture(e.pointerId); } catch (x) {} iniciar(); });
+  canvas.addEventListener('pointermove', e => { if (estado === 'jogando') mover(e); });
+  document.addEventListener('keydown', e => {
+    if (!overlay.classList.contains('active')) return;
+    if (['ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+    teclas[e.code] = true;
+    if (e.code === 'Space') iniciar();
+  });
+  document.addEventListener('keyup', e => { teclas[e.code] = false; });
+
+  // Toque 5 vezes seguidas no "⚡ CLUBE PRIME" do topo para abrir o jogo (só para clientes)
   const logo = document.querySelector('.top-header .brand-title');
   if (logo) {
     logo.style.userSelect = 'none';
     logo.style.webkitTapHighlightColor = 'transparent';
     let toques = 0, timer = null;
     logo.addEventListener('click', () => {
-      if (window.currentUserData?.funcao === 'lojista') return; // jogo é só para clientes
+      if (window.currentUserData?.funcao === 'lojista') return;
       toques++;
       clearTimeout(timer);
       timer = setTimeout(() => { toques = 0; }, 2000);
       if (toques >= 5) {
-        toques = 0;
-        clearTimeout(timer);
-        if (typeof window.confetti === 'function') {
-          try { window.confetti({ particleCount: 60, spread: 70, origin: { y: 0.2 } }); } catch (e) {}
-        }
+        toques = 0; clearTimeout(timer);
+        if (typeof window.confetti === 'function') { try { window.confetti({ particleCount: 60, spread: 70, origin: { y: 0.2 } }); } catch (e) {} }
         abrir();
       }
     });

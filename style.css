@@ -148,7 +148,7 @@ html {
   text-size-adjust: 100%;
 }
 
-@media (min-width: 600px) {
+@media (min-width: 600px) and (hover: hover) and (pointer: fine) {
   html { font-size: 16px; }
 }
 
@@ -219,8 +219,8 @@ body {
   background: var(--secondary);
   border: 1px solid var(--card-border);
   color: var(--text);
-  width: 34px;
-  height: 34px;
+  width: 2.4rem;
+  height: 2.4rem;
   flex-shrink: 0;
   border-radius: 50%;
   display: flex;
@@ -763,7 +763,7 @@ body {
   .company-card { padding: 16px; margin-bottom: 12px; }
 }
 
-@media (min-width: 600px) {
+@media (min-width: 600px) and (hover: hover) and (pointer: fine) {
   body {
     background-color: #090d16;
   }
@@ -779,7 +779,7 @@ body {
 
 /* ===== MODO COMPUTADOR (tela larga, a partir de 1024px) =====
    No celular e no tablet nada muda: continua a moldura de app. */
-@media (min-width: 1024px) {
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
   body {
     display: block;
     background-color: var(--bg);
@@ -868,6 +868,34 @@ body {
   .modal-content { max-width: 460px; }
 }
 
+/* ===== CELULAR COM "MODO DESKTOP" LIGADO NO NAVEGADOR =====
+   O navegador finge que a tela é larga (~1000px) e encolhe tudo.
+   Aqui detectamos que o aparelho é de toque e escalamos o texto pela
+   largura, mantendo layout de app em tela cheia. */
+@media (hover: none) and (pointer: coarse) {
+  html { font-size: clamp(13px, 3.4vw, 44px); }
+
+  .app-shell {
+    max-width: none;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: none;
+    border-radius: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -878,8 +906,8 @@ body {
 
 /* Botão "Instalar app": só o ícone, mesmo tamanho do botão de tema */
 .install-mini {
-  width: 34px;
-  height: 34px;
+  width: 2.4rem;
+  height: 2.4rem;
   flex-shrink: 0;
   border: none;
   border-radius: 50%;
@@ -912,10 +940,22 @@ body {
 }
 
 /* ===== ABAS DO ADM (Dash, Cupons, Clientes, Lojas, Logs) ===== */
+#screen-admin .auth-tabs {
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+
+#screen-admin .auth-tabs .auth-tab,
 .auth-tab[id^="adm-tab-"] {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
   white-space: nowrap;
   padding: 8px 2px !important;
-  font-size: 0.7rem !important;
+  font-size: 0.66rem !important;
   letter-spacing: -0.2px;
 }
 
