@@ -67,7 +67,7 @@
     document.addEventListener('DOMContentLoaded', atualizarBotaoInstalar);
   </script>
 
-  <script type="module" src="app.js?v=9"></script>
+  <script type="module" src="app.js?v=10"></script>
 </head>
 <body>
 
@@ -380,10 +380,13 @@
             </details>
             <button id="btn-add-cidade" class="btn btn-cyan" style="padding:10px; font-size:0.82rem;" onclick="adicionarCidadeAdmin()">➕ Adicionar cidade</button>
 
+            <button id="btn-cancelar-edicao-cidade" class="btn btn-outline" style="display:none; margin-top:8px; padding:8px; font-size:0.78rem;" onclick="sairModoEdicaoCidade()">Cancelar edição</button>
+
             <div style="font-size:0.68rem; font-weight:800; color:var(--muted); margin:16px 0 6px;">CIDADES CADASTRADAS</div>
             <div id="admin-lista-cidades"></div>
           </div>
         </details>
+        <button class="btn btn-outline btn-small" style="margin-top:8px;" onclick="alterarSenhaAcoes()">🔑 Alterar senha de segurança</button>
       </div>
 
       <button class="btn btn-cyan" style="margin-bottom:12px; padding:10px; font-size:0.82rem; font-weight:900;" onclick="alternarVisaoCliente()">
@@ -581,7 +584,10 @@
       <div id="adm-section-logs" class="admin-tab-content" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <h3 style="font-size:1rem; font-weight:800;">Registro de Atividades</h3>
-          <button class="btn btn-cyan btn-small" onclick="carregarLogsAdminSistema()">🔄 Atualizar</button>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-cyan btn-small" onclick="carregarLogsAdminSistema()">🔄 Atualizar</button>
+            <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="apagarLogsSistemaAdmin()">🗑️ Apagar</button>
+          </div>
         </div>
         <div style="display:flex; gap:6px; margin-bottom:8px;">
           <select id="filter-system-log-cat" class="form-control" style="flex:1;" onchange="renderizarLogsSistema()">
@@ -966,6 +972,25 @@
       </div>
       <button id="btn-excluir-conta-final" class="btn" style="background:var(--danger); color:#ffffff; margin-bottom:8px;" onclick="executarExclusaoPropriaConta()">🗑️ Excluir definitivamente</button>
       <button class="btn btn-outline" onclick="fecharModal('modal-excluir-conta')">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="modal-senha-acao" class="modal" style="z-index:7000;">
+    <div class="modal-content" style="text-align:left;">
+      <div style="font-size:2.2rem; text-align:center; margin-bottom:4px;">🔐</div>
+      <h3 id="senha-acao-titulo" style="font-size:1.1rem; font-weight:900; text-align:center;">Senha de segurança</h3>
+      <p id="senha-acao-texto" style="font-size:0.8rem; color:var(--muted); margin:6px 0 12px; line-height:1.4; text-align:center;"></p>
+      <div class="form-group" style="text-align:left;">
+        <label>SENHA</label>
+        <input type="password" id="senha-acao-input" class="form-control" placeholder="Digite a senha" autocomplete="off" onkeydown="if(event.key==='Enter') confirmarSenhaAcao()">
+      </div>
+      <div id="box-senha-acao-confirmar" class="form-group" style="text-align:left; display:none;">
+        <label>CONFIRME A SENHA</label>
+        <input type="password" id="senha-acao-confirmar" class="form-control" placeholder="Digite de novo" autocomplete="off" onkeydown="if(event.key==='Enter') confirmarSenhaAcao()">
+      </div>
+      <div id="senha-acao-erro" style="font-size:0.75rem; color:var(--danger); font-weight:700; min-height:1em; margin-bottom:8px;"></div>
+      <button class="btn" style="margin-bottom:8px;" onclick="confirmarSenhaAcao()">✅ Confirmar</button>
+      <button class="btn btn-outline" onclick="cancelarSenhaAcao()">Cancelar</button>
     </div>
   </div>
 
