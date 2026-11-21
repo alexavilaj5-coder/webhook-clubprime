@@ -13,7 +13,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Clube Prime">
 
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap">
+  <link rel="stylesheet" href="style.css?v=4">
   <!-- Blindagem do jogo secreto: vale mesmo se o style.css do aparelho estiver desatualizado -->
   <style>
     .offline-overlay { position: fixed; inset: 0; z-index: 5000; }
@@ -83,7 +86,7 @@
         <span>⚡ CLUBE PRIME</span>
       </div>
       <div class="header-actions">
-        <button id="btn-install-app" class="btn btn-small" style="display:none; width:auto; padding:6px 10px; font-size:0.72rem; white-space:nowrap; align-items:center;" onclick="instalarApp()">📲 Instalar app</button>
+        <button id="btn-install-app" class="install-mini" style="display:none;" onclick="instalarApp()" title="Instalar app" aria-label="Instalar app">📲</button>
         <button class="theme-toggle-btn" onclick="toggleTheme()" title="Alternar Modo Escuro">🌙</button>
         <div class="location-badge">📍 Pelotas, RS</div>
       </div>
@@ -593,10 +596,8 @@
     <!-- TELA HOME (CLIENTE) -->
     <div id="screen-home" class="screen">
 
-      <div id="box-voltar-admin" style="display:none; margin-bottom:14px;">
-        <button class="btn" style="background:#ef4444; color:#ffffff; font-weight:900;" onclick="voltarAoAdminDesdeCliente()">
-          ⚡ Administrador
-        </button>
+      <div id="box-voltar-admin" style="display:none; margin-bottom:10px;">
+        <button class="admin-bar" onclick="voltarAoAdminDesdeCliente()">⚡ Administrador</button>
       </div>
 
       <!-- ALERTA AUTOMÁTICO DE VIP A EXPIRAR -->
@@ -638,7 +639,7 @@
       <div class="hero-card" style="padding: 10px 14px; min-height: auto; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 16px;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <span class="hero-welcome" style="font-size: 0.55rem; opacity:0.75;">Painel do Membro</span>
+            <span class="hero-welcome" style="font-size: 0.68rem;">Painel do Membro</span>
             <h2 class="hero-name" style="font-size: 0.9rem; margin-top: 1px;">Olá, <span id="user-name-display">Cliente</span> 👋</h2>
           </div>
           <div class="status-badge free" style="font-size: 0.55rem; padding: 2px 7px;">PLANO GRATUITO</div>
@@ -647,20 +648,22 @@
         <div class="hero-stats" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.15);">
           <div class="stat-item">
             <div id="user-economy-display" class="stat-val" style="font-size: 0.85rem;">R$ 0,00</div>
-            <div class="stat-lbl" style="font-size: 0.55rem;">Economia total</div>
+            <div class="stat-lbl" style="font-size: 0.7rem;">Economia total</div>
           </div>
           <div class="stat-item" onclick="abrirModalNiveis()" style="cursor:pointer;" title="Clique para ver detalhes dos níveis">
             <div id="user-level-display" class="stat-val" style="font-size: 0.85rem;">🥉 Bronze</div>
-            <div class="stat-lbl" style="font-size: 0.55rem;">Nível (Ver mais)</div>
+            <div class="stat-lbl" style="font-size: 0.7rem;">Nível (Ver mais)</div>
           </div>
         </div>
       </div>
 
-      <div id="banner-assinatura" class="card-vip-banner" style="padding:12px 14px; margin-bottom:12px;">
-        <span style="font-size:0.65rem; font-weight:900; color:var(--accent); letter-spacing:1px; text-transform:uppercase;">Plano Membro PRIME</span>
-        <h3 style="font-size:1rem; font-weight:900; margin-top:2px;">Libere todos os cupons</h3>
-        <p style="font-size:0.74rem; color:var(--muted); margin-top:2px;">Ativação instantânea via Pix • 30 dias</p>
-        <button id="btn-gerar-pix" class="btn btn-cyan" style="margin-top:10px; padding:10px; font-size:0.85rem;" onclick="gerarPixMercadoPago()">⚡ Ser VIP · R$ 19,90</button>
+      <div id="banner-assinatura" class="card-vip-banner vip-row" style="padding:12px 14px; margin-bottom:12px;">
+        <div class="vip-row-text">
+          <span style="font-size:0.65rem; font-weight:900; color:var(--accent); letter-spacing:1px; text-transform:uppercase;">Plano Membro PRIME</span>
+          <h3 style="font-size:1rem; font-weight:900; margin-top:2px;">Libere todos os cupons</h3>
+          <p style="font-size:0.74rem; color:var(--muted); margin-top:2px;">Pix instantâneo • 30 dias</p>
+        </div>
+        <button id="btn-gerar-pix" class="btn btn-cyan vip-row-btn" onclick="gerarPixMercadoPago()">⚡ Ser VIP<br>R$ 19,90</button>
       </div>
 
       <div style="margin-bottom:18px;">
