@@ -2137,6 +2137,7 @@ function renderizarLogsAdminFiltrados() {
 window.limparLogsEmpresaAdmin = async function(empresaId, empresaNome) {
   empresaNome = decodeURIComponent(empresaNome);
   if (confirm(`Deseja realmente excluir/limpar todos os logs de resgate da empresa "${empresaNome}"?`)) {
+    if (!(await exigirSenhaAcao('apagar os logs de resgate'))) return;
     try {
       const qLogs = query(collection(db, "logs_resgates"), where("empresaId", "==", empresaId));
       const snap = await getDocs(qLogs);
@@ -2720,6 +2721,119 @@ async function garantirCidadesNoFirestore() {
   })));
 }
 
+// ---------- Senha de segurança para ações sensíveis (cidades e logs) ----------
+const SENHA_ITER = 150000;
+let _falhasSenha = 0, _bloqueadoAte = 0;
+
+const bytesParaHex = b => Array.from(b).map(x => x.toString(16).padStart(2, '0')).join('');
+const hexParaBytes = h => new Uint8Array((h.match(/.{2}/g) || []).map(x => parseInt(x, 16)));
+
+async function hashSenhaAcao(senha, saltHex, iter = SENHA_ITER) {
+  const chave = await crypto.subtle.importKey('raw', new TextEncoder().encode(senha), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: hexParaBytes(saltHex), iterations: iter, hash: 'SHA-256' }, chave, 256);
+  return bytesParaHex(new Uint8Array(bits));
+}
+
+async function gravarSenhaAcao(novaSenha) {
+  const salt = bytesParaHex(crypto.getRandomValues(new Uint8Array(16)));
+  const hash = await hashSenhaAcao(novaSenha, salt);
+  await setDoc(doc(db, "configuracoes", "senha_acoes"), { salt, hash, iter: SENHA_ITER, atualizadoEm: new Date().toISOString() });
+}
+
+function perguntarSenha({ titulo, texto, confirmar = false }) {
+  return new Promise(resolve => {
+    if (window._senhaAcaoResolver) window._senhaAcaoResolver(null);
+    document.getElementById('senha-acao-titulo').innerText = titulo;
+    document.getElementById('senha-acao-texto').innerText = texto;
+    const i1 = document.getElementById('senha-acao-input');
+    const i2 = document.getElementById('senha-acao-confirmar');
+    i1.value = ''; i2.value = '';
+    document.getElementById('box-senha-acao-confirmar').style.display = confirmar ? 'block' : 'none';
+    document.getElementById('senha-acao-erro').innerText = '';
+    window._senhaAcaoResolver = resolve;
+    window._senhaAcaoConfirmar = confirmar;
+    document.getElementById('modal-senha-acao').classList.add('active');
+    setTimeout(() => i1.focus(), 100);
+  });
+}
+
+window.confirmarSenhaAcao = function() {
+  const v = document.getElementById('senha-acao-input').value;
+  const erro = document.getElementById('senha-acao-erro');
+  if (!v) { erro.innerText = 'Digite a senha.'; return; }
+  if (window._senhaAcaoConfirmar) {
+    if (v.length < 4) { erro.innerText = 'Use pelo menos 4 caracteres.'; return; }
+    if (v !== document.getElementById('senha-acao-confirmar').value) { erro.innerText = 'As senhas não são iguais.'; return; }
+  }
+  document.getElementById('modal-senha-acao').classList.remove('active');
+  const r = window._senhaAcaoResolver; window._senhaAcaoResolver = null;
+  if (r) r(v);
+};
+
+window.cancelarSenhaAcao = function() {
+  document.getElementById('modal-senha-acao').classList.remove('active');
+  const r = window._senhaAcaoResolver; window._senhaAcaoResolver = null;
+  if (r) r(null);
+};
+
+// Retorna true só se o admin criou a senha agora ou digitou a senha certa
+async function exigirSenhaAcao(motivo) {
+  if (window.currentUserData?.funcao !== 'admin') return false;
+  if (Date.now() < _bloqueadoAte) {
+    mostrarAviso("Aguarde", `Muitas tentativas erradas. Tente de novo em ${Math.ceil((_bloqueadoAte - Date.now()) / 1000)}s.`, "⏳");
+    return false;
+  }
+  let snap;
+  try {
+    snap = await getDoc(doc(db, "configuracoes", "senha_acoes"));
+  } catch (e) {
+    mostrarAviso("Erro", "Não consegui verificar a senha: " + e.message, "❌");
+    return false;
+  }
+
+  if (!snap.exists()) {
+    const nova = await perguntarSenha({
+      titulo: 'Crie a senha de segurança',
+      texto: `Ainda não existe uma senha. Crie uma agora: ela será pedida para ${motivo} e para outras ações sensíveis.`,
+      confirmar: true
+    });
+    if (!nova) return false;
+    try { await gravarSenhaAcao(nova); } catch (e) { mostrarAviso("Erro", e.message, "❌"); return false; }
+    mostrarAviso("Senha criada 🔐", "Guarde essa senha: ela será pedida nas próximas vezes.", "✅");
+    return true;
+  }
+
+  const d = snap.data();
+  const tentativa = await perguntarSenha({ titulo: 'Senha de segurança', texto: `Digite a senha para ${motivo}.` });
+  if (!tentativa) return false;
+  let ok = false;
+  try { ok = (await hashSenhaAcao(tentativa, d.salt, d.iter || SENHA_ITER)) === d.hash; } catch (e) {}
+  if (!ok) {
+    _falhasSenha++;
+    if (_falhasSenha >= 5) { _bloqueadoAte = Date.now() + 60000; _falhasSenha = 0; }
+    mostrarAviso("Senha incorreta", "A senha não confere. Nada foi alterado.", "🔒");
+    return false;
+  }
+  _falhasSenha = 0;
+  return true;
+}
+
+window.alterarSenhaAcoes = async function() {
+  if (window.currentUserData?.funcao !== 'admin') return;
+  try {
+    const snap = await getDoc(doc(db, "configuracoes", "senha_acoes"));
+    if (snap.exists() && !(await exigirSenhaAcao('alterar a senha'))) return;
+    const nova = await perguntarSenha({ titulo: 'Nova senha de segurança', texto: 'Escolha a nova senha (mínimo 4 caracteres).', confirmar: true });
+    if (!nova) return;
+    await gravarSenhaAcao(nova);
+    try { await registrarLogAdmin('sistema', 'Senha de segurança alterada', ''); } catch (e) {}
+    mostrarAviso("Senha salva 🔐", "A nova senha já está valendo.", "✅");
+  } catch (e) {
+    mostrarAviso("Erro", e.message, "❌");
+  }
+};
+
+// ---------- Cidades ----------
 window.renderizarCidadesAdmin = function() {
   const box = document.getElementById('admin-lista-cidades');
   if (!box) return;
@@ -2734,6 +2848,7 @@ window.renderizarCidadesAdmin = function() {
         </div>
         ${padrao ? '' : `
         <div style="display:flex; gap:6px; flex-shrink:0;">
+          <button class="btn btn-outline btn-small" style="padding:6px 10px;" onclick="editarCidadeAdmin('${c.id}')">✏️</button>
           <button class="btn btn-outline btn-small" style="padding:6px 10px;" onclick="alternarCidadeAdmin('${c.id}')">${c.ativa ? '⏸️' : '▶️'}</button>
           <button class="btn btn-outline btn-small" style="padding:6px 10px; color:var(--danger); border-color:#ef444455;" onclick="excluirCidadeAdmin('${c.id}')">🗑️</button>
         </div>`}
@@ -2741,10 +2856,34 @@ window.renderizarCidadesAdmin = function() {
   }).join('');
 };
 
+window.editarCidadeAdmin = function(id) {
+  const c = window.Cidades.lista().find(x => x.id === id);
+  if (!c || id === 'pelotas-rs') return;
+  window._cidadeEditando = id;
+  document.getElementById('nova-cidade-nome').value = c.nome || '';
+  document.getElementById('nova-cidade-uf').value = c.uf || '';
+  document.getElementById('nova-cidade-lat').value = c.lat ?? '';
+  document.getElementById('nova-cidade-lon').value = c.lon ?? '';
+  document.getElementById('btn-add-cidade').innerHTML = '💾 Salvar alterações';
+  document.getElementById('btn-cancelar-edicao-cidade').style.display = 'block';
+  document.getElementById('nova-cidade-nome').scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+window.sairModoEdicaoCidade = function() {
+  window._cidadeEditando = null;
+  document.getElementById('nova-cidade-nome').value = '';
+  document.getElementById('nova-cidade-uf').value = 'RS';
+  document.getElementById('nova-cidade-lat').value = '';
+  document.getElementById('nova-cidade-lon').value = '';
+  document.getElementById('btn-add-cidade').innerHTML = '➕ Adicionar cidade';
+  document.getElementById('btn-cancelar-edicao-cidade').style.display = 'none';
+};
+
 window.alternarCidadeAdmin = async function(id) {
   if (window.currentUserData?.funcao !== 'admin') return;
   const c = window.Cidades.lista().find(x => x.id === id);
   if (!c || id === 'pelotas-rs') return;
+  if (!(await exigirSenhaAcao(c.ativa ? 'pausar a cidade' : 'ativar a cidade'))) return;
   try {
     await garantirCidadesNoFirestore();
     await updateDoc(doc(db, "cidades", id), { ativa: !c.ativa });
@@ -2774,8 +2913,10 @@ window.excluirCidadeAdmin = async function(id) {
     if (!snapU.empty || !snapC.empty) {
       return mostrarAviso("Cidade em uso", `${c.nome} ainda tem ${snapU.size} cadastro(s) e ${snapC.size} cupom(ns). Use o botão de pausar (⏸️) em vez de excluir.`, "⚠️");
     }
+    if (!(await exigirSenhaAcao('excluir a cidade'))) return;
     await garantirCidadesNoFirestore();
     await deleteDoc(doc(db, "cidades", id));
+    if (window._cidadeEditando === id) sairModoEdicaoCidade();
     try { await registrarLogAdmin('sistema', 'Cidade excluída', `${c.nome} / ${c.uf}`); } catch (e) {}
     await window.Cidades.recarregar();
     renderizarCidadesAdmin();
@@ -2788,6 +2929,7 @@ window.excluirCidadeAdmin = async function(id) {
 window.adicionarCidadeAdmin = async function() {
   if (window.currentUserData?.funcao !== 'admin') return;
 
+  const editando = window._cidadeEditando || null;
   const nome = document.getElementById('nova-cidade-nome').value.trim().replace(/\s+/g, ' ');
   const uf = document.getElementById('nova-cidade-uf').value.trim().toUpperCase();
   const latTxt = document.getElementById('nova-cidade-lat').value.trim();
@@ -2797,12 +2939,14 @@ window.adicionarCidadeAdmin = async function() {
   if (!/^[A-Z]{2}$/.test(uf)) return mostrarAviso("Atenção", "Digite a sigla do estado com 2 letras (ex: RS).", "🏙️");
 
   const slug = (nome + '-' + uf).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  if (window.Cidades.lista().some(c => c.id === slug)) {
+  if (!editando && window.Cidades.lista().some(c => c.id === slug)) {
     return mostrarAviso("Já existe", `${nome} / ${uf} já está na lista de cidades.`, "ℹ️");
   }
 
-  const lat = latTxt !== '' ? parseFloat(latTxt) : null;
-  const lon = lonTxt !== '' ? parseFloat(lonTxt) : null;
+  const lat = latTxt !== '' && !isNaN(parseFloat(latTxt)) ? parseFloat(latTxt) : null;
+  const lon = lonTxt !== '' && !isNaN(parseFloat(lonTxt)) ? parseFloat(lonTxt) : null;
+
+  if (!(await exigirSenhaAcao(editando ? 'editar a cidade' : 'criar a cidade'))) return;
 
   const btn = document.getElementById('btn-add-cidade');
   const textoBtn = btn.innerHTML;
@@ -2812,23 +2956,52 @@ window.adicionarCidadeAdmin = async function() {
   try {
     const atuais = window.Cidades.lista();
     await garantirCidadesNoFirestore();
-    await setDoc(doc(db, "cidades", slug), {
-      nome, uf, lat, lon, ativa: true, ordem: atuais.length, criadoEm: new Date().toISOString()
-    });
 
-    try { await registrarLogAdmin('sistema', 'Cidade adicionada', `${nome} / ${uf}`); } catch (e) {}
+    if (editando) {
+      await updateDoc(doc(db, "cidades", editando), { nome, uf, lat, lon });
+      try { await registrarLogAdmin('sistema', 'Cidade editada', `${nome} / ${uf}`); } catch (e) {}
+    } else {
+      await setDoc(doc(db, "cidades", slug), {
+        nome, uf, lat, lon, ativa: true, ordem: atuais.length, criadoEm: new Date().toISOString()
+      });
+      try { await registrarLogAdmin('sistema', 'Cidade adicionada', `${nome} / ${uf}`); } catch (e) {}
+    }
+
     await window.Cidades.recarregar();
-
-    document.getElementById('nova-cidade-nome').value = '';
-    document.getElementById('nova-cidade-lat').value = '';
-    document.getElementById('nova-cidade-lon').value = '';
+    sairModoEdicaoCidade();
     renderizarCidadesAdmin();
-    mostrarAviso("Cidade adicionada! 🏙️", `${nome} / ${uf} já aparece no cadastro e na troca de cidade.`, "✅");
+    mostrarAviso(editando ? "Cidade atualizada ✏️" : "Cidade adicionada! 🏙️",
+      editando ? `${nome} / ${uf} foi atualizada.` : `${nome} / ${uf} já aparece no cadastro e na troca de cidade.`, "✅");
   } catch (err) {
     mostrarAviso("Erro", err.message, "❌");
   } finally {
-    btn.innerHTML = textoBtn;
+    btn.innerHTML = window._cidadeEditando ? '💾 Salvar alterações' : '➕ Adicionar cidade';
     btn.style.pointerEvents = '';
+  }
+};
+
+// ---------- Apagar logs (pede senha) ----------
+window.apagarLogsSistemaAdmin = async function() {
+  if (window.currentUserData?.funcao !== 'admin') return;
+  if (!confirm("Apagar TODOS os logs do sistema? Essa ação não pode ser desfeita.")) return;
+  if (!(await exigirSenhaAcao('apagar os logs do sistema'))) return;
+
+  try {
+    let total = 0;
+    while (true) {
+      const snap = await getDocs(query(collection(db, "logs_admin"), limit(400)));
+      if (snap.empty) break;
+      const batch = writeBatch(db);
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      total += snap.size;
+      if (snap.size < 400) break;
+    }
+    try { await registrarLogAdmin('sistema', 'Logs do sistema apagados', `${total} registro(s)`); } catch (e) {}
+    mostrarAviso("Logs apagados 🗑️", `${total} registro(s) removido(s).`, "✅");
+    carregarLogsAdminSistema();
+  } catch (err) {
+    mostrarAviso("Erro", err.message, "❌");
   }
 };
 
