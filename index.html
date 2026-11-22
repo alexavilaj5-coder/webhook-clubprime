@@ -1,95 +1,1328 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Clube Prime - Em breve</title>
-  <meta name="description" content="Clube Prime Pelotas: cupons de desconto nos melhores parceiros da cidade. Em breve.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>CLUBE PRIME - Pelotas / RS</title>
+  
+  <!-- Configuração PWA / Manifesto -->
+  <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#2563eb">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Clube Prime">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap">
+  <link rel="stylesheet" href="style.css?v=8">
+  <!-- Blindagem do jogo secreto: vale mesmo se o style.css do aparelho estiver desatualizado -->
   <style>
-    :root {
-      --bg: #f8fafc;
-      --text: #0f172a;
-      --muted: #64748b;
-      --primary: #2563eb;
-      --ticket: #ffffff;
-      --line: #cbd5e1;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0b1220;
-        --text: #f1f5f9;
-        --muted: #94a3b8;
-        --primary: #60a5fa;
-        --ticket: #131c2e;
-        --line: #2b3a55;
-      }
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
-      text-align: center;
-    }
-    main { width: 100%; max-width: 380px; }
-
-    .ticket {
-      display: flex;
-      background: var(--ticket);
-      border: 1.5px dashed var(--line);
-      border-radius: 20px;
-      overflow: hidden;
-      margin-bottom: 32px;
-      text-align: left;
-    }
-    .stub {
-      background: var(--primary);
-      color: #fff;
-      width: 38%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 22px 8px;
-      border-right: 2px dashed rgba(255, 255, 255, 0.55);
-    }
-    .stub .big { font-size: 2.6rem; font-weight: 800; line-height: 1; }
-    .stub .small { font-size: 0.85rem; font-weight: 800; letter-spacing: 0.06em; margin-top: 4px; }
-    .info { flex: 1; padding: 18px 16px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
-    .info strong { font-size: 1.05rem; font-weight: 800; }
-    .info span { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
-
-    h1 { font-size: 1.9rem; font-weight: 800; line-height: 1.15; }
-    p { margin-top: 10px; font-size: 0.95rem; line-height: 1.5; color: var(--muted); font-weight: 500; }
-    .foot { margin-top: 36px; font-size: 0.75rem; color: var(--muted); }
+    .offline-overlay { position: fixed; inset: 0; z-index: 5000; }
+    .offline-overlay:not(.active) { display: none !important; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Chart.js para gráficos do Admin -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- HTML5-QRCode para leitura via câmera do Lojista -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <!-- QRCode.js para gerar o QR Code no modal do Cliente -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  
+  <!-- Botão "Instalar app" (PWA) -->
+  <script>
+    window.deferredInstallPrompt = null;
+    function appJaInstalado() {
+      return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    }
+    function ehIOS() {
+      return /iphone|ipad|ipod/i.test(navigator.userAgent);
+    }
+    function atualizarBotaoInstalar() {
+      var btn = document.getElementById('btn-install-app');
+      if (!btn) return;
+      var mostrar = !appJaInstalado() && (window.deferredInstallPrompt || ehIOS());
+      btn.style.display = mostrar ? 'inline-flex' : 'none';
+    }
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window.deferredInstallPrompt = e;
+      atualizarBotaoInstalar();
+    });
+    window.addEventListener('appinstalled', function () {
+      window.deferredInstallPrompt = null;
+      atualizarBotaoInstalar();
+    });
+    window.instalarApp = async function () {
+      if (window.deferredInstallPrompt) {
+        window.deferredInstallPrompt.prompt();
+        try { await window.deferredInstallPrompt.userChoice; } catch (e) {}
+        window.deferredInstallPrompt = null;
+        atualizarBotaoInstalar();
+      } else if (ehIOS()) {
+        alert('Para instalar no iPhone: toque em Compartilhar (quadrado com seta) e depois em "Adicionar à Tela de Início".');
+      }
+    };
+    document.addEventListener('DOMContentLoaded', atualizarBotaoInstalar);
+  </script>
+
+  <script type="module" src="app.js?v=10"></script>
 </head>
 <body>
-  <main>
-    <div class="ticket" aria-hidden="true">
-      <div class="stub">
-        <span class="big">?</span>
-        <span class="small">OFF</span>
+
+  <!-- TELA PERSONALIZADA DE MODO OFFLINE (SEM CONEXÃO) -->
+  <div id="offline-screen" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg, #f8fafc); z-index:99999; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center;">
+    <div style="font-size:3.5rem; margin-bottom:12px;">📡</div>
+    <h2 style="font-size:1.5rem; font-weight:900; color:var(--text, #0f172a); margin-bottom:8px;">Ops! Você está sem internet</h2>
+    <p style="font-size:0.85rem; color:var(--muted, #64748b); max-width:280px; margin-bottom:20px; line-height:1.4;">Conecte-se a uma rede para ver os cupons atualizados e utilizar o Clube Prime.</p>
+    <button class="btn btn-cyan" style="max-width:220px;" onclick="window.location.reload()">🔄 Tentar Reconectar</button>
+  </div>
+
+  <div class="app-shell">
+    
+    <div class="top-header">
+      <div class="brand-title">
+        <span>⚡ CLUBE PRIME</span>
       </div>
-      <div class="info">
-        <strong>Clube Prime</strong>
-        <span>Pelotas / RS</span>
+      <div class="header-actions">
+        <button id="btn-install-app" class="install-mini" style="display:none;" onclick="instalarApp()" title="Instalar app">📲 Instalar app</button>
+        <button class="theme-toggle-btn" onclick="toggleTheme()" title="Alternar Modo Escuro">🌙</button>
+        <div class="location-badge">📍 Pelotas, RS</div>
       </div>
     </div>
 
-    <h1>Em breve</h1>
-    <p>Estamos preparando cupons de desconto nos melhores lugares de Pelotas. Volte logo para conferir.</p>
+    <!-- TELA LOGIN/CADASTRO -->
+    <div id="screen-auth" class="screen">
+      <div style="text-align:center; margin-bottom:24px; margin-top:10px;">
+        <h2 style="font-size:1.9rem; font-weight:900; color:var(--text);">Acesse o Clube</h2>
+        <p style="font-size:0.82rem; color:var(--muted); margin-top:4px;">Economize diariamente com cupons exclusivos em Pelotas.</p>
+      </div>
 
-    <div class="foot">Clube Prime &bull; Pelotas / RS</div>
-  </main>
+      <div class="auth-tabs">
+        <div id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">Entrar</div>
+        <div id="tab-signup" class="auth-tab" onclick="switchAuthTab('signup')">Criar Conta</div>
+      </div>
+
+      <div id="group-name" class="form-group" style="display:none;">
+        <label>NOME COMPLETO</label>
+        <input type="text" id="reg-name" class="form-control" placeholder="Seu nome">
+      </div>
+
+      <div id="group-whatsapp" class="form-group" style="display:none;">
+        <label>WHATSAPP / CELULAR</label>
+        <input type="tel" id="reg-whatsapp" class="form-control" placeholder="(53) 99999-9999">
+      </div>
+
+      <div id="group-cidade" class="form-group" style="display:none;">
+        <label>CIDADE</label>
+        <select id="reg-cidade" class="form-control"></select>
+        <div style="font-size:0.7rem; color:var(--muted); margin-top:4px;">Parceiros ficam disponíveis só na cidade escolhida. Clientes podem trocar depois no topo do app.</div>
+      </div>
+
+      <div id="group-cpf" class="form-group" style="display:none;">
+        <label>CPF (APENAS NÚMEROS)</label>
+        <input type="text" id="reg-cpf" class="form-control" placeholder="00000000000" maxlength="11">
+      </div>
+
+      <div class="form-group">
+        <label>E-MAIL</label>
+        <input type="email" id="reg-email" class="form-control" placeholder="seuemail@gmail.com">
+      </div>
+
+      <div class="form-group">
+        <label>SENHA</label>
+        <input type="password" id="reg-pass" class="form-control" placeholder="******">
+      </div>
+
+      <div id="box-privacy-terms" style="display:none; margin:10px 0;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:0.75rem; color:var(--muted); cursor:pointer;">
+          <input type="checkbox" id="chk-privacy-terms">
+          Li e aceito os <a href="/privacidade.html" target="_blank" rel="noopener" style="color:var(--primary); text-decoration:underline;">Política de Privacidade</a>.
+        </label>
+      </div>
+
+      <div id="box-merchant-options" style="display:none; margin:14px 0; padding:12px; background:var(--secondary); border:1px dashed var(--card-border); border-radius:14px;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; font-weight:800; cursor:pointer;">
+          <input type="checkbox" id="chk-is-merchant" onchange="toggleMerchantFields(this.checked)">
+          🏬 Sou um Estabelecimento Parceiro
+        </label>
+        <a href="Manual-do-Lojista-Clube-Prime.pdf" target="_blank" rel="noopener" download style="display:block; margin-top:8px; font-size:0.75rem; font-weight:700; color:var(--primary); text-decoration:none;">📘 Baixar o Manual do Lojista (PDF)</a>
+
+        <div id="merchant-fields" style="display:none; margin-top:12px;">
+          <div class="form-group">
+            <label>NOME DA SUA EMPRESA / LOJA</label>
+            <input type="text" id="reg-store-name" class="form-control" placeholder="Ex: Barbearia Silva">
+          </div>
+          <div class="form-group">
+            <label>ENDEREÇO DA EMPRESA</label>
+            <input type="text" id="reg-store-address" class="form-control" placeholder="Ex: Rua Barão de Mauá, 450">
+          </div>
+          <div class="form-group">
+            <label>LOCALIZAÇÃO DA EMPRESA (GPS)</label>
+            <button type="button" class="btn btn-outline" style="padding:10px; font-size:0.8rem;" onclick="capturarLocalizacaoEmpresa('reg-store')">📍 Usar minha localização atual</button>
+            <input type="hidden" id="reg-store-lat">
+            <input type="hidden" id="reg-store-lon">
+            <div id="reg-store-gps-status" style="font-size:0.72rem; color:var(--muted); margin-top:6px;">Aperte o botão estando dentro da loja para os clientes encontrarem você por proximidade.</div>
+          </div>
+          <div class="form-group">
+            <label>TELEFONE / WHATSAPP DA EMPRESA</label>
+            <input type="text" id="reg-store-phone" class="form-control" placeholder="Ex: 53 99999-9999">
+          </div>
+          <div class="form-group">
+            <label>INSTAGRAM DA EMPRESA (OPCIONAL)</label>
+            <input type="text" id="reg-store-instagram" class="form-control" placeholder="Ex: @sualoja (editável depois)">
+          </div>
+          <div class="form-group">
+            <label>CÓDIGO DE ATIVAÇÃO DE PARCEIRO</label>
+            <input type="text" id="reg-store-code" class="form-control" placeholder="Digite a chave secreta" style="text-transform:uppercase;">
+          </div>
+        </div>
+      </div>
+
+      <button id="btn-auth-submit" class="btn" style="margin-top:12px;" onclick="executarAuth()">Entrar na Conta</button>
+      
+      <div id="box-esqueci" style="text-align:center; margin-top:14px;">
+        <a href="#" onclick="recuperarSenha()" style="font-size:0.8rem; color:var(--muted); text-decoration:none; font-weight:600;">🔑 Esqueci minha senha</a>
+      </div>
+
+      <div style="display:flex; align-items:center; margin:22px 0 16px 0;">
+        <div style="flex:1; height:1px; background:var(--card-border);"></div>
+        <span style="font-size:0.7rem; color:var(--muted); padding:0 12px; font-weight:800;">OU ENTRE COM</span>
+        <div style="flex:1; height:1px; background:var(--card-border);"></div>
+      </div>
+
+      <button class="btn btn-google" style="margin-bottom:20px;" onclick="fazerLoginGoogle()">
+        <svg width="18" height="18" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        Entrar com o Google
+      </button>
+
+      <div class="dev-credits">
+        🚀 Powered by: <strong>Prime Labs</strong> • Pelotas / RS<br><a href="/privacidade.html" target="_blank" rel="noopener" style="color:var(--muted); font-size:0.72rem;">Política de Privacidade</a> • <a href="/excluir-conta.html" target="_blank" rel="noopener" style="color:var(--muted); font-size:0.72rem;">Excluir conta</a><br>
+        <a href="https://wa.me/555384052112?text=Olá,%20preciso%20de%20suporte%20no%20Clube%20Prime!" target="_blank" style="display:inline-flex; align-items:center; gap:4px; margin-top:6px; color:var(--primary); text-decoration:none; font-weight:800;">
+          💬 Suporte via WhatsApp
+        </a>
+      </div>
+    </div>
+
+    <!-- TELA PAINEL DO LOJISTA -->
+    <div id="screen-merchant" class="screen">
+      <div class="panel-controle-highlight" style="padding: 12px; border-radius: 20px; margin-bottom: 16px; background: var(--card);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <span style="font-size:0.75rem; font-weight:800; color:var(--accent);">PAINEL DO LOJISTA</span>
+            <h2 id="merchant-store-name" style="font-size:1.4rem; font-weight:900;">Empresa Parceira</h2>
+          </div>
+          <div class="status-badge lojista">PARCEIRO ATIVO</div>
+        </div>
+      </div>
+
+      <div id="merchant-banner-notice" style="display:none; background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:#ffffff; padding:14px 16px; border-radius:18px; margin-bottom:16px; font-size:0.82rem; font-weight:700; box-shadow:0 6px 16px rgba(37,99,235,0.2);">
+        📢 <span id="merchant-banner-content">-</span>
+      </div>
+
+      <div style="background:var(--card); border:2px solid var(--primary); padding:20px; border-radius:20px; text-align:center; margin-bottom:16px; box-shadow:0 8px 20px rgba(37,99,235,0.15);">
+        <span style="font-size:2.2rem;">🎟️</span>
+        <h3 style="font-size:1.1rem; font-weight:800; margin-top:6px;">Validar Cupom do Cliente</h3>
+        <p style="font-size:0.8rem; color:var(--muted); margin-top:2px; margin-bottom:14px;">Escaneie o QR Code com a câmera do celular ou digite o código manual.</p>
+
+        <button class="btn btn-cyan" style="margin-bottom:12px; font-size:0.85rem;" onclick="abrirLeitorQrCode()">📷 Escanear QR Code com Câmera</button>
+        <div id="reader-container" style="display:none; margin:10px 0; border-radius:12px; overflow:hidden;">
+          <div id="qr-reader" style="width:100%;"></div>
+          <button class="btn btn-outline btn-small" style="margin-top:8px;" onclick="fecharLeitorQrCode()">Fechar Câmera</button>
+        </div>
+
+        <div class="form-group" style="text-align:left;">
+          <label>OU DIGITE O CÓDIGO MANUAL</label>
+          <input type="text" id="input-validar-codigo" class="form-control" placeholder="Ex: BARBER-8F2K" style="text-transform:uppercase;" oninput="verificarCodigoDigitadoLojista(this.value)">
+        </div>
+
+        <!-- ÁREA DINÂMICA DE CÁLCULO DE DESCONTO E VALOR -->
+        <div id="box-calculo-validacao" style="display:none; background:var(--secondary); border:1px solid var(--card-border); padding:12px; border-radius:12px; margin-bottom:12px; text-align:left;">
+          <div style="font-size:0.8rem; font-weight:900; color:var(--primary); margin-bottom:6px;">📊 Detalhes do Desconto Aplicado</div>
+          <div style="font-size:0.75rem; color:var(--muted); margin-bottom:4px;">Cupom: <strong id="val-CupomNome">-</strong></div>
+          <div style="font-size:0.75rem; color:var(--muted); margin-bottom:8px;">Desconto cadastrado: <strong id="val-DescontoPct" style="color:var(--accent);">-</strong></div>
+          
+          <div class="form-group" style="margin-bottom:8px;">
+            <label style="font-size:0.7rem;">INFORME O VALOR DO SERVIÇO OU DA VENDA (R$)</label>
+            <input type="number" id="input-valor-servico" class="form-control" step="0.01" placeholder="Ex: 100.00" oninput="calcularValoresBaixa(this.value)">
+          </div>
+
+          <div style="background:var(--card); padding:8px; border-radius:8px; font-size:0.75rem; display:flex; flex-direction:column; gap:3px;">
+            <div>Valor original: <strong id="res-val-original">R$ 0,00</strong></div>
+            <div>Desconto (%): <strong id="res-val-pct">0%</strong></div>
+            <div>Valor do desconto: <strong id="res-val-desconto" style="color:#10b981;">R$ 0,00</strong></div>
+            <div style="font-size:0.85rem; border-top:1px dashed var(--card-border); padding-top:4px; margin-top:2px;">Valor a pagar: <strong id="res-val-final" style="color:var(--primary);">R$ 0,00</strong></div>
+          </div>
+        </div>
+
+        <button id="btn-validar-baixa-final" class="btn" disabled style="opacity:0.5; pointer-events:none;" onclick="validarCupomTextoLojista()">✅ Validar e Dar Baixa no Caixa</button>
+      </div>
+
+      <button id="btn-toggle-painel-lojista" type="button" class="btn btn-outline" style="margin-bottom:16px;" onclick="var b=document.getElementById('merchant-extra');var o=b.style.display==='none';b.style.display=o?'block':'none';this.innerHTML=o?'➖ Ocultar painel':'➕ Abrir painel (cupons, logs e empresa)';">➕ Abrir painel (cupons, logs e empresa)</button>
+
+      <div id="merchant-extra" style="display:none;">
+      <div class="admin-grid" style="margin-bottom:16px;">
+        <div class="admin-stat-card">
+          <div class="admin-stat-lbl">Cliques nas Ofertas</div>
+          <div id="merchant-stat-clicks" class="admin-stat-val">0</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-lbl">Cupons Utilizados</div>
+          <div id="merchant-stat-validations" class="admin-stat-val">0</div>
+        </div>
+      </div>
+
+      <details style="background:var(--card); border:1px solid var(--card-border); border-radius:18px; margin-bottom:16px; overflow:hidden;">
+        <summary style="padding:14px 16px; font-weight:800; font-size:0.95rem; cursor:pointer; background:var(--card); list-style:none; display:flex; justify-content:space-between; align-items:center;">
+          <span>📋 Logs de Resgate Recentes (Sua Empresa)</span>
+          <span style="font-size:0.8rem; color:var(--muted);">▼</span>
+        </summary>
+        <div id="merchant-logs-list" style="padding:12px; border-top:1px solid var(--card-border); max-height:200px; overflow-y:auto;">
+          <p style="font-size:0.8rem; color:var(--muted);">Sem resgates registrados.</p>
+        </div>
+      </details>
+
+      <details style="background:var(--card); border:1px solid var(--card-border); border-radius:18px; margin-bottom:16px; overflow:hidden;">
+        <summary style="padding:14px 16px; font-weight:800; font-size:0.95rem; cursor:pointer; background:var(--card); list-style:none; display:flex; justify-content:space-between; align-items:center;">
+          <span>⚙️ Editar Informações da Empresa</span>
+          <span style="font-size:0.8rem; color:var(--muted);">▼</span>
+        </summary>
+        <div style="padding:16px; border-top:1px solid var(--card-border);">
+          <div class="form-group" style="text-align:left; margin-bottom:12px;">
+            <label>FOTO DA EMPRESA (aparece para os clientes)</label>
+            <img id="merchant-edit-foto-preview" alt="Foto da empresa" style="display:none; width:100%; aspect-ratio:12/5; height:auto; object-fit:cover; border-radius:14px; margin-bottom:8px;">
+            <input type="hidden" id="merchant-edit-foto" value="">
+            <input type="file" id="merchant-edit-foto-file" accept="image/*" style="display:none;" onchange="processarFotoEmpresa(this)">
+            <div style="display:flex; gap:8px;">
+              <button type="button" class="btn btn-outline btn-small" style="flex:1;" onclick="document.getElementById('merchant-edit-foto-file').click()">📷 Escolher foto</button>
+              <button type="button" id="merchant-edit-foto-ajustar" class="btn btn-outline btn-small" style="flex:1; display:none;" onclick="ajustarFotoEmpresa()">🔍 Ajustar</button>
+              <button type="button" id="merchant-edit-foto-remover" class="btn btn-outline btn-small" style="flex:1; display:none; color:var(--danger); border-color:#ef444455;" onclick="removerFotoEmpresa()">🗑️ Remover</button>
+            </div>
+            <div id="merchant-edit-foto-status" style="font-size:0.7rem; color:var(--muted); margin-top:4px;">Depois de escolher, toque em "Salvar Alterações da Empresa".</div>
+          </div>
+          <div class="form-group" style="text-align:left; margin-bottom:8px;">
+            <label>NOME DA EMPRESA</label>
+            <input type="text" id="merchant-edit-name" class="form-control" placeholder="Nome da Loja">
+          </div>
+          <div class="form-group" style="text-align:left; margin-bottom:8px;">
+            <label>ENDEREÇO</label>
+            <input type="text" id="merchant-edit-address" class="form-control" placeholder="Ex: Rua Barão de Mauá, 450">
+          </div>
+          <div class="form-group" style="text-align:left; margin-bottom:8px;">
+            <label>LOCALIZAÇÃO NO MAPA (GPS)</label>
+            <button type="button" class="btn btn-outline" style="padding:8px; font-size:0.8rem;" onclick="capturarLocalizacaoEmpresa('merchant-edit')">📍 Usar minha localização atual</button>
+            <input type="hidden" id="merchant-edit-lat">
+            <input type="hidden" id="merchant-edit-lon">
+            <div id="merchant-edit-gps-status" style="font-size:0.72rem; color:var(--muted); margin-top:6px;">Estando dentro da loja, toque no botão e depois em "Salvar Alterações da Empresa".</div>
+          </div>
+          <div class="form-group" style="text-align:left; margin-bottom:8px;">
+            <label>TELEFONE / WHATSAPP</label>
+            <input type="text" id="merchant-edit-phone" class="form-control" placeholder="Ex: 53 99999-9999">
+          </div>
+          <div class="form-group" style="text-align:left; margin-bottom:12px;">
+            <label>INSTAGRAM</label>
+            <input type="text" id="merchant-edit-instagram" class="form-control" placeholder="Ex: @sualoja">
+          </div>
+          <button class="btn btn-outline" style="padding:8px; font-size:0.8rem;" onclick="salvarDadosEmpresaLojista()">💾 Salvar Alterações da Empresa</button>
+        </div>
+      </details>
+
+      <button class="btn" style="margin-bottom:20px;" onclick="abrirModalCriarOferta()">➕ Publicar Nova Oferta / Cupom (Máx. 3)</button>
+      <button class="btn btn-outline" style="margin-bottom:20px;" onclick="abrirPreviewVitrineLojista()">👁️ Ver como o cliente vê</button>
+      <a href="Manual-do-Lojista-Clube-Prime.pdf" target="_blank" rel="noopener" download class="btn btn-outline" style="display:block; text-align:center; text-decoration:none; margin-bottom:20px;">📘 Baixar Manual do Lojista</a>
+
+      <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:12px;">Suas Promoções Criadas</h3>
+      <div id="merchant-offers-list">
+        <p style="font-size:0.8rem; color:var(--muted);">Carregando suas promoções...</p>
+      </div>
+        <button class="btn btn-outline" style="margin-top:16px; padding:8px; font-size:0.75rem; color:var(--muted); border-color:var(--card-border);" onclick="abrirModalExcluirConta()">🗑️ Excluir minha conta e empresa</button>
+      </div><!-- /merchant-extra -->
+
+      <button class="btn btn-outline" style="color:var(--danger); border-color:#ef444455; margin-top:20px;" onclick="deslogar()">Sair do Painel</button>
+    </div>
+
+    <!-- TELA PAINEL ADMINISTRADOR -->
+    <div id="screen-admin" class="screen">
+      <div class="panel-controle-highlight" style="padding: 12px; border-radius: 20px; margin-bottom: 12px; background: var(--card);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <span style="font-size:0.68rem; font-weight:800; color:var(--accent);">PAINEL DE CONTROLE</span>
+            <h2 style="font-size:1.15rem; font-weight:900;">Gestão Geral ADM</h2>
+          </div>
+          <div class="status-badge admin" style="padding:4px 10px; font-size:0.6rem;">ADMIN</div>
+        </div>
+        <div style="margin-top:10px;">
+          <label style="font-size:0.68rem; font-weight:800; color:var(--muted);">🏙️ FILTRAR PAINEL POR CIDADE</label>
+          <select id="adm-filtro-cidade" class="form-control" onchange="filtrarAdminCidade(this.value)"><option value="todas">🌎 Todas as cidades</option></select>
+        </div>
+        <details style="margin-top:10px; background:var(--secondary); border:1px solid var(--card-border); border-radius:14px; padding:10px 12px;" ontoggle="if(this.open) renderizarCidadesAdmin()">
+          <summary style="font-size:0.8rem; font-weight:800; cursor:pointer;">🏙️ Gerenciar cidades</summary>
+          <div style="margin-top:10px; text-align:left;">
+            <div class="form-group" style="margin-bottom:8px;">
+              <label style="font-size:0.68rem;">NOME DA CIDADE *</label>
+              <input type="text" id="nova-cidade-nome" class="form-control" placeholder="Ex: Camaquã">
+            </div>
+            <div class="form-group" style="margin-bottom:8px;">
+              <label style="font-size:0.68rem;">ESTADO (UF) *</label>
+              <input type="text" id="nova-cidade-uf" class="form-control" maxlength="2" value="RS" style="text-transform:uppercase;">
+            </div>
+            <details style="margin-bottom:10px;">
+              <summary style="font-size:0.7rem; color:var(--muted); cursor:pointer;">Opcional: coordenadas (para o "Usar minha localização" achar a cidade)</summary>
+              <div style="display:flex; gap:8px; margin-top:8px;">
+                <input type="number" step="any" id="nova-cidade-lat" class="form-control" placeholder="Latitude">
+                <input type="number" step="any" id="nova-cidade-lon" class="form-control" placeholder="Longitude">
+              </div>
+            </details>
+            <button id="btn-add-cidade" class="btn btn-cyan" style="padding:10px; font-size:0.82rem;" onclick="adicionarCidadeAdmin()">➕ Adicionar cidade</button>
+
+            <button id="btn-cancelar-edicao-cidade" class="btn btn-outline" style="display:none; margin-top:8px; padding:8px; font-size:0.78rem;" onclick="sairModoEdicaoCidade()">Cancelar edição</button>
+
+            <div style="font-size:0.68rem; font-weight:800; color:var(--muted); margin:16px 0 6px;">CIDADES CADASTRADAS</div>
+            <div id="admin-lista-cidades"></div>
+          </div>
+        </details>
+        <button class="btn btn-outline btn-small" style="margin-top:8px;" onclick="alterarSenhaAcoes()">🔑 Alterar senha de segurança</button>
+      </div>
+
+      <button class="btn btn-cyan" style="margin-bottom:12px; padding:10px; font-size:0.82rem; font-weight:900;" onclick="alternarVisaoCliente()">
+        Modo Cliente
+      </button>
+
+      <!-- MENU DE ABAS LIMPAS NO ADM -->
+      <div class="auth-tabs" style="margin-bottom:14px; grid-template-columns: repeat(5, 1fr);">
+        <div id="adm-tab-dash" class="auth-tab active" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('dash')">📊 Dash</div>
+        <div id="adm-tab-cupons" class="auth-tab" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('cupons')">🎟️ Cupons</div>
+        <div id="adm-tab-clientes" class="auth-tab" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('clientes')">👥 Clientes</div>
+        <div id="adm-tab-empresas" class="auth-tab" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('empresas')">🏢 Lojas</div>
+        <div id="adm-tab-logs" class="auth-tab" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('logs')">📜 Logs</div>
+      </div>
+
+      <!-- ABA 1: DASHBOARD & RELATÓRIOS FINANCEIROS -->
+      <div id="adm-section-dash" class="admin-tab-content">
+        
+        <!-- SUB-ABAS DASHBOARD / FINANCEIRO -->
+        <div style="display:flex; gap:6px; margin-bottom:12px;">
+          <button id="btn-subtab-overview" class="btn btn-cyan btn-small" style="flex:1;" onclick="switchDashSubTab('overview')">📊 Visão Geral</button>
+          <button id="btn-subtab-finance" class="btn btn-outline btn-small" style="flex:1;" onclick="switchDashSubTab('finance')">💳 Financeiro & Pix</button>
+        </div>
+
+        <!-- VISÃO GERAL (reorganizada) -->
+        <div id="dash-sub-overview">
+
+          <div style="font-size:0.68rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; margin:4px 2px 6px;">👥 Clientes</div>
+          <div class="admin-grid" style="grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px;">
+            <div class="admin-stat-card" style="padding:8px 4px;">
+              <div class="admin-stat-lbl" style="font-size:0.58rem;">Usuários</div>
+              <div id="admin-count-users" class="admin-stat-val" style="font-size:1.05rem;">0</div>
+            </div>
+            <div class="admin-stat-card" style="padding:8px 4px;">
+              <div class="admin-stat-lbl" style="font-size:0.58rem;">VIPs</div>
+              <div id="admin-count-vips" class="admin-stat-val" style="font-size:1.05rem;">0</div>
+            </div>
+            <div class="admin-stat-card" style="padding:8px 4px;">
+              <div class="admin-stat-lbl" style="font-size:0.58rem;">Free</div>
+              <div id="admin-count-free" class="admin-stat-val" style="font-size:1.05rem;">0</div>
+            </div>
+          </div>
+
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:12px; display:flex; align-items:center; gap:14px;">
+            <div style="position:relative; width:110px; height:110px; flex-shrink:0;">
+              <canvas id="chartUsersVip"></canvas>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:0.68rem; color:var(--muted); font-weight:800; text-transform:uppercase;">Conversão VIP</div>
+              <div id="admin-vip-conversion-rate" style="font-size:1.8rem; font-weight:900; color:var(--accent); line-height:1.1;">0%</div>
+              <div style="font-size:0.7rem; margin-top:6px; color:var(--muted);">
+                <span style="color:#f97316;">●</span> VIP &nbsp; <span style="color:#64748b;">●</span> Free
+              </div>
+            </div>
+          </div>
+
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:14px;">
+            <h3 style="font-size:0.85rem; font-weight:800; margin-bottom:6px; color:var(--text);">📈 Novos cadastros (7 dias)</h3>
+            <div style="position:relative; width:100%; height:120px;">
+              <canvas id="chartUsersGrowth"></canvas>
+            </div>
+          </div>
+
+          <div style="font-size:0.68rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; margin:4px 2px 6px;">🏢 Parceiros e atividade</div>
+          <div class="admin-grid" style="grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:14px;">
+            <div class="admin-stat-card" style="padding:8px 4px;">
+              <div class="admin-stat-lbl" style="font-size:0.58rem;">Lojas</div>
+              <div id="admin-count-merchants" class="admin-stat-val" style="font-size:1.05rem;">0</div>
+            </div>
+            <div class="admin-stat-card" style="padding:8px 4px;">
+              <div class="admin-stat-lbl" style="font-size:0.58rem;">Ofertas</div>
+              <div id="admin-count-offers" class="admin-stat-val" style="font-size:1.05rem;">0</div>
+            </div>
+            <div class="admin-stat-card" style="padding:8px 4px;">
+              <div class="admin-stat-lbl" style="font-size:0.58rem;">Resgates</div>
+              <div id="admin-count-coupons-used" class="admin-stat-val" style="font-size:1.05rem;">0</div>
+            </div>
+            <div class="admin-stat-card" style="padding:8px 4px;">
+              <div class="admin-stat-lbl" style="font-size:0.58rem;">Pix</div>
+              <div id="admin-count-payments-approved" class="admin-stat-val" style="font-size:1.05rem; color:#10b981;">0</div>
+            </div>
+          </div>
+
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <h3 style="font-size:0.85rem; font-weight:800; color:var(--text);">📜 Últimas atividades</h3>
+              <button class="btn btn-outline btn-small" style="padding:4px 8px; font-size:0.68rem;" onclick="switchAdminTab('logs')">Ver tudo</button>
+            </div>
+            <div id="admin-recent-activity" style="font-size:0.72rem; color:var(--muted);">Carregando...</div>
+          </div>
+
+          <details style="background:var(--card); border:1px solid var(--card-border); padding:12px 14px; border-radius:14px; margin-bottom:16px;">
+            <summary style="font-size:0.85rem; font-weight:800; cursor:pointer;">📢 Avisos e recados</summary>
+            <div style="margin-top:10px;">
+              <label style="font-size:0.72rem; font-weight:800; color:var(--muted);">Para todos os clientes</label>
+              <input type="text" id="admin-global-banner-text" class="form-control" style="margin:4px 0 6px;" placeholder="Ex: 🔥 Novas ofertas na cidade!">
+              <button class="btn btn-cyan" style="padding:8px; font-size:0.8rem; margin-bottom:12px;" onclick="salvarBannerGlobalAdmin()">💾 Publicar Aviso</button>
+              <label style="font-size:0.72rem; font-weight:800; color:var(--muted);">Exclusivo para lojistas</label>
+              <input type="text" id="admin-merchant-banner-text" class="form-control" style="margin:4px 0 6px;" placeholder="Ex: ⚠️ Lembre-se de validar os cupons!">
+              <button class="btn btn-cyan" style="padding:8px; font-size:0.8rem;" onclick="salvarBannerLojistaAdmin()">💾 Publicar Recado</button>
+            </div>
+          </details>
+        </div>
+
+        <!-- RELATÓRIO FINANCEIRO E PIX COMPLETO -->
+        <div id="dash-sub-finance" style="display:none;">
+          
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <div>
+                <h3 style="font-size:0.95rem; font-weight:900;">💰 Entradas Reais de Pix</h3>
+                <p style="font-size:0.68rem; color:var(--muted);">Apenas pagamentos compensados (R$ 19,90)</p>
+              </div>
+              <span id="admin-total-revenue" style="font-size:1.1rem; font-weight:900; color:#10b981;">R$ 0,00</span>
+            </div>
+
+            <!-- GRÁFICO DE FATURAMENTO DIÁRIO -->
+            <div style="position:relative; width:100%; height:150px; margin-top:10px;">
+              <canvas id="chartRevenueDay"></canvas>
+            </div>
+          </div>
+
+          <!-- FILTROS DE PERÍODO -->
+          <div style="background:var(--card); border:1px solid var(--card-border); padding:12px; border-radius:14px; margin-bottom:12px;">
+            <div style="font-size:0.72rem; font-weight:800; color:var(--muted); margin-bottom:8px;">FILTRAR PERÍODO:</div>
+            
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+              <button class="btn btn-outline btn-small filter-period-btn active" onclick="filtrarFinanceiroPeriodo('hoje', this)">Hoje</button>
+              <button class="btn btn-outline btn-small filter-period-btn" onclick="filtrarFinanceiroPeriodo('semana', this)">Esta Semana</button>
+              <button class="btn btn-outline btn-small filter-period-btn" onclick="filtrarFinanceiroPeriodo('mes', this)">Este Mês</button>
+              <button class="btn btn-outline btn-small filter-period-btn" onclick="filtrarFinanceiroPeriodo('todos', this)">Todos</button>
+            </div>
+
+            <div style="border-top:1px dashed var(--card-border); padding-top:8px; margin-top:8px;">
+              <div style="font-size:0.7rem; font-weight:800; color:var(--text); margin-bottom:6px;">📅 Intervalo Personalizado (De / Até):</div>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input type="date" id="filter-date-start" class="form-control" style="font-size:0.72rem; padding:6px;">
+                <span style="font-size:0.75rem; color:var(--muted);">até</span>
+                <input type="date" id="filter-date-end" class="form-control" style="font-size:0.72rem; padding:6px;">
+              </div>
+              <button class="btn btn-cyan btn-small" style="margin-top:8px; padding:6px; font-size:0.75rem;" onclick="aplicarFiltroDataCustomizada()">🔍 Aplicar Filtro de Datas</button>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h4 style="font-size:0.85rem; font-weight:800;">💳 Histórico de Transações Pix</h4>
+            <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455; padding:4px 8px; font-size:0.68rem;" onclick="confirmarZerarHistoricoPix()">🧹 Zerar Leitura Pix</button>
+          </div>
+
+          <div style="background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:12px; overflow-x:auto;">
+            <div id="admin-pix-payments-list" style="max-height:280px; overflow-y:auto;">
+              <p style="font-size:0.75rem; color:var(--muted); text-align:center;">Carregando histórico de pagamentos...</p>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ABA 2: CUPONS -->
+      <div id="adm-section-cupons" class="admin-tab-content" style="display:none;">
+        
+        <div style="background:var(--card); border:1px solid var(--card-border); padding:14px; border-radius:16px; margin-bottom:16px; text-align:center;">
+          <h3 style="font-size:0.9rem; font-weight:900; margin-bottom:4px;">🎁 Gerar novos Cupons de 30 Dias VIP</h3>
+          <p style="font-size:0.72rem; color:var(--muted); margin-bottom:10px;">Cria cupons de uso único para você mandar para clientes entrarem como VIP sem somar no faturamento real.</p>
+          <button class="btn btn-cyan" style="padding:10px; font-size:0.82rem; margin-bottom:12px;" onclick="gerar40CuponsVipAdmin()">Gerar Cupons VIP Únicos</button>
+
+          <details style="text-align:left; background:var(--secondary); padding:10px; border-radius:12px;">
+            <summary style="font-size:0.8rem; font-weight:800; cursor:pointer;">📋 Ver Lista dos Cupons VIP Gerados</summary>
+            <div id="admin-vip-coupons-list" style="margin-top:10px; max-height:160px; overflow-y:auto; font-size:0.75rem;">
+              <p style="color:var(--muted);">Nenhum cupom gerado ainda ou carregando...</p>
+            </div>
+          </details>
+        </div>
+
+        <h3 style="font-size:1rem; font-weight:800; margin-bottom:10px;">Gestão Global de Cupons</h3>
+        <div id="admin-all-coupons-list" style="margin-bottom:16px; max-height:220px; overflow-y:auto; padding-right:4px;">
+          <p style="font-size:0.8rem; color:var(--muted);">Carregando...</p>
+        </div>
+
+        <h3 style="font-size:1rem; font-weight:800; margin-bottom:8px;">Logs de Resgate por Empresa</h3>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label>FILTRAR LOGS</label>
+          <select id="admin-filter-empresa" class="form-control" onchange="filtrarLogsAdminPorEmpresa()">
+            <option value="all">Todas as Empresas</option>
+          </select>
+        </div>
+
+        <div id="admin-logs-list" style="margin-bottom:16px; max-height:180px; overflow-y:auto; padding-right:4px;">
+          <p style="font-size:0.8rem; color:var(--muted);">Aguardando resgates...</p>
+        </div>
+      </div>
+
+      <!-- ABA: LOGS DO SISTEMA -->
+      <div id="adm-section-logs" class="admin-tab-content" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <h3 style="font-size:1rem; font-weight:800;">Registro de Atividades</h3>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-cyan btn-small" onclick="carregarLogsAdminSistema()">🔄 Atualizar</button>
+            <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="apagarLogsSistemaAdmin()">🗑️ Apagar</button>
+          </div>
+        </div>
+        <div style="display:flex; gap:6px; margin-bottom:8px;">
+          <select id="filter-system-log-cat" class="form-control" style="flex:1;" onchange="renderizarLogsSistema()">
+            <option value="all">Todas as categorias</option>
+            <option value="vip">👑 VIP</option>
+            <option value="empresa">🏢 Empresa</option>
+            <option value="cliente">👤 Cliente</option>
+            <option value="cupom">🎟️ Cupom</option>
+            <option value="financeiro">💳 Financeiro</option>
+            <option value="sistema">⚙️ Sistema</option>
+          </select>
+          <input id="filter-system-log-text" class="form-control" style="flex:1;" placeholder="Buscar..." oninput="renderizarLogsSistema()">
+        </div>
+        <div id="admin-system-logs-count" style="font-size:0.7rem; color:var(--muted); margin-bottom:8px;"></div>
+        <div id="admin-system-logs-list" style="max-height:60vh; overflow-y:auto; padding-right:4px;"></div>
+      </div>
+
+      <!-- ABA 3: CLIENTES -->
+      <div id="adm-section-clientes" class="admin-tab-content" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <h3 style="font-size:1rem; font-weight:800;">Gestão de Clientes</h3>
+          <button class="btn btn-outline btn-small" style="font-size:0.7rem; padding:4px 8px;" onclick="copiarListaWhatsAppClientes()">📱 Copiar WhatsApps</button>
+        </div>
+        <div id="admin-users-list" style="margin-bottom:16px; max-height:300px; overflow-y:auto; padding-right:4px;">
+          <p style="font-size:0.8rem; color:var(--muted);">Carregando...</p>
+        </div>
+      </div>
+
+      <!-- ABA 4: EMPRESAS / LOJISTAS -->
+      <div id="adm-section-empresas" class="admin-tab-content" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <h3 style="font-size:1rem; font-weight:800;">Lojistas Parceiros</h3>
+          <button class="btn btn-cyan btn-small" onclick="abrirModalAdminEmpresa()">➕ Nova</button>
+        </div>
+        <div id="admin-merchants-list" style="margin-bottom:16px; max-height:300px; overflow-y:auto; padding-right:4px;">
+          <p style="font-size:0.8rem; color:var(--muted);">Nenhuma empresa registrada.</p>
+        </div>
+      </div>
+
+      <button class="btn btn-outline" style="color:var(--danger); border-color:#ef444455; margin-top:16px;" onclick="deslogar()">Sair do Painel Admin</button>
+    </div>
+
+    <!-- TELA HOME (CLIENTE) -->
+    <div id="screen-home" class="screen">
+
+      <div id="box-voltar-admin" style="display:none; margin-bottom:10px;">
+        <button class="admin-bar" onclick="voltarAoAdminDesdeCliente()">⚡ Administrador</button>
+      </div>
+
+      <!-- ALERTA AUTOMÁTICO DE VIP A EXPIRAR -->
+      <div id="vip-expiring-alert" style="display:none; background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color:#ffffff; padding:14px 16px; border-radius:18px; margin-bottom:16px; box-shadow:0 6px 16px rgba(239,68,68,0.25);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:0.72rem; font-weight:900; text-transform:uppercase; letter-spacing:0.5px;">⚠️ Seu VIP vence em breve!</div>
+            <div id="vip-expiring-msg" style="font-size:0.82rem; font-weight:700; margin-top:2px;">Renove agora e garanta seus descontos sem interrupção.</div>
+          </div>
+          <button class="btn btn-cyan btn-small" style="background:#ffffff; color:#dc2626; font-weight:900; width:auto; padding:8px 12px; margin:0;" onclick="renovarVipAcumulado()">Renove</button>
+        </div>
+      </div>
+
+      <div id="client-global-banner" style="display:none; background:linear-gradient(135deg, #f97316 0%, #ea580c 100%); color:#ffffff; padding:12px 16px; border-radius:16px; margin-bottom:16px; font-size:0.82rem; font-weight:800; text-align:center; box-shadow:0 6px 16px rgba(249,115,22,0.2);">
+        📢 <span id="client-global-banner-content">-</span>
+      </div>
+
+      <!-- LOJA PATROCINADA DA SEMANA -->
+      <div id="client-sponsored-banner" class="company-card patrocinado" style="display:none; background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color:#ffffff; padding:24px 22px; border-radius:24px; margin-bottom:14px; box-shadow:0 14px 32px rgba(124,58,237,0.35); border: 1px solid rgba(255, 255, 255, 0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+          <div>
+            <span style="font-size:0.72rem; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; color:#e0e7ff; display:block; margin-bottom:4px;">⭐ Oferta da Semana</span>
+            <h3 id="client-sponsored-name" style="font-size:1.9rem; font-weight:900; margin:0; line-height:1.15; text-shadow: 0 2px 5px rgba(0,0,0,0.2);">-</h3>
+          </div>
+          
+          <div style="display:flex; gap:8px; align-items:center; flex-shrink:0; margin-top:2px;">
+            <a id="client-sponsored-wpp-btn" href="#" target="_blank" style="display:none; width:44px; height:44px; background:rgba(255,255,255,0.22); backdrop-filter:blur(6px); border-radius:50%; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; color:#fff; font-size:1.3rem; border:1px solid rgba(255,255,255,0.35); transition:all 0.2s;" title="Chamar no WhatsApp">
+              💬
+            </a>
+            <a id="client-sponsored-insta-btn" href="#" target="_blank" style="display:none; width:44px; height:44px; background:rgba(255,255,255,0.22); backdrop-filter:blur(6px); border-radius:50%; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; color:#fff; border:1px solid rgba(255,255,255,0.35); transition:all 0.2s;" title="Ver no Instagram">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+            </a>
+          </div>
+        </div>
+        <p id="client-sponsored-legend-text" style="font-size:1rem; color:#ede9fe; margin:0; line-height:1.4; opacity:0.95;">-</p>
+      </div>
+
+      <!-- PAINEL DO MEMBRO -->
+      <div class="hero-card" style="padding: 10px 14px; min-height: auto; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <span class="hero-welcome" style="font-size: 0.68rem;">Painel do Membro</span>
+            <h2 class="hero-name" style="font-size: 0.9rem; margin-top: 1px;">Olá, <span id="user-name-display">Cliente</span> 👋</h2>
+          </div>
+          <div class="status-badge free" style="font-size: 0.55rem; padding: 2px 7px;">PLANO GRATUITO</div>
+        </div>
+
+        <div class="hero-stats" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.15);">
+          <div class="stat-item">
+            <div id="user-economy-display" class="stat-val" style="font-size: 0.85rem;">R$ 0,00</div>
+            <div class="stat-lbl" style="font-size: 0.7rem;">Economia total</div>
+          </div>
+          <div class="stat-item" onclick="abrirModalNiveis()" style="cursor:pointer;" title="Clique para ver detalhes dos níveis">
+            <div id="user-level-display" class="stat-val" style="font-size: 0.85rem;">🥉 Bronze</div>
+            <div class="stat-lbl" style="font-size: 0.7rem;">Nível (Ver mais)</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="banner-assinatura" class="card-vip-banner vip-row" style="padding:12px 14px; margin-bottom:12px;">
+        <div class="vip-row-text">
+          <span style="font-size:0.65rem; font-weight:900; color:var(--accent); letter-spacing:1px; text-transform:uppercase;">Plano Membro PRIME</span>
+          <h3 style="font-size:1rem; font-weight:900; margin-top:2px;">Libere todos os cupons</h3>
+          <p style="font-size:0.74rem; color:var(--muted); margin-top:2px;">Pix instantâneo • 30 dias</p>
+        </div>
+        <button id="btn-gerar-pix" class="btn btn-cyan vip-row-btn" onclick="gerarPixMercadoPago()">⚡ Ser VIP<br>R$ 19,90</button>
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <input type="text" class="form-control" placeholder="🔍 Buscar restaurante, oficina, barbearia..." onkeyup="filterStores(this.value)">
+      </div>
+
+      <!-- CATEGORIAS EXPANDIDAS + BOTÃO DE GPS (PRÓXIMOS DE MIM) -->
+      <div class="categories-bar">
+        <div class="category-pill active" onclick="filterCat('all', this)">Todos os cupons</div>
+        <div class="category-pill" style="background:transparent; color:var(--primary); border:1.5px dashed var(--primary);" onclick="ativarBuscaProximidadeGps()">📍 Próximos de Mim (GPS)</div>
+        <div class="category-pill" onclick="filterCat('gastronomia', this)">🍔 Gastronomia & Delivery</div>
+        <div class="category-pill" onclick="filterCat('compras', this)">🛍️ Lojas & Compras</div>
+        <div class="category-pill" onclick="filterCat('automotivo', this)">🔧 Automotivo</div>
+        <div class="category-pill" onclick="filterCat('beleza', this)">💇 Saúde & Beleza</div>
+        <div class="category-pill" onclick="filterCat('servicos', this)">⚙️ Serviços Gerais</div>
+        <div class="category-pill" onclick="filterCat('pet', this)">🐾 Pet Shop</div>
+        <div class="category-pill" onclick="filterCat('saude', this)">🏥 Saúde & Farmácia</div>
+        <div class="category-pill" onclick="filterCat('lazer', this)">🎟️ Lazer & Entretenimento</div>
+      </div>
+
+      <!-- VITRINE DE EMPRESAS -->
+      <div id="stores-list-dynamic">
+        <p style="font-size:0.8rem; color:var(--muted); text-align:center;">Carregando cupons de Pelotas...</p>
+      </div>
+    </div>
+
+    <!-- TELA PARCEIROS -->
+    <div id="screen-search" class="screen">
+      <h2 style="margin-bottom:12px; font-weight:900;">Parceiros Locais</h2>
+      <p style="font-size:0.8rem; color:var(--muted); margin-bottom:16px;">Todas as empresas cadastradas no Clube Prime em Pelotas:</p>
+      <div id="partners-list-all">
+        <p style="font-size:0.8rem; color:var(--muted); text-align:center;">Carregando parceiros...</p>
+      </div>
+    </div>
+
+    <!-- TELA PERFIL -->
+    <div id="screen-profile" class="screen">
+      <div style="text-align:center; margin-bottom:20px; margin-top:10px;">
+        <div class="profile-avatar-container">
+          <img id="profile-avatar" class="profile-avatar-img" src="" alt="Foto de Perfil">
+        </div>
+        <h2 id="profile-name" style="font-weight:900; font-size:1.3rem;">Carregando...</h2>
+        <p id="profile-email" style="font-size:0.82rem; color:var(--muted); margin-top:2px;">-</p>
+        <p id="profile-whatsapp" style="font-size:0.78rem; color:var(--primary); font-weight:700; margin-top:2px;">-</p>
+      </div>
+
+      <!-- EXTRATO DE ECONOMIA -->
+      <div style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#ffffff; padding:18px; border-radius:20px; margin-bottom:18px; text-align:center; box-shadow:0 8px 20px rgba(16,185,129,0.25);">
+        <div style="font-size:0.75rem; font-weight:900; text-transform:uppercase; letter-spacing:1px; opacity:0.9;">💰 Extrato de Economia Total</div>
+        <div id="profile-total-economy-val" style="font-size:2rem; font-weight:900; margin:6px 0;">R$ 0,00</div>
+        <div style="font-size:0.75rem; opacity:0.9;">Valor total economizado utilizando os cupons da plataforma!</div>
+      </div>
+
+      <button class="btn btn-cyan" style="margin-bottom:18px; padding:10px; font-size:0.82rem;" onclick="abrirModalEditarCliente()">
+        ✏️ Editar Meus Dados (Nome, WhatsApp, Senha)
+      </button>
+
+      <div id="profile-vip-card" style="display:none; background:var(--accent-light); border:1px solid var(--accent-border); padding:16px; border-radius:18px; margin-bottom:18px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:1.8rem;">👑</span>
+            <div>
+              <div style="font-weight:800; color:var(--accent); font-size:0.95rem;">Assinatura VIP Ativa</div>
+              <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">Válido até: <span id="profile-vip-expira" style="color:var(--text); font-weight:700;">-</span></div>
+              <div style="font-size:0.75rem; color:var(--primary); margin-top:2px; font-weight:800;" id="profile-vip-countdown">-</div>
+            </div>
+          </div>
+          <div id="box-renew-vip" style="display:none;">
+            <button class="btn btn-cyan" style="padding:8px 12px; font-size:0.78rem;" onclick="renovarVipAcumulado()">🔄 Renovar (+30d)</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--card); border:1px solid var(--card-border); border-radius:20px; padding:16px; margin-bottom:18px;">
+        <h3 style="font-size:0.9rem; font-weight:800; margin-bottom:6px;">🎁 Possui um Cupom VIP do ADM?</h3>
+        <p style="font-size:0.75rem; color:var(--muted); margin-bottom:10px;">Insira abaixo o código recebido para ganhar 30 dias de VIP instantâneo:</p>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="input-cupom-vip-adm" class="form-control" placeholder="EX: VIP-XXXX" style="text-transform:uppercase;">
+          <button class="btn btn-cyan" style="width:120px; font-size:0.8rem;" onclick="resgatarCupomVipAdm()">Resgatar</button>
+        </div>
+      </div>
+
+      <div style="background:var(--card); border:1px solid var(--card-border); border-radius:20px; padding:18px; margin-bottom:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="font-size:0.95rem; font-weight:800;">🎟️ Histórico de Cupons Resgatados</h3>
+          <select id="filter-client-history" class="form-control" style="width:110px; font-size:0.7rem; padding:4px;" onchange="renderizarHistoricoClientePerfil()">
+            <option value="todos">Todos</option>
+            <option value="mes">Este Mês</option>
+            <option value="ano">Este Ano</option>
+          </select>
+        </div>
+        <div id="client-history-list" style="max-height:220px; overflow-y:auto; font-size:0.75rem;">
+          <p style="color:var(--muted); text-align:center;">Nenhum cupom resgatado ainda.</p>
+        </div>
+      </div>
+
+      <div style="background:var(--card); border:1px solid var(--card-border); border-radius:20px; padding:18px; margin-bottom:20px; cursor:pointer;" onclick="abrirModalNiveis()">
+        <h3 style="font-size:0.95rem; font-weight:800; margin-bottom:10px;">🏆 Suas Conquistas no Clube (Ver Níveis)</h3>
+        <div style="display:flex; justify-content:space-around; text-align:center;">
+          <div>
+            <span style="font-size:1.8rem;">🎯</span>
+            <div id="badge-resgates-count" style="font-size:0.85rem; font-weight:900; margin-top:2px;">0</div>
+            <div style="font-size:0.68rem; color:var(--muted);">Cupons Usados</div>
+          </div>
+          <div>
+            <span id="badge-level-icon" style="font-size:1.8rem;">🥉</span>
+            <div id="badge-level-title" style="font-size:0.85rem; font-weight:900; margin-top:2px;">Bronze</div>
+            <div style="font-size:0.68rem; color:var(--muted);">Nível Atual</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--card); border:1px solid var(--card-border); border-radius:20px; padding:18px; margin-bottom:20px;">
+        <div class="profile-info-row">
+          <span style="color:var(--muted); font-weight:600;">Status do Plano</span>
+          <div class="status-badge free">PLANO GRATUITO</div>
+        </div>
+        <div class="profile-info-row">
+          <span style="color:var(--muted); font-weight:600;">Membro Desde</span>
+          <span id="profile-joined-date" style="font-weight:700;">-</span>
+        </div>
+        <div class="profile-info-row">
+          <span style="color:var(--muted); font-weight:600;">Cidade</span>
+          <span style="font-weight:700;">Pelotas / RS</span>
+        </div>
+      </div>
+
+      <button class="btn btn-outline" style="color:var(--danger); border-color:#ef444455;" onclick="deslogar()">Sair da Conta</button>
+      <button class="btn btn-outline" style="margin-top:10px; padding:8px; font-size:0.75rem; color:var(--muted); border-color:var(--card-border);" onclick="abrirModalExcluirConta()">🗑️ Excluir minha conta</button>
+
+      <div class="dev-credits">
+        🚀 Desenvolvido por: <strong>Prime Labs</strong> • Pelotas / RS<br><a href="/privacidade.html" target="_blank" rel="noopener" style="color:var(--muted); font-size:0.72rem;">Política de Privacidade</a> • <a href="/excluir-conta.html" target="_blank" rel="noopener" style="color:var(--muted); font-size:0.72rem;">Excluir conta</a><br>
+        <a href="https://wa.me/555384052112?text=Olá,%20preciso%20de%20suporte%20no%20Clube%20Prime!" target="_blank" style="display:inline-flex; align-items:center; gap:4px; margin-top:6px; color:var(--primary); text-decoration:none; font-weight:800;">
+          💬 Suporte via WhatsApp
+        </a>
+      </div>
+    </div>
+
+    <!-- NAVEGAÇÃO INFERIOR -->
+    <div class="bottom-nav" style="display:none;">
+      <div class="nav-item active" onclick="navTo('home', this)">
+        <span class="nav-icon">🏠</span>
+        <span>Início</span>
+      </div>
+      <div class="nav-item" onclick="navTo('search', this)">
+        <span class="nav-icon">🔍</span>
+        <span>Parceiros</span>
+      </div>
+      <div class="nav-item" onclick="navTo('profile', this)">
+        <span class="nav-icon">👤</span>
+        <span>Perfil</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAIS DO SISTEMA -->
+
+  <!-- EDITOR DE FOTO (reposicionar / zoom) -->
+  <div id="modal-editor-foto" class="modal" style="z-index:8000;">
+    <div class="modal-content" style="text-align:left;">
+      <h3 style="font-size:1.1rem; font-weight:900; text-align:center; margin-bottom:4px;">🖼️ Ajustar foto</h3>
+      <p style="font-size:0.72rem; color:var(--muted); text-align:center; margin-bottom:10px;">Arraste para reposicionar. Use o controle (ou pinça) para dar zoom.</p>
+      <div style="border-radius:14px; overflow:hidden; border:1px solid var(--card-border); background:#ffffff; line-height:0;">
+        <canvas id="editor-foto-canvas" width="720" height="300" style="width:100%; height:auto; display:block; touch-action:none; cursor:grab;"></canvas>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; margin:14px 2px 4px;">
+        <button type="button" class="btn btn-outline btn-small" style="width:44px; flex:0 0 44px; font-size:1.1rem; padding:6px;" onclick="editorFotoPasso(-8)">−</button>
+        <input type="range" id="editor-foto-zoom" min="0" max="100" step="0.5" value="0" style="flex:1;" oninput="editorFotoZoomSlider(this.value)">
+        <button type="button" class="btn btn-outline btn-small" style="width:44px; flex:0 0 44px; font-size:1.1rem; padding:6px;" onclick="editorFotoPasso(8)">+</button>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button type="button" class="btn btn-outline btn-small" style="flex:1;" onclick="editorFotoReset()">↺ Centralizar</button>
+      </div>
+      <button class="btn btn-cyan" style="margin-top:12px;" onclick="editorFotoConfirmar()">✅ Usar esta foto</button>
+      <button class="btn btn-outline" style="margin-top:8px;" onclick="editorFotoCancelar()">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="modal-patrocinar-empresa" class="modal">
+    <div class="modal-content" style="text-align:left;">
+      <div style="font-size:2.2rem; margin-bottom:4px; text-align:center;">⭐</div>
+      <h3 style="font-size:1.2rem; font-weight:900; margin-bottom:4px; text-align:center;">Definir Patrocinado da Semana</h3>
+      <div id="patrocinar-empresa-nome-label" style="font-size:0.85rem; color:var(--primary); font-weight:900; margin-bottom:14px; text-align:center;">Empresa</div>
+      
+      <input type="hidden" id="patrocinar-empresa-uid" value="">
+      <input type="hidden" id="patrocinar-empresa-nome" value="">
+      <input type="hidden" id="patrocinar-empresa-wpp" value="">
+      <input type="hidden" id="patrocinar-empresa-insta" value="">
+
+      <div class="form-group">
+        <label>LEGENDA / FRASE DE DESTAQUE DA SEMANA</label>
+        <input type="text" id="patrocinar-empresa-legenda" class="form-control" placeholder="Ex: A melhor revisão e suspensão da cidade!">
+      </div>
+
+      <button class="btn btn-cyan" style="margin-top:12px;" onclick="salvarPatrocinadoDaSemana()">💾 Definir como Patrocinado</button>
+      <button class="btn btn-outline" style="margin-top:8px;" onclick="fecharModal('modal-patrocinar-empresa')">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="modal-niveis" class="modal">
+    <div class="modal-content" style="text-align:left;">
+      <div style="text-align:center; font-size:2rem; margin-bottom:4px;">🏅</div>
+      <h3 style="font-size:1.15rem; font-weight:900; text-align:center; margin-bottom:12px;">Como Funcionam os Níveis</h3>
+      <p style="font-size:0.78rem; color:var(--muted); margin-bottom:14px; text-align:center;">Quanto mais você utiliza os cupons do Clube Prime, mais você sobe de nível e economiza!</p>
+      
+      <div style="background:var(--secondary); padding:12px; border-radius:14px; margin-bottom:8px;">
+        <div style="font-weight:900; font-size:0.9rem; color:#cd7f32;">🥉 Nível Bronze (0 a 3 cupons usados)</div>
+        <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">Nível inicial de todos os membros ao entrar no clube. Comece a resgatar para subir!</div>
+      </div>
+
+      <div style="background:var(--secondary); padding:12px; border-radius:14px; margin-bottom:8px;">
+        <div style="font-weight:900; font-size:0.9rem; color:#c0c0c0;">🥈 Nível Prata (4 a 9 cupons usados)</div>
+        <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">Você já é um membro ativo que economiza regularmente com os parceiros de Pelotas.</div>
+      </div>
+
+      <div style="background:var(--secondary); padding:12px; border-radius:14px; margin-bottom:16px;">
+        <div style="font-weight:900; font-size:0.9rem; color:#ffd700;">🥇 Nível Ouro (10 ou mais cupons usados)</div>
+        <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">O topo do clube! Membro Elite com máxima economia garantida nas melhores lojas da cidade.</div>
+      </div>
+
+      <button class="btn" onclick="fecharModal('modal-niveis')">Entendido</button>
+    </div>
+  </div>
+
+  <div id="modal-regras-cupom" class="modal">
+    <div class="modal-content" style="text-align:left;">
+      <div style="font-size:2rem; margin-bottom:4px; text-align:center;">ℹ️</div>
+      <h3 style="font-size:1.1rem; font-weight:900; text-align:center; margin-bottom:4px;" id="modal-regra-titulo">Regras da Promoção</h3>
+      <div id="modal-regra-loja" style="font-size:0.8rem; font-weight:800; color:var(--primary); text-align:center; margin-bottom:12px;">-</div>
+      
+      <div style="background:var(--secondary); padding:14px; border-radius:14px; margin-bottom:16px; font-size:0.8rem; line-height:1.4; color:var(--text);" id="modal-regra-texto">
+        Nenhuma regra informada.
+      </div>
+
+      <button class="btn" onclick="fecharModal('modal-regras-cupom')">Fechar</button>
+    </div>
+  </div>
+
+  <div id="modal-preview-vitrine" class="modal">
+    <div class="modal-content" style="text-align:left; max-height:85vh; overflow-y:auto;">
+      <h3 style="font-size:1.1rem; font-weight:900; text-align:center; margin-bottom:4px;">👁️ Visão do Cliente</h3>
+      <p style="font-size:0.72rem; color:var(--muted); text-align:center; margin-bottom:12px;">É assim que sua empresa aparece na vitrine (somente visualização).</p>
+      <div id="preview-vitrine-conteudo"></div>
+      <button class="btn" style="margin-top:14px;" onclick="fecharModal('modal-preview-vitrine')">Fechar</button>
+    </div>
+  </div>
+
+  <div id="modal-edit-client" class="modal">
+    <div class="modal-content" style="text-align:left;">
+      <h3 style="font-size:1.2rem; font-weight:900; margin-bottom:12px;">✏️ Editar Meus Dados</h3>
+      
+      <div class="form-group">
+        <label>NOME COMPLETO</label>
+        <input type="text" id="edit-client-name" class="form-control" placeholder="Seu nome">
+      </div>
+
+      <div class="form-group">
+        <label>WHATSAPP / CELULAR</label>
+        <input type="tel" id="edit-client-whatsapp" class="form-control" placeholder="(53) 99999-9999">
+      </div>
+
+      <div class="form-group">
+        <label>CPF (APENAS NÚMEROS)</label>
+        <input type="text" id="edit-client-cpf" class="form-control" placeholder="00000000000" maxlength="11">
+      </div>
+
+      <div class="form-group">
+        <label>NOVA SENHA (DEIXE EM BRANCO PARA NÃO ALTERAR)</label>
+        <input type="password" id="edit-client-pass" class="form-control" placeholder="Nova senha">
+      </div>
+
+      <button class="btn btn-cyan" style="margin-top:12px;" onclick="salvarAlteracoesCliente()">💾 Salvar Alterações</button>
+      <button class="btn btn-outline" style="margin-top:8px;" onclick="fecharModal('modal-edit-client')">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="modal-excluir-conta" class="modal">
+    <div class="modal-content" style="text-align:left;">
+      <div style="font-size:2.5rem; margin-bottom:6px; text-align:center;">⚠️</div>
+      <h3 style="font-size:1.15rem; font-weight:900; color:var(--danger); text-align:center;">Excluir minha conta?</h3>
+      <p id="excluir-conta-aviso" style="font-size:0.8rem; color:var(--muted); margin-top:6px; margin-bottom:14px; line-height:1.4;"></p>
+      <div class="form-group" id="box-excluir-senha" style="text-align:left;">
+        <label>SUA SENHA</label>
+        <input type="password" id="excluir-conta-senha" class="form-control" placeholder="Digite sua senha" autocomplete="current-password">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>DIGITE EXCLUIR PARA CONFIRMAR</label>
+        <input type="text" id="excluir-conta-confirmacao" class="form-control" placeholder="EXCLUIR" autocomplete="off" style="text-transform:uppercase;">
+      </div>
+      <button id="btn-excluir-conta-final" class="btn" style="background:var(--danger); color:#ffffff; margin-bottom:8px;" onclick="executarExclusaoPropriaConta()">🗑️ Excluir definitivamente</button>
+      <button class="btn btn-outline" onclick="fecharModal('modal-excluir-conta')">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="modal-senha-acao" class="modal" style="z-index:7000;">
+    <div class="modal-content" style="text-align:left;">
+      <div style="font-size:2.2rem; text-align:center; margin-bottom:4px;">🔐</div>
+      <h3 id="senha-acao-titulo" style="font-size:1.1rem; font-weight:900; text-align:center;">Senha de segurança</h3>
+      <p id="senha-acao-texto" style="font-size:0.8rem; color:var(--muted); margin:6px 0 12px; line-height:1.4; text-align:center;"></p>
+      <div class="form-group" style="text-align:left;">
+        <label>SENHA</label>
+        <input type="password" id="senha-acao-input" class="form-control" placeholder="Digite a senha" autocomplete="off" onkeydown="if(event.key==='Enter') confirmarSenhaAcao()">
+      </div>
+      <div id="box-senha-acao-confirmar" class="form-group" style="text-align:left; display:none;">
+        <label>CONFIRME A SENHA</label>
+        <input type="password" id="senha-acao-confirmar" class="form-control" placeholder="Digite de novo" autocomplete="off" onkeydown="if(event.key==='Enter') confirmarSenhaAcao()">
+      </div>
+      <div id="senha-acao-erro" style="font-size:0.75rem; color:var(--danger); font-weight:700; min-height:1em; margin-bottom:8px;"></div>
+      <button class="btn" style="margin-bottom:8px;" onclick="confirmarSenhaAcao()">✅ Confirmar</button>
+      <button class="btn btn-outline" onclick="cancelarSenhaAcao()">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="modal-confirm-delete-user" class="modal">
+    <div class="modal-content">
+      <div style="font-size:2.5rem; margin-bottom:6px;">⚠️</div>
+      <h3 style="font-size:1.15rem; font-weight:900; color:var(--danger);">Excluir Cliente?</h3>
+      <p style="font-size:0.8rem; color:var(--muted); margin-top:4px; margin-bottom:14px; line-height:1.4;">
+        Tem certeza que deseja apagar o cadastro de <strong id="delete-user-name">-</strong>? Esta ação removerá totalmente o usuário do banco de dados.
+      </p>
+      <input type="hidden" id="delete-user-uid" value="">
+      <button class="btn" style="background:var(--danger); color:#ffffff; margin-bottom:8px;" onclick="executarExclusaoCliente()">🗑️ Sim, Excluir Cadastro</button>
+      <button class="btn btn-outline" onclick="fecharModal('modal-confirm-delete-user')">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="modal-empresa-desativada" class="modal">
+    <div class="modal-content">
+      <div style="font-size:2.5rem; margin-bottom:6px;">🔒</div>
+      <h3 style="font-size:1.15rem; font-weight:900; color:var(--accent);">Empresa Desativada</h3>
+      <p style="font-size:0.82rem; color:var(--muted); margin-top:6px; margin-bottom:16px; line-height:1.4;">
+        Esta empresa parceira foi desativada no sistema administrativo. Caso você seja o lojista e acredite que isso seja um engano, entre em contato com o suporte do Clube Prime.
+      </p>
+      <a href="https://wa.me/555384052112?text=Olá,%20minha%20empresa%20foi%20desativada%20no%20Clube%20Prime%20e%20gostaria%20de%20falar%20com%20o%20suporte." target="_blank" class="btn btn-cyan" style="margin-bottom:8px; text-decoration:none; display:block; text-align:center;">💬 Falar com o Suporte (WhatsApp)</a>
+      <button class="btn btn-outline" onclick="fecharModal('modal-empresa-desativada')">Fechar</button>
+    </div>
+  </div>
+
+  <div id="modal-terms" class="modal">
+    <div class="modal-content" style="text-align:left;">
+      <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:10px;">📜 Termos e Privacidade</h3>
+      <div style="font-size:0.78rem; color:var(--muted); max-height:320px; overflow-y:auto; line-height:1.45; margin-bottom:14px;">
+        <p style="margin-bottom:8px;">O <strong>Clube Prime Pelotas</strong> é um clube de descontos que conecta clientes a estabelecimentos parceiros de Pelotas / RS. Ao criar sua conta, você concorda com estes termos, que seguem a Lei Geral de Proteção de Dados (LGPD, Lei 13.709/2018).</p>
+
+        <p style="margin-bottom:4px; color:var(--text);"><strong>1. Dados que coletamos</strong></p>
+        <p style="margin-bottom:8px;">• <strong>Cadastro:</strong> nome, e-mail, senha, WhatsApp e CPF. Se você entrar com o Google, recebemos também seu nome, e-mail e foto de perfil.<br>
+        • <strong>Uso do app:</strong> cupons resgatados (código, data, estabelecimento e valor de desconto), usados para calcular sua economia e seu nível (Bronze, Prata e Ouro).<br>
+        • <strong>Parceiros:</strong> nome da empresa, endereço, telefone, Instagram e localização da loja.<br>
+        • <strong>Pagamento VIP:</strong> nome, e-mail e CPF para gerar a cobrança Pix, e o status do pagamento.</p>
+
+        <p style="margin-bottom:4px; color:var(--text);"><strong>2. Para que usamos</strong></p>
+        <p style="margin-bottom:8px;">Criar e proteger sua conta, liberar o acesso VIP, gerar e validar cupons, emitir a cobrança Pix, mostrar sua economia e dar suporte. O CPF é usado apenas para o pagamento, e o WhatsApp para contato sobre seus resgates.</p>
+
+        <p style="margin-bottom:4px; color:var(--text);"><strong>3. Localização (GPS)</strong></p>
+        <p style="margin-bottom:8px;">Para clientes, a localização só é pedida quando você toca em "Próximos de Mim". Ela serve para calcular a distância até os parceiros e <strong>não é gravada</strong> em nossos servidores. Para parceiros, a localização da loja é salva e exibida aos clientes.</p>
+
+        <p style="margin-bottom:4px; color:var(--text);"><strong>4. Pagamento e acesso VIP</strong></p>
+        <p style="margin-bottom:8px;">A assinatura VIP custa R$ 19,90, paga via Pix e processada pelo <strong>Mercado Pago</strong>. Não recebemos nem guardamos dados de cartão ou de conta bancária. O acesso é liberado após a confirmação do pagamento e vale pelo período mostrado no seu perfil. Não há renovação automática: você renova quando quiser.</p>
+
+        <p style="margin-bottom:4px; color:var(--text);"><strong>5. Com quem compartilhamos</strong></p>
+        <p style="margin-bottom:8px;">Não vendemos seus dados. Eles são compartilhados apenas com:<br>
+        • o <strong>estabelecimento</strong> onde você resgata um cupom (seu nome, WhatsApp e o código do cupom);<br>
+        • <strong>Mercado Pago</strong>, para emitir a cobrança Pix;<br>
+        • <strong>Google (Firebase)</strong> e <strong>Vercel</strong>, que hospedam o login, o banco de dados e o sistema de pagamento;<br>
+        • autoridades, quando a lei exigir.<br>
+        A equipe administradora do Clube Prime também acessa os dados para suporte e validação de cupons.</p>
+
+        <p style="margin-bottom:4px; color:var(--text);"><strong>6. Armazenamento e segurança</strong></p>
+        <p style="margin-bottom:8px;">Seus dados ficam nos servidores do Google Firebase. Sua senha é gerenciada pelo Firebase Auth e não temos acesso a ela. Adotamos medidas para proteger suas informações, mas nenhum sistema é 100% seguro. No seu aparelho guardamos apenas preferências, como o tema escolhido.</p>
+
+        <p style="margin-bottom:4px; color:var(--text);"><strong>7. Cupons e ofertas</strong></p>
+        <p style="margin-bottom:8px;">As ofertas são criadas e gerenciadas pelos estabelecimentos parceiros, que definem desconto, regras e limite de uso (1 por dia, uso único ou ilimitado). O cupom é pessoal, com código único, e só pode ser resgatado por assinantes VIP ativos. O Clube Prime não se responsabiliza pelo produto ou serviço prestado pelo parceiro.</p>
+
+        <p style="margin-bottom:4px; color:var(--text);"><strong>8. Seus direitos</strong></p>
+        <p style="margin-bottom:8px;">Você pode corrigir seus dados no Perfil e, pela LGPD, pedir acesso, portabilidade, exclusão da conta e dos dados ou revogar seu consentimento. Fale com a gente em <strong>(53) 98405-2112</strong> ou em <a href="/privacidade.html" target="_blank" rel="noopener">política de privacidade</a>.</p>
+
+        <p style="margin-bottom:4px; color:var(--text);"><strong>9. Alterações</strong></p>
+        <p>Podemos atualizar estes termos e avisaremos pelo app quando isso acontecer. Última atualização: 21/11/2026.</p>
+      </div>
+      <button class="btn" onclick="fecharModal('modal-terms')">Entendido</button>
+    </div>
+  </div>
+
+  <div id="modal-alert" class="modal modal-top">
+    <div class="modal-content">
+      <div id="alert-icon" style="font-size:2rem; margin-bottom:6px;">⚡</div>
+      <h3 id="alert-title" style="font-size:1.1rem; font-weight:800; margin-bottom:6px;">Aviso</h3>
+      <p id="alert-msg" style="font-size:0.85rem; color:var(--muted); margin-bottom:14px; line-height:1.4;">---</p>
+      <button class="btn" style="padding:10px;" onclick="fecharModal('modal-alert')">OK</button>
+    </div>
+  </div>
+
+  <div id="modal-pix" class="modal">
+    <div class="modal-content">
+      <div style="font-size:2.2rem; margin-bottom:4px;">⚡</div>
+      <h3 style="font-size:1.2rem; font-weight:800;">Pagamento via PIX</h3>
+      <p style="font-size:0.8rem; color:var(--muted); margin-top:2px;">Escaneie o QR Code ou copie a chave abaixo:</p>
+
+      <div style="background:#ffffff; padding:12px; border-radius:20px; border:1px solid var(--card-border); width:210px; height:210px; margin:14px auto; display:flex; align-items:center; justify-content:center;">
+        <img id="pix-qr-img" src="" alt="QR Code Pix" style="width:100%; height:100%; object-fit:contain;">
+      </div>
+
+      <div style="display:flex; align-items:center; justify-content:center; gap:8px; font-size:0.75rem; color:var(--primary); margin-bottom:12px; font-weight:800;">
+        <span class="spinner"></span>
+        Verificando pagamento a cada 5s...
+      </div>
+
+      <button class="btn" style="margin-bottom:8px;" onclick="copiarPixCode()">📋 Copiar Código Pix</button>
+      <button id="btn-checar-vip" class="btn btn-cyan" style="margin-bottom:8px;" onclick="verificarStatusVipManual()">🔄 Já Paguei / Checar Agora</button>
+      <button class="btn btn-outline" onclick="fecharModal('modal-pix')">Fechar</button>
+    </div>
+  </div>
+
+  <div id="modal-coupon" class="modal">
+    <div class="modal-content" style="max-width: 380px; padding: 20px;">
+      <h3 id="modal-title" style="font-size:1.15rem; font-weight:800;">---</h3>
+      <div id="modal-disc" style="color:var(--primary); font-weight:900; font-size:1.05rem; margin-top:2px;">---</div>
+
+      <div style="text-align:left; background:var(--secondary); padding:10px 12px; border-radius:12px; margin-top:10px; font-size:0.78rem;">
+        <div>📍 <strong>Endereço:</strong> <span id="modal-address">-</span></div>
+        <div style="margin-top:3px;">📞 <strong>Contato/Zap:</strong> <span id="modal-phone">-</span></div>
+        <div style="margin-top:3px;">📜 <strong>Regras / Horários:</strong> <span id="modal-rules">-</span></div>
+      </div>
+
+      <div id="box-blocked" style="display:none; margin-top:14px; background:var(--accent-light); border:1px solid var(--accent-border); padding:14px; border-radius:16px;">
+        <span style="font-size:1.8rem;">🔒</span>
+        <h4 style="font-size:0.9rem; font-weight:800; color:var(--accent); margin-top:2px;">Código VIP Bloqueado!</h4>
+        <p style="font-size:0.75rem; color:var(--muted); margin-top:3px; line-height:1.3;">Seja membro VIP por apenas R$ 19,90 para desbloquear este e todos os cupons de Pelotas.</p>
+        <button class="btn btn-cyan" style="margin-top:10px;" onclick="gerarPixMercadoPago()">⚡ Desbloquear Cupons (R$ 19,90)</button>
+      </div>
+
+      <div id="box-unlocked" style="display:none; margin-top:14px;">
+        <div style="font-size:0.72rem; color:var(--muted); font-weight:700; margin-bottom:4px;">MOSTRE ESTE QR CODE OU CÓDIGO NO CAIXA:</div>
+        
+        <div id="qrcode-canvas" style="background:#ffffff; padding:10px; border-radius:14px; width:140px; height:140px; margin:8px auto; display:flex; justify-content:center; align-items:center;"></div>
+
+        <div style="background:var(--secondary); border:2px dashed var(--primary); padding:10px; border-radius:14px; margin:8px 0;">
+          <div id="modal-code" style="font-size:1.3rem; font-weight:900; letter-spacing:2px; color:var(--primary);">---</div>
+        </div>
+
+        <button class="btn" style="padding:10px;" onclick="copiarCodigoCupom()">📋 Copiar Código Único</button>
+      </div>
+
+      <button class="btn btn-outline" style="margin-top:12px; padding:10px;" onclick="fecharModal('modal-coupon')">Fechar</button>
+    </div>
+  </div>
+
+  <div id="modal-add-offer" class="modal">
+    <div class="modal-content">
+      <h3 id="modal-offer-heading" style="font-size:1.2rem; font-weight:800; margin-bottom:10px;">➕ Nova Oferta</h3>
+      <input type="hidden" id="edit-offer-id" value="">
+      <input type="hidden" id="offer-image" value="">
+
+      <!-- PRÉVIA AO VIVO -->
+      <div style="position:sticky; top:-24px; z-index:5; background:var(--bg); padding:14px 0 10px;">
+        <div style="font-size:0.65rem; font-weight:800; color:var(--muted); margin-bottom:4px; text-align:left;">👁️ ASSIM O CLIENTE VÊ</div>
+        <div style="background:var(--secondary); border:1px solid var(--card-border); border-radius:14px; overflow:hidden; text-align:left;">
+          <div style="padding:10px 12px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <img id="pv-img" alt="" style="display:none; width:76px; height:76px; flex:0 0 76px; border-radius:12px; object-fit:cover;">
+            <div style="flex:1; min-width:0;">
+              <div id="pv-title" style="font-size:0.85rem; font-weight:800; color:var(--text); word-break:break-word;">Título da promoção</div>
+              <div id="pv-desc" style="font-size:0.75rem; color:var(--muted); word-break:break-word;">Descrição curta</div>
+              <div id="pv-rule" style="font-size:0.68rem; color:var(--primary); font-weight:700; margin-top:4px;"></div>
+            </div>
+            <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+              <span id="pv-badge" class="discount-badge" style="font-size:0.72rem; padding:3px 8px;">OFERTA</span>
+              <span class="btn btn-cyan btn-small" style="padding:6px 10px; font-size:0.75rem; pointer-events:none;">🎟️ Resgatar</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group" style="text-align:left;">
+        <label>TÍTULO DA PROMOÇÃO *</label>
+        <input type="text" id="offer-title" class="form-control" placeholder="Ex: Troca de óleo com desconto" oninput="atualizarPreviaOferta()">
+      </div>
+
+      <div class="form-group" style="text-align:left;">
+        <label>DESCRIÇÃO CURTA *</label>
+        <input type="text" id="offer-desc" class="form-control" placeholder="Ex: Válido no Pix ou dinheiro" oninput="atualizarPreviaOferta()">
+      </div>
+
+      <div class="form-group" style="text-align:left;">
+        <label>DESCONTO (%) *</label>
+        <input type="number" id="offer-desconto-pct" class="form-control" min="1" max="100" step="1" placeholder="Ex: 15" oninput="atualizarPreviaOferta()">
+      </div>
+
+      <div class="form-group" style="text-align:left;">
+        <label>DIAS E HORÁRIOS (OPCIONAL)</label>
+        <input type="text" id="offer-rules" class="form-control" placeholder="Ex: Terça a quinta, 14h às 18h" oninput="atualizarPreviaOferta()">
+      </div>
+
+      <div class="form-group" style="text-align:left;">
+        <label>LIMITE DE USO POR PESSOA</label>
+        <select id="offer-limit" class="form-control" onchange="atualizarPreviaOferta()">
+          <option value="daily">1 cupom por dia por pessoa</option>
+          <option value="once">Apenas 1 cupom por pessoa (Uso Único)</option>
+          <option value="unlimited">Ilimitado</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="text-align:left;">
+        <label>CATEGORIA</label>
+        <select id="offer-cat" class="form-control">
+          <option value="gastronomia">Gastronomia & Delivery</option>
+          <option value="compras">Lojas & Compras</option>
+          <option value="automotivo">Automotivo</option>
+          <option value="beleza">Saúde & Beleza</option>
+          <option value="servicos">Serviços Gerais</option>
+          <option value="pet">Pet Shop</option>
+          <option value="saude">Saúde & Farmácia</option>
+          <option value="lazer">Lazer & Entretenimento</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="text-align:left;">
+        <label>FOTO DA OFERTA (OPCIONAL)</label>
+        <input type="file" id="offer-image-file" accept="image/*" style="display:none;" onchange="processarFotoOferta(this)">
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-outline btn-small" style="flex:1;" onclick="document.getElementById('offer-image-file').click()">📷 Escolher foto</button>
+          <button type="button" id="btn-remover-foto" class="btn btn-outline btn-small" style="display:none; color:var(--danger); border-color:#ef444455;" onclick="removerFotoOferta()">🗑️ Remover</button>
+        </div>
+        <div id="offer-image-status" style="font-size:0.7rem; color:var(--muted); margin-top:4px;"></div>
+      </div>
+
+      <details style="background:var(--secondary); border:1px solid var(--card-border); border-radius:12px; padding:10px 12px; margin-top:6px; text-align:left;">
+        <summary style="font-size:0.8rem; font-weight:800; cursor:pointer;">⚙️ Opções avançadas</summary>
+        <div style="margin-top:10px;">
+          <div class="form-group" style="text-align:left;">
+            <label>PREFIXO DO CÓDIGO</label>
+            <input type="text" id="offer-code" class="form-control" placeholder="Ex: BARBER" style="text-transform:uppercase;">
+            <div style="font-size:0.65rem; color:var(--muted); margin-top:3px;">O app gera códigos como BARBER-X7K2.</div>
+          </div>
+          <div class="form-group" style="text-align:left;">
+            <label>TEXTO DO SELO (SE QUISER OUTRO)</label>
+            <input type="text" id="offer-badge" class="form-control" placeholder="Ex: BRINDE" oninput="atualizarPreviaOferta()">
+            <div style="font-size:0.65rem; color:var(--muted); margin-top:3px;">Vazio = usa o desconto (ex: 15% OFF).</div>
+          </div>
+          <div class="form-group" style="text-align:left;">
+            <label>ECONOMIA ESTIMADA (R$) — SÓ REFERÊNCIA</label>
+            <input type="number" id="offer-econ" class="form-control" placeholder="15.00">
+          </div>
+          <div class="form-group" style="text-align:left;">
+            <label>LINK DA FOTO (ALTERNATIVA AO ENVIO)</label>
+            <input type="text" id="offer-image-link" class="form-control" placeholder="https://..." oninput="document.getElementById('offer-image').value = this.value.trim(); atualizarPreviaOferta()">
+          </div>
+          <div class="form-group" style="text-align:left; display:none;" id="box-admin-order">
+            <label>ORDEM DE POSICIONAMENTO (MENOR = TOPO - APENAS ADM)</label>
+            <input type="number" id="offer-order" class="form-control" value="0" placeholder="Ex: 1, 2, 3...">
+          </div>
+        </div>
+      </details>
+
+      <button class="btn btn-cyan" style="margin-top:12px;" onclick="salvarOfertaGeral()">💾 Salvar e Publicar</button>
+      <button class="btn btn-outline" style="margin-top:8px;" onclick="fecharModal('modal-add-offer')">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="modal-admin-empresa" class="modal">
+    <div class="modal-content">
+      <h3 id="modal-admin-empresa-title" style="font-size:1.2rem; font-weight:800; margin-bottom:12px;">🏢 Nova Empresa Parceira</h3>
+      <input type="hidden" id="admin-empresa-id" value="">
+
+      <div class="form-group" style="text-align:left;">
+        <label>NOME DA EMPRESA</label>
+        <input type="text" id="adm-emp-nome" class="form-control" placeholder="Ex: Hamburgueria Pelotas">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>E-MAIL DE ACESSO DO LOJISTA</label>
+        <input type="email" id="adm-emp-email" class="form-control" placeholder="lojista@email.com">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>DESCRIÇÃO</label>
+        <input type="text" id="adm-emp-desc" class="form-control" placeholder="Breve descrição dos produtos/serviços">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>ENDEREÇO</label>
+        <input type="text" id="adm-emp-endereco" class="form-control" placeholder="Ex: Rua XV de Novembro, 200">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>TELEFONE / WHATSAPP</label>
+        <input type="text" id="adm-emp-telefone" class="form-control" placeholder="Ex: 53 99999-8888">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>INSTAGRAM</label>
+        <input type="text" id="adm-emp-instagram" class="form-control" placeholder="Ex: @sualoja">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>CATEGORIA</label>
+        <select id="adm-emp-cat" class="form-control">
+          <option value="gastronomia">Gastronomia & Delivery</option>
+          <option value="compras">Lojas & Compras</option>
+          <option value="automotivo">Automotivo</option>
+          <option value="beleza">Saúde & Beleza</option>
+          <option value="servicos">Serviços Gerais</option>
+          <option value="pet">Pet Shop</option>
+          <option value="saude">Saúde & Farmácia</option>
+          <option value="lazer">Lazer & Entretenimento</option>
+        </select>
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label>LINK DA LOGO / IMAGEM</label>
+        <input type="text" id="adm-emp-logo" class="form-control" placeholder="https://exemplo.com/logo.jpg">
+      </div>
+
+      <button class="btn btn-cyan" style="margin-top:12px;" onclick="salvarEmpresaPeloAdmin()">💾 Salvar Empresa</button>
+      <button class="btn btn-outline" style="margin-top:8px;" onclick="fecharModal('modal-admin-empresa')">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- EASTER EGG: jogo secreto -->
+  <div id="offline-overlay" class="offline-overlay">
+    <h2 style="font-weight:900; margin-bottom:4px;">🎮 Você achou o jogo secreto!</h2>
+    <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">Toque na tela para pular os obstáculos. Quanto mais longe, mais rápido!</p>
+    <canvas id="offline-canvas" width="320" height="180"></canvas>
+    <div style="font-size:0.8rem; font-weight:800; margin-top:10px;">Pontos: <span id="offline-pontos">0</span> &nbsp;•&nbsp; Recorde: <span id="offline-recorde">0</span></div>
+    <div style="display:flex; gap:8px; margin-top:14px; width:100%; max-width:360px;">
+      <button type="button" class="btn btn-small" style="flex:1;" onclick="fecharJogoSecreto()">Fechar</button>
+    </div>
+  </div>
+
 </body>
 </html>
