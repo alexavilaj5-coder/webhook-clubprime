@@ -4040,7 +4040,7 @@ async function carregarFeed(forcar) {
         posts.push({
           uid: d.id, nome: u.empresaNome || 'Loja', categoria: u.empresaCategoria || '',
           foto: u.fotoUrl || '', whatsapp: u.empresaTelefone || '', cidadeId: u.cidadeId,
-          texto: p.texto || '', imagem: p.imagem || '', link: p.link || '', criadoEm: p.criadoEm, expiraEm: p.expiraEm
+          texto: p.texto || '', imagem: p.imagem || '', criadoEm: p.criadoEm, expiraEm: p.expiraEm
         });
       });
       _cacheFeed = { t: Date.now(), posts };
@@ -4082,7 +4082,6 @@ function renderizarFeed() {
       ? `<img class="feed-avatar" src="${escapeHtml(p.foto)}" alt="">` : `<div class="feed-avatar">🏢</div>`;
     const imagem = p.imagem && (p.imagem.startsWith('data:image/') || p.imagem.startsWith('https://'))
       ? `<img class="feed-img" src="${escapeHtml(p.imagem)}" alt="Foto do post" loading="lazy">` : '';
-    const link = linkSeguro(p.link);
     const fone = String(p.whatsapp || '').replace(/\D/g, '');
     return `
       <div class="feed-card">
@@ -4097,7 +4096,6 @@ function renderizarFeed() {
         ${imagem}
         <div class="feed-acoes">
           <button class="btn btn-cyan btn-small" onclick="irParaLojaNaVitrine('${escapeHtml(p.uid)}')">🎟️ Ver cupons</button>
-          ${link ? `<a class="btn btn-outline btn-small" style="text-decoration:none;" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">▶️ Ver vídeo/link</a>` : ''}
           ${fone ? `<a class="btn btn-outline btn-small" style="text-decoration:none;" href="https://wa.me/55${fone}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
           ${ehAdmin ? `<button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="removerPostAdmin('${escapeHtml(p.uid)}')">🗑️ Remover</button>` : ''}
         </div>
@@ -4177,22 +4175,18 @@ window.publicarPostFeed = async function() {
   if (!user || window.currentUserData?.funcao !== 'lojista') return;
   const texto = (document.getElementById('merchant-post-text').value || '').trim().slice(0, 400);
   const imagem = document.getElementById('merchant-post-img').value || '';
-  const linkBruto = (document.getElementById('merchant-post-link').value || '').trim();
-  const link = linkBruto ? linkSeguro(linkBruto) : '';
   if (texto.length < 5 && !imagem) return mostrarAviso("Atenção", "Escreva o texto do post (mínimo 5 letras) ou adicione uma foto.", "⚠️");
-  if (linkBruto && !link) return mostrarAviso("Atenção", "O link precisa começar com https://", "⚠️");
   const ultimo = window.currentUserData.post?.criadoEm ? new Date(window.currentUserData.post.criadoEm).getTime() : 0;
   if (Date.now() - ultimo < 6 * 3600000) return mostrarAviso("Aguarde ⏳", "Você pode publicar um novo post a cada 6 horas.", "⏳");
 
   const dias = Math.min(3, Math.max(1, Number(document.getElementById('merchant-post-dias').value) || 2));
   const agora = Date.now();
-  const post = { texto, imagem, link, criadoEm: new Date(agora).toISOString(), expiraEm: new Date(agora + dias * 86400000).toISOString() };
+  const post = { texto, imagem, criadoEm: new Date(agora).toISOString(), expiraEm: new Date(agora + dias * 86400000).toISOString() };
   try {
     await updateDoc(doc(db, "usuarios", user.uid), { post });
     window.currentUserData.post = post;
     registrarLogAdmin('feed', 'Post publicado no feed', texto.slice(0, 120));
     document.getElementById('merchant-post-text').value = '';
-    document.getElementById('merchant-post-link').value = '';
     removerFotoPost();
     atualizarCaixaPost();
     mostrarAviso("Publicado! 📣", `Seu post aparece na aba Feed por ${dias} dia(s).`, "✅");

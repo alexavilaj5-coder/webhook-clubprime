@@ -1410,3 +1410,13 @@ body {
 .feed-texto { font-size:0.88rem; line-height:1.45; white-space:pre-wrap; word-break:break-word; margin-bottom:10px; }
 .feed-img { width:100%; max-height:340px; object-fit:cover; border-radius:14px; margin-bottom:10px; }
 .feed-acoes { display:flex; gap:8px; flex-wrap:wrap; }
+
+
+/* ===== Tela do lojista: seções organizadas ===== */
+.sec-titulo { font-size:0.72rem; font-weight:900; letter-spacing:0.8px; text-transform:uppercase; color:var(--muted); margin:4px 2px 8px; }
+.sec-box { background:var(--card); border:1px solid var(--card-border); border-radius:18px; margin-bottom:12px; overflow:hidden; }
+.sec-sum { padding:14px 16px; font-weight:800; font-size:0.95rem; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; }
+.sec-sum::-webkit-details-marker { display:none; }
+.sec-seta { font-size:0.8rem; color:var(--muted); transition:transform .2s; }
+.sec-box[open] .sec-seta { transform:rotate(180deg); }
+.sec-corpo { padding:14px 16px; border-top:1px solid var(--card-border); }
