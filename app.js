@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   escutarBannerGlobal();
   escutarBannerLojista();
-  escutarLeilaoPatrocinado();
+  escutarPatrocinado();
 });
 
 function resetarEstadoUI() {
@@ -357,6 +357,7 @@ onAuthStateChanged(auth, async (user) => {
         carregarEstatisticasLojista(user.uid);
         carregarCuponsDoLojista(user.uid);
         carregarLogsDoLojista(user.uid);
+        atualizarCaixaPost();
         return;
       }
 
@@ -370,7 +371,7 @@ onAuthStateChanged(auth, async (user) => {
         const expiraData = new Date(data.vipExpiraEm);
         if (new Date() > expiraData) {
           data.vip = false;
-          await updateDoc(userDocRef, { vip: false, vipExpiraEm: null });
+          await updateDoc(userDocRef, { vip: false, vipExpiraEm: null, vipExpirouEm: expiraData.toISOString() });
         }
       }
 
@@ -396,6 +397,9 @@ onAuthStateChanged(auth, async (user) => {
 
       calcularEconomiaNivelUsuario(user.uid);
       carregarHistoricoClientePerfil(user.uid);
+      window.favoritosSet = new Set(Array.isArray(data.favoritos) ? data.favoritos : []);
+      atualizarFavoritosUI();
+      carregarFeed(false);
 
       const vipExpiringAlert = document.getElementById('vip-expiring-alert');
 
@@ -717,96 +721,6 @@ async function carregarParceirosCliente() {
   }
 }
 
-function escutarLeilaoPatrocinado() {
-  const leilaoRef = doc(db, "configuracoes", "leilao_patrocinado");
-  onSnapshot(leilaoRef, (docSnap) => {
-    const sponsoredBanner = document.getElementById('client-sponsored-banner');
-    const sponsoredNameEl = document.getElementById('client-sponsored-name');
-    const sponsoredLegendEl = document.getElementById('client-sponsored-legend-text');
-    const wppBtn = document.getElementById('client-sponsored-wpp-btn');
-    const instaBtn = document.getElementById('client-sponsored-insta-btn');
-    
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      const vencedor = data.vencedorNome;
-      const legenda = data.legenda || "Destaque especial da semana no Clube Prime!";
-      const whatsapp = data.whatsapp || "";
-      const instagram = data.instagram || "";
-
-      if (vencedor && sponsoredBanner && sponsoredNameEl) {
-        sponsoredNameEl.innerText = vencedor;
-        if (sponsoredLegendEl) sponsoredLegendEl.innerText = legenda;
-
-        if (whatsapp) {
-          const foneLimpo = whatsapp.replace(/\D/g, '');
-          wppBtn.href = `https://wa.me/55${foneLimpo}?text=Olá,%20vi%20vocês%20no%20destaque%20do%20Clube%20Prime!`;
-          wppBtn.style.display = 'inline-flex';
-        } else {
-          wppBtn.style.display = 'none';
-        }
-
-        if (instagram) {
-          instaBtn.href = `https://instagram.com/${encodeURIComponent(instagram.replace('@', ''))}`;
-          instaBtn.style.display = 'inline-flex';
-        } else {
-          instaBtn.style.display = 'none';
-        }
-
-        sponsoredBanner.style.display = 'block';
-      } else if (sponsoredBanner) {
-        sponsoredBanner.style.display = 'none';
-      }
-    }
-  });
-}
-
-window.abrirModalPatrocinarEmpresa = function(uid, nomeEncoded, wppEncoded, instaEncoded) {
-  const nome = decodeURIComponent(nomeEncoded);
-  const wpp = decodeURIComponent(wppEncoded);
-  const insta = decodeURIComponent(instaEncoded);
-
-  document.getElementById('patrocinar-empresa-uid').value = uid;
-  document.getElementById('patrocinar-empresa-nome').value = nome;
-  document.getElementById('patrocinar-empresa-wpp').value = wpp;
-  document.getElementById('patrocinar-empresa-insta').value = insta;
-
-  document.getElementById('patrocinar-empresa-nome-label').innerText = `🏢 ${nome}`;
-  document.getElementById('patrocinar-empresa-legenda').value = `Destaque exclusivo da semana com ${nome}!`;
-  
-  document.getElementById('modal-patrocinar-empresa').classList.add('active');
-};
-
-window.salvarPatrocinadoDaSemana = async function() {
-  const uid = document.getElementById('patrocinar-empresa-uid').value;
-  const nome = document.getElementById('patrocinar-empresa-nome').value;
-  const whatsapp = document.getElementById('patrocinar-empresa-wpp').value;
-  const instagram = document.getElementById('patrocinar-empresa-insta').value;
-  const legenda = document.getElementById('patrocinar-empresa-legenda').value.trim();
-
-  if (!legenda) {
-    return mostrarAviso("Atenção", "Escreva uma breve legenda para o destaque.", "⚠️");
-  }
-
-  try {
-    await setDoc(doc(db, "configuracoes", "leilao_patrocinado"), {
-      vencedorUid: uid,
-      vencedorNome: nome,
-      legenda: legenda,
-      whatsapp: whatsapp,
-      instagram: instagram,
-      maiorLance: 0,
-      atualizadoEm: new Date().toISOString()
-    }, { merge: true });
-
-    registrarLogAdmin('empresa', 'Patrocinada da semana definida', nome);
-    fecharModal('modal-patrocinar-empresa');
-    dispararConfetes();
-    mostrarAviso("Sucesso! ⭐", `A empresa "${nome}" agora é a Patrocinada da Semana no aplicativo!`, "✅");
-  } catch(err) {
-    mostrarAviso("Erro", err.message, "❌");
-  }
-};
-
 async function calcularEconomiaNivelUsuario(uid) {
   try {
     const qLogs = query(collection(db, "logs_resgates"), where("usuarioUid", "==", uid), where("status", "==", "usado"));
@@ -822,6 +736,7 @@ async function calcularEconomiaNivelUsuario(uid) {
     const elEcon = document.getElementById('user-economy-display');
     if (elEcon) elEcon.innerText = `R$ ${totalEcon.toFixed(2).replace('.', ',')}`;
 
+    atualizarBannerSaudade(totalEcon);
     const elProfileEcon = document.getElementById('profile-total-economy-val');
     if (elProfileEcon) elProfileEcon.innerText = `R$ ${totalEcon.toFixed(2).replace('.', ',')}`;
 
@@ -1159,13 +1074,54 @@ window.salvarBannerLojistaAdmin = async function() {
 function carregarCuponsVitrine() {
   const q = query(collection(db, "cupons"), where("ativo", "==", true));
   unsubscribeCupons = onSnapshot(q, (snapshot) => {
+    const bruto = [];
+    snapshot.forEach((docSnap) => { bruto.push({ id: docSnap.id, ...docSnap.data() }); });
+    window._cuponsVitrineBruto = bruto;
+    renderizarVitrine(true);
+  });
+  // Ofertas agendadas entram/saem sozinhas: reavalia a cada minuto (só redesenha se algo mudou)
+  if (!window._timerVitrine) {
+    window._timerVitrine = setInterval(() => { if (window._cuponsVitrineBruto) renderizarVitrine(false); }, 60000);
+  }
+}
+
+function cupomVisivelAgora(c) {
+  if (c.moderacao === 'pendente' || c.moderacao === 'rejeitado') return false;
+  const agora = Date.now();
+  if (c.inicioEm) { const t = new Date(c.inicioEm).getTime(); if (!isNaN(t) && t > agora) return false; }
+  if (c.fimEm) { const t = new Date(c.fimEm).getTime(); if (!isNaN(t) && t < agora) return false; }
+  return true;
+}
+
+function rotuloStatusCupom(c) {
+  if (c.moderacao === 'pendente') return '⏳ EM ANÁLISE';
+  if (c.moderacao === 'rejeitado') return '❌ REJEITADA';
+  if (!c.ativo) return '🔴 PAUSADA';
+  const agora = Date.now();
+  if (c.inicioEm && new Date(c.inicioEm).getTime() > agora) return '🗓️ AGENDADA';
+  if (c.fimEm && new Date(c.fimEm).getTime() < agora) return '⌛ ENCERRADA';
+  return '🟢 ATIVA';
+}
+
+function infoExtraCupom(c) {
+  const fmt = (iso) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const partes = [];
+  if (c.inicioEm) partes.push(`Início: ${fmt(c.inicioEm)}`);
+  if (c.fimEm) partes.push(`Fim: ${fmt(c.fimEm)}`);
+  let html = partes.length ? `<p style="font-size:0.7rem; color:var(--muted); margin:2px 0;">🗓️ ${partes.join(' • ')}</p>` : '';
+  if (c.moderacao === 'pendente') html += `<p style="font-size:0.7rem; color:#f59e0b; font-weight:700; margin:2px 0;">Aguardando aprovação antes de aparecer na vitrine.</p>`;
+  if (c.moderacao === 'rejeitado') html += `<p style="font-size:0.7rem; color:var(--danger); font-weight:700; margin:2px 0;">Motivo: ${escapeHtml(c.motivoRejeicao || 'não informado')}. Edite a oferta para reenviar.</p>`;
+  return html;
+}
+
+function renderizarVitrine(forcar) {
     const container = document.getElementById('stores-list-dynamic');
     if (!container) return;
-    
-    let cuponsArray = [];
-    snapshot.forEach((docSnap) => {
-      cuponsArray.push({ id: docSnap.id, ...docSnap.data() });
-    });
+
+    let cuponsArray = (window._cuponsVitrineBruto || []).filter(cupomVisivelAgora);
+    const assinatura = cuponsArray.map(c => c.id).sort().join(',');
+    if (!forcar && assinatura === window._assinaturaVitrine) return;
+    window._assinaturaVitrine = assinatura;
 
     cuponsArray.sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
     cuponsArray = window.Cidades.filtrar(cuponsArray);
@@ -1207,7 +1163,7 @@ function carregarCuponsVitrine() {
           ${imgHtml}
           <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
             <div>
-              <h3 style="font-size:1.1rem; font-weight:900; color:var(--text);">${ICONES_CATEGORIA[emp.categoria] || '🏢'} ${escapeHtml(emp.nome)}</h3>
+              <h3 style="font-size:1.1rem; font-weight:900; color:var(--text);">${ICONES_CATEGORIA[emp.categoria] || '🏢'} ${escapeHtml(emp.nome)} <button type="button" class="fav-btn" data-fav="${escapeHtml(String(key))}" onclick="toggleFavorito(this)" aria-label="Favoritar loja">♡</button></h3>
               <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">📍 ${escapeHtml(emp.endereco)} <span class="distancia-badge" style="font-weight:800; color:var(--primary);"></span></div>
             </div>
             <span style="font-size:0.7rem; font-weight:800; color:var(--primary); background:var(--secondary); padding:4px 8px; border-radius:10px; white-space:nowrap; flex-shrink:0; margin-left:8px;">${emp.cupons.length} ${emp.cupons.length === 1 ? 'oferta' : 'ofertas'}</span>
@@ -1270,7 +1226,7 @@ function carregarCuponsVitrine() {
     } else {
       container.innerHTML = `<p style="font-size:0.8rem; color:var(--muted); text-align:center; padding:20px;">Nenhum cupom ativo no momento.</p>`;
     }
-  });
+    atualizarFavoritosUI();
 }
 
 window.recarregarVitrine = function() {
@@ -1339,6 +1295,22 @@ async function carregarEstatisticasLojista(empresaUid) {
     const qValid = query(collection(db, "logs_resgates"), where("empresaId", "==", empresaUid), where("status", "==", "usado"));
     const snapValid = await getDocs(qValid);
     document.getElementById('merchant-stat-validations').innerText = snapValid.size;
+
+    const usosPorCliente = {};
+    let faturado = 0;
+    snapValid.forEach(d => {
+      const l = d.data();
+      const k = l.usuarioUid || l.usuarioEmail || d.id;
+      usosPorCliente[k] = (usosPorCliente[k] || 0) + 1;
+      faturado += Number(l.valorFinal) || 0;
+    });
+    const unicos = Object.keys(usosPorCliente).length;
+    const recorrentes = Object.values(usosPorCliente).filter(n => n >= 2).length;
+    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.innerText = v; };
+    setTxt('merchant-stat-clientes', unicos);
+    setTxt('merchant-stat-recorrentes', recorrentes);
+    setTxt('merchant-stat-novos', unicos - recorrentes);
+    setTxt('merchant-stat-faturado', 'R$ ' + faturado.toFixed(2).replace('.', ','));
   } catch (e) { console.error(e); }
 }
 
@@ -1358,7 +1330,7 @@ function carregarCuponsDoLojista(empresaUid) {
       const cupom = docSnap.data();
       const docId = docSnap.id;
       (window.cacheCuponsPorId = window.cacheCuponsPorId || {})[docId] = cupom;
-      const statusText = cupom.ativo ? "🟢 ATIVA" : "🔴 PAUSADA";
+      const statusText = rotuloStatusCupom(cupom);
       const btnPausaText = cupom.ativo ? "Pausar" : "Ativar";
       const cliques = cupom.cliquesCount || 0;
       const pctDescontoStr = cupom.descontoPct ? `${cupom.descontoPct}%` : 'Não def.';
@@ -1370,6 +1342,7 @@ function carregarCuponsDoLojista(empresaUid) {
             <span style="font-size:0.7rem; font-weight:800;">${statusText}</span>
           </div>
           <p style="font-size:0.75rem; color:var(--muted); margin:4px 0;">Desconto: <strong>${pctDescontoStr}</strong> | Prefixo: <strong>${escapeHtml(cupom.codigo || 'PRIME')}</strong> | Cliques: <strong>${cliques}</strong></p>
+          ${infoExtraCupom(cupom)}
           <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
             <button class="btn btn-outline btn-small" onclick="toggleStatusCupom('${docId}', ${cupom.ativo})">⏸️ ${btnPausaText}</button>
             <button class="btn btn-outline btn-small" onclick="abrirModalEditarOferta('${docId}', '${encAttr(cupom.titulo)}', '${encAttr(cupom.descricao)}', '${encAttr(cupom.regras || '')}', '${String(cupom.categoria || '').replace(/[^A-Za-z0-9_-]/g, '')}', '${encAttr(cupom.descontoBadge || '')}', ${cupom.valorEconomia || 10}, '${String(cupom.codigo || 'PRIME').replace(/[^A-Za-z0-9]/g, '') || 'PRIME'}', '', '${cupom.limite || 'daily'}', ${cupom.ordem || 0}, ${cupom.descontoPct || 10})">✏️ Editar</button>
@@ -1440,6 +1413,9 @@ window.switchAdminTab = function(tabName) {
   document.getElementById('adm-section-clientes').style.display = tabName === 'clientes' ? 'block' : 'none';
   document.getElementById('adm-section-empresas').style.display = tabName === 'empresas' ? 'block' : 'none';
   document.getElementById('adm-section-logs').style.display = tabName === 'logs' ? 'block' : 'none';
+  document.getElementById('adm-tab-rank').classList.toggle('active', tabName === 'rank');
+  document.getElementById('adm-section-rank').style.display = tabName === 'rank' ? 'block' : 'none';
+  if (tabName === 'rank') renderizarRankingsAdmin();
   if (tabName === 'logs') carregarLogsAdminSistema();
 };
 
@@ -1580,9 +1556,9 @@ async function carregarPainelAdmin() {
           <p style="font-size:0.75rem; color:var(--muted); margin-bottom:6px;">📅 <strong>Cadastrado em:</strong> <span style="color:var(--primary); font-weight:700;">${empresaCadastradaEm}</span></p>
 
           <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
-            <button class="btn btn-outline btn-small" style="color:#7c3aed; border-color:#7c3aed55;" onclick="abrirModalPatrocinarEmpresa('${uid}', '${empNomeEncoded}', '${empWppEncoded}', '${empInstaEncoded}')">⭐ Patrocinar</button>
             <button class="btn btn-outline btn-small" onclick="abrirModalAdminEmpresa('${uid}', '${empNomeEncoded}', '${encAttr(u.email || '')}', '${encAttr(u.empresaDescricao || '')}', '${encAttr(u.empresaEndereco || '')}', '${empWppEncoded}', '${empInstaEncoded}', '${String(u.empresaCategoria || 'gastronomia').replace(/[^A-Za-z0-9_-]/g, '')}', '${encAttr(u.fotoUrl || '')}')">✏️ Editar</button>
             <button class="btn btn-outline btn-small" onclick="toggleStatusEmpresaAdmin('${uid}', ${statusAtivo})">⏸️ ${btnToggleTxt}</button>
+            <button class="btn btn-outline btn-small" style="color:#7c3aed; border-color:#7c3aed55;" onclick="abrirModalPatrocinarEmpresa('${uid}', '${empNomeEncoded}', '${empWppEncoded}', '${empInstaEncoded}')">⭐ Patrocinar</button>
             <button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="excluirEmpresaAdmin('${uid}', '${empNomeEncoded}')">🗑️ Excluir</button>
           </div>
         </div>
@@ -1594,14 +1570,30 @@ async function carregarPainelAdmin() {
     const snapCuponsAll = await getDocs(collection(db, "cupons"));
     let allCuponsHtml = '';
     let totalCuponsAtivos = 0;
+    let pendentesHtml = '';
+    let totalPendentes = 0;
 
     snapCuponsAll.forEach(docSnap => {
       const c = docSnap.data();
       const docId = docSnap.id;
       if (!admDentro(c)) return;
       (window.cacheCuponsPorId = window.cacheCuponsPorId || {})[docId] = c;
+      if (c.moderacao === 'pendente') {
+        totalPendentes++;
+        pendentesHtml += `
+          <div style="background:var(--card); border:1px solid #f59e0b88; padding:12px; border-radius:14px; margin-bottom:8px;">
+            <div style="font-size:0.85rem; font-weight:900;">${escapeHtml(c.titulo)} <span style="color:var(--muted); font-weight:600;">(${escapeHtml(c.empresaNome)})</span></div>
+            <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">${escapeHtml(c.descricao)}</div>
+            <div style="font-size:0.72rem; margin-top:4px;">Desconto: <strong>${c.descontoPct || 10}%</strong> • Limite: <strong>${escapeHtml(c.limite || 'daily')}</strong>${c.regras ? ' • ' + escapeHtml(c.regras) : ''}</div>
+            ${infoExtraCupom({ inicioEm: c.inicioEm, fimEm: c.fimEm })}
+            <div style="display:flex; gap:6px; margin-top:8px;">
+              <button class="btn btn-cyan btn-small" style="flex:1;" onclick="aprovarOferta('${docId}')">✅ Aprovar</button>
+              <button class="btn btn-outline btn-small" style="flex:1; color:var(--danger); border-color:#ef444455;" onclick="rejeitarOferta('${docId}')">❌ Rejeitar</button>
+            </div>
+          </div>`;
+      }
       if (c.ativo) totalCuponsAtivos++;
-      const statusText = c.ativo ? "🟢 ATIVA" : "🔴 PAUSADA";
+      const statusText = rotuloStatusCupom(c);
       const btnPausaText = c.ativo ? "Pausar" : "Ativar";
 
       allCuponsHtml += `
@@ -1645,6 +1637,9 @@ async function carregarPainelAdmin() {
     document.getElementById('admin-count-coupons-used').innerText = countCuponsUsados;
     document.getElementById('admin-count-payments-approved').innerText = cachePagamentosPix.length;
 
+    window._admPendentes = totalPendentes;
+    const elPend = document.getElementById('admin-pending-offers');
+    if (elPend) elPend.innerHTML = pendentesHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhuma oferta pendente.</p>';
     document.getElementById('admin-all-coupons-list').innerHTML = allCuponsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum cupom registrado.</p>';
     document.getElementById('admin-users-list').innerHTML = listUsersHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhum cliente encontrado.</p>';
     document.getElementById('admin-merchants-list').innerHTML = listMerchantsHtml || '<p style="font-size:0.8rem; color:var(--muted);">Nenhuma empresa parceira registrada.</p>';
@@ -1653,6 +1648,8 @@ async function carregarPainelAdmin() {
     renderizarGraficoCrescimentoClientes();
     renderizarRelatorioFinanceiro('hoje');
     carregarUltimasAtividades();
+    renderizarRankingsAdmin();
+    atualizarBannerAdmin();
 
   } catch (err) { console.error(err); }
 }
@@ -2451,6 +2448,14 @@ window.removerFotoEmpresa = function() {
   atualizarPreviaFotoEmpresa();
 };
 
+function isoParaInputLocal(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 window.abrirModalCriarOferta = async function() {
   const user = auth.currentUser;
   if (user && window.currentUserData?.funcao === "lojista") {
@@ -2474,6 +2479,8 @@ window.abrirModalCriarOferta = async function() {
   document.getElementById('offer-econ').value = "";
   document.getElementById('offer-code').value = "";
   document.getElementById('offer-limit').value = "daily";
+  document.getElementById('offer-inicio').value = "";
+  document.getElementById('offer-fim').value = "";
 
   const boxAdmin = document.getElementById('box-admin-order');
   if (boxAdmin) {
@@ -2500,6 +2507,9 @@ window.abrirModalEditarOferta = function(id, titulo, desc, regras, cat, badge, e
   document.getElementById('offer-econ').value = econ;
   document.getElementById('offer-code').value = codigo;
   document.getElementById('offer-limit').value = limite;
+  const cEd = (window.cacheCuponsPorId && window.cacheCuponsPorId[id]) || {};
+  document.getElementById('offer-inicio').value = isoParaInputLocal(cEd.inicioEm);
+  document.getElementById('offer-fim').value = isoParaInputLocal(cEd.fimEm);
 
   const boxAdmin = document.getElementById('box-admin-order');
   if (boxAdmin) {
@@ -2527,6 +2537,16 @@ window.salvarOfertaGeral = async function() {
   const econ = parseFloat(document.getElementById('offer-econ').value) || 10.00;
   const codigo = document.getElementById('offer-code').value.toUpperCase().trim() || 'PRIME';
   const limite = document.getElementById('offer-limit').value || 'daily';
+  const inicioVal = document.getElementById('offer-inicio')?.value || '';
+  const fimVal = document.getElementById('offer-fim')?.value || '';
+  const inicioIso = inicioVal ? new Date(inicioVal).toISOString() : '';
+  const fimIso = fimVal ? new Date(fimVal).toISOString() : '';
+  if (inicioIso && fimIso && new Date(fimIso) <= new Date(inicioIso)) {
+    return mostrarAviso("Atenção", "A data de término precisa ser depois da data de início.", "⚠️");
+  }
+  if (fimIso && new Date(fimIso) <= new Date()) {
+    return mostrarAviso("Atenção", "A data de término já passou. Escolha uma data futura.", "⚠️");
+  }
 
   if (!titulo || !desc) return mostrarAviso("Atenção", "Preencha o título e a descrição.", "⚠️");
   if (isNaN(descontoPct) || descontoPct <= 0 || descontoPct > 100) {
@@ -2547,8 +2567,11 @@ window.salvarOfertaGeral = async function() {
       descontoBadge: badge,
       valorEconomia: econ,
       codigo: codigo,
-      limite: limite
+      limite: limite,
+      inicioEm: inicioIso,
+      fimEm: fimIso
     };
+    const ehAdminOferta = window.currentUserData?.funcao === "admin";
 
     if (window.currentUserData?.funcao === "admin") {
       const ordemInput = document.getElementById('offer-order');
@@ -2556,9 +2579,10 @@ window.salvarOfertaGeral = async function() {
     }
 
     if (editId) {
+      if (!ehAdminOferta) { dadosCupom.moderacao = 'pendente'; dadosCupom.motivoRejeicao = ''; }
       await updateDoc(doc(db, "cupons", editId), dadosCupom);
       registrarLogAdmin('cupom', 'Oferta editada', titulo);
-      mostrarAviso("Atualizado! 🚀", "Oferta modificada com sucesso.", "✅");
+      mostrarAviso("Atualizado! 🚀", ehAdminOferta ? "Oferta modificada com sucesso." : "Oferta enviada para nova aprovação. Assim que for aprovada, volta para a vitrine.", "✅");
     } else {
       dadosCupom.empresaId = user.uid;
       dadosCupom.cidadeId = window.currentUserData?.cidadeId || 'pelotas-rs';
@@ -2576,9 +2600,10 @@ window.salvarOfertaGeral = async function() {
       dadosCupom.cliquesCount = 0;
       dadosCupom.criadoEm = new Date().toISOString();
       dadosCupom.ordem = 0;
+      dadosCupom.moderacao = ehAdminOferta ? 'aprovado' : 'pendente';
       await addDoc(collection(db, "cupons"), dadosCupom);
-      registrarLogAdmin('cupom', 'Oferta publicada', titulo);
-      mostrarAviso("Publicado! 🎉", "Promoção ativa na vitrine.", "✅");
+      registrarLogAdmin('cupom', ehAdminOferta ? 'Oferta publicada' : 'Oferta enviada para aprovação', titulo);
+      mostrarAviso(ehAdminOferta ? "Publicado! 🎉" : "Enviada para análise ⏳", ehAdminOferta ? "Promoção ativa na vitrine." : "Sua oferta foi enviada e aparece na vitrine assim que o administrador aprovar.", "✅");
     }
 
     fecharModal('modal-add-offer');
@@ -2738,7 +2763,10 @@ window.navTo = function(screenId, btn) {
     btn.classList.add('active');
   }
 
-  if (screenId === 'search') {
+  if (screenId === 'feed') {
+    renderizarFeed();
+    carregarFeed(true).then(() => { renderizarFeed(); marcarFeedVisto(); });
+  } else if (screenId === 'search') {
     carregarParceirosCliente();
   } else if (screenId === 'profile') {
     carregarHistoricoClientePerfil();
@@ -2752,10 +2780,15 @@ window.filterCat = function(cat, btn) {
   cards.forEach(card => {
     if (cat === 'all') {
       card.style.display = 'block';
+    } else if (cat === 'favoritos') {
+      card.style.display = (window.favoritosSet && window.favoritosSet.has(card.dataset.key)) ? 'block' : 'none';
     } else {
       card.style.display = card.dataset.cat === cat ? 'block' : 'none';
     }
   });
+  if (cat === 'favoritos' && !(window.favoritosSet && window.favoritosSet.size)) {
+    mostrarAviso("Sem favoritos ainda ❤️", "Toque no coração ao lado do nome de uma loja para ela aparecer aqui.", "❤️");
+  }
 };
 
 window.filterStores = function(term) {
@@ -3805,3 +3838,595 @@ window.removerFotoOferta = function() {
     });
   }
 })();
+
+
+/* =====================================================================
+   NOVIDADES: favoritos, avisos das lojas, aviso do lojista, moderação,
+   rankings, alertas de fraude e exportação CSV
+   ===================================================================== */
+
+// ---------- Favoritos ----------
+window.favoritosSet = window.favoritosSet || new Set();
+
+function atualizarFavoritosUI() {
+  document.querySelectorAll('.fav-btn').forEach(b => {
+    const on = window.favoritosSet.has(b.dataset.fav);
+    b.classList.toggle('on', on);
+    b.textContent = on ? '♥' : '♡';
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+
+window.toggleFavorito = async function(btn) {
+  const user = auth.currentUser;
+  if (!user || window.currentUserData?.funcao !== 'cliente') {
+    return mostrarAviso("Atenção", "Entre como cliente para favoritar lojas.", "⚠️");
+  }
+  const key = btn.dataset.fav;
+  const set = window.favoritosSet;
+  const tinha = set.has(key);
+  if (!tinha && set.size >= 50) {
+    return mostrarAviso("Limite", "Você pode favoritar até 50 lojas.", "⚠️");
+  }
+  if (tinha) set.delete(key); else set.add(key);
+  atualizarFavoritosUI();
+  try {
+    await updateDoc(doc(db, "usuarios", user.uid), { favoritos: Array.from(set) });
+    if (window.currentUserData) window.currentUserData.favoritos = Array.from(set);
+    if (document.getElementById('screen-feed')?.classList.contains('active')) renderizarFeed();
+  } catch (e) {
+    if (tinha) set.add(key); else set.delete(key);
+    atualizarFavoritosUI();
+    mostrarAviso("Erro", "Não consegui salvar o favorito: " + e.message, "❌");
+  }
+};
+
+// ---------- Ir até uma loja na vitrine (usado pelo patrocinado e pelo feed) ----------
+window.irParaLojaNaVitrine = function(uid) {
+  if (!uid) return;
+  navTo('home', document.querySelector('.bottom-nav .nav-item'));
+  const pill = document.querySelector('.categories-bar .category-pill');
+  if (pill) filterCat('all', pill);
+  setTimeout(() => {
+    const card = Array.from(document.querySelectorAll('#stores-list-dynamic .company-card')).find(c => c.dataset.key === uid);
+    if (!card) return mostrarAviso("Sem cupons agora", "Essa loja não tem cupons ativos neste momento.", "🎟️");
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.style.outline = '3px solid var(--accent)';
+    setTimeout(() => { card.style.outline = ''; }, 2500);
+  }, 150);
+};
+
+// ---------- Patrocinado (definido manualmente pelo admin; mesmo documento de antes) ----------
+function escutarPatrocinado() {
+  onSnapshot(doc(db, "configuracoes", "leilao_patrocinado"), (snap) => {
+    window._patrocinado = snap.exists() ? snap.data() : null;
+    renderizarPatrocinado();
+  });
+  if (!window._timerPatrocinado) window._timerPatrocinado = setInterval(renderizarPatrocinado, 60000);
+}
+
+function patrocinadoAtivo() {
+  const p = window._patrocinado;
+  if (!p || !p.vencedorNome) return null;
+  if (p.fimEm) { const t = new Date(p.fimEm).getTime(); if (!isNaN(t) && t < Date.now()) return null; }
+  return p;
+}
+
+function renderizarPatrocinado() {
+  const p = patrocinadoAtivo();
+
+  const st = document.getElementById('adm-sponsor-status');
+  if (st) {
+    st.innerHTML = p
+      ? `⭐ Patrocinado agora: <strong>${escapeHtml(p.vencedorNome)}</strong>${p.fimEm ? ` (até ${new Date(p.fimEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })})` : ' (sem data para acabar)'} <button class="btn btn-outline btn-small" style="margin-top:8px;" onclick="removerPatrocinado()">Remover do topo</button>`
+      : 'Nenhuma loja patrocinada no momento. Use o botão ⭐ Patrocinar em uma loja abaixo.';
+  }
+
+  const banner = document.getElementById('client-sponsored-banner');
+  if (!banner) return;
+  if (!p) { banner.style.display = 'none'; return; }
+
+  document.getElementById('client-sponsored-name').innerText = p.vencedorNome;
+  document.getElementById('client-sponsored-legend-text').innerText = p.legenda || 'Destaque especial no Clube Prime!';
+
+  const foto = p.foto && (String(p.foto).startsWith('data:image/') || String(p.foto).startsWith('https://')) ? p.foto : '';
+  banner.style.backgroundImage = foto
+    ? `linear-gradient(135deg, rgba(76,29,149,0.86), rgba(55,48,163,0.72)), url("${foto}")`
+    : 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)';
+
+  const wppBtn = document.getElementById('client-sponsored-wpp-btn');
+  const instaBtn = document.getElementById('client-sponsored-insta-btn');
+  const fone = String(p.whatsapp || '').replace(/\D/g, '');
+  if (fone) {
+    wppBtn.href = `https://wa.me/55${fone}?text=${encodeURIComponent('Olá, vi vocês em destaque no Clube Prime!')}`;
+    wppBtn.style.display = 'inline-flex';
+  } else { wppBtn.style.display = 'none'; }
+  const insta = String(p.instagram || '').replace('@', '').trim();
+  if (insta) {
+    instaBtn.href = `https://instagram.com/${encodeURIComponent(insta)}`;
+    instaBtn.style.display = 'inline-flex';
+  } else { instaBtn.style.display = 'none'; }
+  banner.style.display = 'block';
+}
+
+window.abrirModalPatrocinarEmpresa = function(uid, nomeEncoded, wppEncoded, instaEncoded) {
+  const nome = decodeURIComponent(nomeEncoded);
+  document.getElementById('patrocinar-empresa-uid').value = uid;
+  document.getElementById('patrocinar-empresa-nome').value = nome;
+  document.getElementById('patrocinar-empresa-wpp').value = decodeURIComponent(wppEncoded);
+  document.getElementById('patrocinar-empresa-insta').value = decodeURIComponent(instaEncoded);
+  document.getElementById('patrocinar-empresa-nome-label').innerText = `🏢 ${nome}`;
+  document.getElementById('patrocinar-empresa-legenda').value = `Destaque exclusivo com ${nome}!`;
+  document.getElementById('patrocinar-empresa-fim').value = '';
+  document.getElementById('modal-patrocinar-empresa').classList.add('active');
+};
+
+window.salvarPatrocinadoDaSemana = async function() {
+  const uid = document.getElementById('patrocinar-empresa-uid').value;
+  const nome = document.getElementById('patrocinar-empresa-nome').value;
+  const legenda = document.getElementById('patrocinar-empresa-legenda').value.trim();
+  const fimVal = document.getElementById('patrocinar-empresa-fim').value;
+  if (!legenda) return mostrarAviso("Atenção", "Escreva uma frase curta para o destaque.", "⚠️");
+  const fimIso = fimVal ? new Date(fimVal).toISOString() : '';
+  if (fimIso && new Date(fimIso) <= new Date()) return mostrarAviso("Atenção", "A data de término precisa ser no futuro.", "⚠️");
+
+  const emp = (typeof cacheEmpresasAdmin !== 'undefined' ? cacheEmpresasAdmin : []).find(e => e.id === uid);
+  const fotoLoja = emp?.data?.fotoUrl || '';
+  try {
+    await setDoc(doc(db, "configuracoes", "leilao_patrocinado"), {
+      vencedorUid: uid,
+      vencedorNome: nome,
+      legenda,
+      whatsapp: document.getElementById('patrocinar-empresa-wpp').value,
+      instagram: document.getElementById('patrocinar-empresa-insta').value,
+      foto: fotoLoja.length < 350000 ? fotoLoja : '',
+      fimEm: fimIso,
+      atualizadoEm: new Date().toISOString()
+    }, { merge: true });
+    registrarLogAdmin('empresa', 'Patrocinado definido', `${nome}${fimIso ? ' até ' + fimIso : ''}`);
+    fecharModal('modal-patrocinar-empresa');
+    dispararConfetes();
+    mostrarAviso("Pronto! ⭐", `"${nome}" agora aparece no topo do app.`, "✅");
+  } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
+};
+
+window.removerPatrocinado = async function() {
+  if (window.currentUserData?.funcao !== 'admin') return;
+  if (!window.confirm('Tirar o patrocinado do topo do app?')) return;
+  try {
+    await setDoc(doc(db, "configuracoes", "leilao_patrocinado"), {
+      vencedorUid: '', vencedorNome: '', legenda: '', foto: '', fimEm: '', whatsapp: '', instagram: '',
+      atualizadoEm: new Date().toISOString()
+    }, { merge: true });
+    registrarLogAdmin('empresa', 'Patrocinado removido', '');
+    mostrarAviso("Removido", "O topo do app ficou sem patrocinado.", "✅");
+  } catch (err) { mostrarAviso("Erro", err.message, "❌"); }
+};
+
+// ---------- Feed das lojas ----------
+// Cada lojista tem no máximo 1 post no ar, guardado no próprio documento (campo "post").
+let _cacheFeed = { t: 0, posts: [] };
+
+function tempoAtras(iso) {
+  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (m < 1) return 'agora';
+  if (m < 60) return `há ${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `há ${h} h`;
+  const d = Math.floor(h / 24);
+  return `há ${d} dia${d > 1 ? 's' : ''}`;
+}
+
+function linkSeguro(u) {
+  try { const x = new URL(String(u).trim()); return x.protocol === 'https:' ? x.href : ''; } catch (e) { return ''; }
+}
+
+function postsAtivosFeed() {
+  const agora = Date.now();
+  const lista = window.Cidades.filtrar(_cacheFeed.posts.filter(p => new Date(p.expiraEm).getTime() > agora));
+  lista.sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm));
+  return lista;
+}
+
+async function carregarFeed(forcar) {
+  try {
+    if (forcar || Date.now() - _cacheFeed.t > 2 * 60000) {
+      const snap = await getDocs(query(collection(db, "usuarios"), where("funcao", "==", "lojista")));
+      const posts = [];
+      snap.forEach(d => {
+        const u = d.data();
+        const p = u.post;
+        if (u.ativo === false || !p || !p.criadoEm || !p.expiraEm) return;
+        posts.push({
+          uid: d.id, nome: u.empresaNome || 'Loja', categoria: u.empresaCategoria || '',
+          foto: u.fotoUrl || '', whatsapp: u.empresaTelefone || '', cidadeId: u.cidadeId,
+          texto: p.texto || '', imagem: p.imagem || '', link: p.link || '', criadoEm: p.criadoEm, expiraEm: p.expiraEm
+        });
+      });
+      _cacheFeed = { t: Date.now(), posts };
+    }
+    atualizarPontinhoFeed();
+  } catch (e) {
+    console.error(e);
+    const el = document.getElementById('feed-list');
+    if (el && forcar && !el.children.length) el.innerHTML = '<p style="font-size:0.8rem; color:var(--muted); text-align:center;">Não consegui carregar o feed agora.</p>';
+  }
+}
+
+function atualizarPontinhoFeed() {
+  const dot = document.getElementById('feed-dot');
+  if (!dot) return;
+  let visto = 0;
+  try { visto = Number(localStorage.getItem('feedVisto') || 0); } catch (e) {}
+  dot.style.display = postsAtivosFeed().some(p => new Date(p.criadoEm).getTime() > visto) ? 'block' : 'none';
+}
+
+function marcarFeedVisto() {
+  try { localStorage.setItem('feedVisto', String(Date.now())); } catch (e) {}
+  const dot = document.getElementById('feed-dot');
+  if (dot) dot.style.display = 'none';
+}
+
+function renderizarFeed() {
+  const el = document.getElementById('feed-list');
+  if (!el) return;
+  const posts = postsAtivosFeed();
+  if (!posts.length) {
+    el.innerHTML = '<p style="font-size:0.85rem; color:var(--muted); text-align:center; padding:30px 10px;">Nenhuma novidade por enquanto. Quando as lojas postarem, aparece aqui. 📣</p>';
+    return;
+  }
+  const ehAdmin = window.currentUserData?.funcao === 'admin';
+  el.innerHTML = posts.map(p => {
+    const fav = window.favoritosSet && window.favoritosSet.has(p.uid);
+    const avatar = p.foto && (p.foto.startsWith('data:image/') || p.foto.startsWith('https://'))
+      ? `<img class="feed-avatar" src="${escapeHtml(p.foto)}" alt="">` : `<div class="feed-avatar">🏢</div>`;
+    const imagem = p.imagem && (p.imagem.startsWith('data:image/') || p.imagem.startsWith('https://'))
+      ? `<img class="feed-img" src="${escapeHtml(p.imagem)}" alt="Foto do post" loading="lazy">` : '';
+    const link = linkSeguro(p.link);
+    const fone = String(p.whatsapp || '').replace(/\D/g, '');
+    return `
+      <div class="feed-card">
+        <div class="feed-head">
+          ${avatar}
+          <div style="min-width:0;">
+            <div class="feed-nome">${fav ? '❤️ ' : ''}${escapeHtml(p.nome)}</div>
+            <div class="feed-meta">${escapeHtml(p.categoria)}${p.categoria ? ' • ' : ''}${tempoAtras(p.criadoEm)}</div>
+          </div>
+        </div>
+        ${p.texto ? `<div class="feed-texto">${escapeHtml(p.texto)}</div>` : ''}
+        ${imagem}
+        <div class="feed-acoes">
+          <button class="btn btn-cyan btn-small" onclick="irParaLojaNaVitrine('${escapeHtml(p.uid)}')">🎟️ Ver cupons</button>
+          ${link ? `<a class="btn btn-outline btn-small" style="text-decoration:none;" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">▶️ Ver vídeo/link</a>` : ''}
+          ${fone ? `<a class="btn btn-outline btn-small" style="text-decoration:none;" href="https://wa.me/55${fone}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
+          ${ehAdmin ? `<button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="removerPostAdmin('${escapeHtml(p.uid)}')">🗑️ Remover</button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+window.removerPostAdmin = async function(uid) {
+  if (window.currentUserData?.funcao !== 'admin') return;
+  if (!window.confirm('Remover este post do feed?')) return;
+  try {
+    await updateDoc(doc(db, "usuarios", uid), { post: null });
+    _cacheFeed.posts = _cacheFeed.posts.filter(p => p.uid !== uid);
+    registrarLogAdmin('feed', 'Post removido pelo admin', uid);
+    renderizarFeed();
+  } catch (e) { mostrarAviso("Erro", e.message, "❌"); }
+};
+
+// ---------- Lojista: publicar no feed ----------
+function atualizarCaixaPost() {
+  const el = document.getElementById('merchant-post-atual');
+  const p = window.currentUserData?.post;
+  if (!el) return;
+  if (p && p.expiraEm && new Date(p.expiraEm).getTime() > Date.now()) {
+    el.innerText = `Post no ar até ${new Date(p.expiraEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}: "${String(p.texto || '').slice(0, 60)}${(p.texto || '').length > 60 ? '…' : ''}"`;
+  } else {
+    el.innerText = 'Nenhum post no ar.';
+  }
+}
+
+window.processarFotoPost = function(input) {
+  const file = input.files && input.files[0];
+  const status = document.getElementById('merchant-post-img-status');
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { status.innerText = '❌ Escolha um arquivo de imagem.'; input.value = ''; return; }
+  status.innerText = '⏳ Preparando a foto...';
+  const reader = new FileReader();
+  reader.onerror = () => { status.innerText = '❌ Não foi possível ler a foto.'; };
+  reader.onload = () => {
+    const img = new Image();
+    img.onerror = () => { status.innerText = '❌ Imagem inválida. Tente outra.'; };
+    img.onload = () => {
+      const escala = Math.min(1, 800 / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.width * escala));
+      canvas.height = Math.max(1, Math.round(img.height * escala));
+      const ctx2d = canvas.getContext('2d');
+      ctx2d.fillStyle = '#ffffff';
+      ctx2d.fillRect(0, 0, canvas.width, canvas.height);
+      ctx2d.drawImage(img, 0, 0, canvas.width, canvas.height);
+      let q = 0.72;
+      let dataUrl = canvas.toDataURL('image/jpeg', q);
+      while (dataUrl.length > 150000 && q > 0.35) { q -= 0.08; dataUrl = canvas.toDataURL('image/jpeg', q); }
+      if (dataUrl.length > 200000) { status.innerText = '❌ Foto muito pesada. Escolha outra.'; return; }
+      document.getElementById('merchant-post-img').value = dataUrl;
+      const prev = document.getElementById('merchant-post-preview');
+      prev.src = dataUrl; prev.style.display = 'block';
+      document.getElementById('merchant-post-img-remover').style.display = 'inline-flex';
+      status.innerText = `✅ Foto pronta (${Math.round(dataUrl.length / 1024)} KB).`;
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+};
+
+window.removerFotoPost = function() {
+  document.getElementById('merchant-post-img').value = '';
+  const prev = document.getElementById('merchant-post-preview');
+  prev.removeAttribute('src'); prev.style.display = 'none';
+  document.getElementById('merchant-post-img-remover').style.display = 'none';
+  document.getElementById('merchant-post-img-status').innerText = '';
+};
+
+window.publicarPostFeed = async function() {
+  const user = auth.currentUser;
+  if (!user || window.currentUserData?.funcao !== 'lojista') return;
+  const texto = (document.getElementById('merchant-post-text').value || '').trim().slice(0, 400);
+  const imagem = document.getElementById('merchant-post-img').value || '';
+  const linkBruto = (document.getElementById('merchant-post-link').value || '').trim();
+  const link = linkBruto ? linkSeguro(linkBruto) : '';
+  if (texto.length < 5 && !imagem) return mostrarAviso("Atenção", "Escreva o texto do post (mínimo 5 letras) ou adicione uma foto.", "⚠️");
+  if (linkBruto && !link) return mostrarAviso("Atenção", "O link precisa começar com https://", "⚠️");
+  const ultimo = window.currentUserData.post?.criadoEm ? new Date(window.currentUserData.post.criadoEm).getTime() : 0;
+  if (Date.now() - ultimo < 6 * 3600000) return mostrarAviso("Aguarde ⏳", "Você pode publicar um novo post a cada 6 horas.", "⏳");
+
+  const dias = Math.min(3, Math.max(1, Number(document.getElementById('merchant-post-dias').value) || 2));
+  const agora = Date.now();
+  const post = { texto, imagem, link, criadoEm: new Date(agora).toISOString(), expiraEm: new Date(agora + dias * 86400000).toISOString() };
+  try {
+    await updateDoc(doc(db, "usuarios", user.uid), { post });
+    window.currentUserData.post = post;
+    registrarLogAdmin('feed', 'Post publicado no feed', texto.slice(0, 120));
+    document.getElementById('merchant-post-text').value = '';
+    document.getElementById('merchant-post-link').value = '';
+    removerFotoPost();
+    atualizarCaixaPost();
+    mostrarAviso("Publicado! 📣", `Seu post aparece na aba Feed por ${dias} dia(s).`, "✅");
+  } catch (e) { mostrarAviso("Erro", e.message, "❌"); }
+};
+
+window.removerPostFeed = async function() {
+  const user = auth.currentUser;
+  if (!user || window.currentUserData?.funcao !== 'lojista') return;
+  try {
+    await updateDoc(doc(db, "usuarios", user.uid), { post: null });
+    window.currentUserData.post = null;
+    atualizarCaixaPost();
+    mostrarAviso("Removido", "Seu post saiu do feed.", "✅");
+  } catch (e) { mostrarAviso("Erro", e.message, "❌"); }
+};
+
+// ---------- Cliente: "sentimos sua falta" quando o VIP vence ----------
+function atualizarBannerSaudade(totalEcon) {
+  const el = document.getElementById('banner-assinatura-sub');
+  const d = window.currentUserData;
+  if (!el || !d) return;
+  if (!d.vip && d.vipExpirouEm) {
+    const dt = new Date(d.vipExpirouEm).toLocaleDateString('pt-BR');
+    el.textContent = totalEcon > 0
+      ? `Seu VIP venceu em ${dt}. Você já economizou R$ ${totalEcon.toFixed(2).replace('.', ',')}. Volte a economizar!`
+      : `Seu VIP venceu em ${dt}. Renove por Pix • 30 dias`;
+  } else {
+    el.textContent = 'Pix instantâneo • 30 dias';
+  }
+}
+
+// ---------- Admin: moderação de ofertas ----------
+window.aprovarOferta = async function(id) {
+  try {
+    await updateDoc(doc(db, "cupons", id), { moderacao: 'aprovado', motivoRejeicao: '', moderadoEm: new Date().toISOString() });
+    registrarLogAdmin('cupom', 'Oferta aprovada', id);
+    mostrarAviso("Aprovada ✅", "A oferta já aparece na vitrine (respeitando a agenda, se houver).", "✅");
+    carregarPainelAdmin();
+  } catch (e) { mostrarAviso("Erro", e.message, "❌"); }
+};
+
+window.rejeitarOferta = async function(id) {
+  const motivo = window.prompt('Motivo da rejeição (o lojista vai ler isso):', '');
+  if (motivo === null) return;
+  try {
+    await updateDoc(doc(db, "cupons", id), {
+      moderacao: 'rejeitado',
+      motivoRejeicao: (motivo.trim() || 'Não atende às regras do Clube.').slice(0, 200),
+      moderadoEm: new Date().toISOString()
+    });
+    registrarLogAdmin('cupom', 'Oferta rejeitada', `${id} — ${motivo}`);
+    mostrarAviso("Rejeitada", "O lojista vai ver o motivo no painel dele.", "✅");
+    carregarPainelAdmin();
+  } catch (e) { mostrarAviso("Erro", e.message, "❌"); }
+};
+
+// ---------- Admin: rankings, fraude, banner ----------
+function fmtBRL(n) { return 'R$ ' + Number(n || 0).toFixed(2).replace('.', ','); }
+
+function logDentroDoPeriodo(l) {
+  const v = document.getElementById('rank-periodo')?.value || '30';
+  if (v === 'all') return true;
+  const t = new Date(l.dataValidacao || l.dataHora).getTime();
+  return !isNaN(t) && (Date.now() - t) <= Number(v) * 86400000;
+}
+
+function calcularAlertasFraude() {
+  const logs = (typeof cacheLogsAdmin !== 'undefined' && cacheLogsAdmin) || [];
+  const alertas = [];
+  const agora = Date.now();
+  const DIA = 86400000;
+  const porUser = {};
+  logs.forEach(l => {
+    const k = l.usuarioUid || l.usuarioEmail || '?';
+    (porUser[k] = porUser[k] || []).push(l);
+  });
+
+  Object.values(porUser).forEach(arr => {
+    const nome = arr[0].usuarioNome || arr[0].usuarioEmail || 'Cliente';
+    const wpp = (arr.find(x => x.usuarioWhatsapp) || {}).usuarioWhatsapp || '';
+
+    const ult24 = arr.filter(l => agora - new Date(l.dataHora).getTime() <= DIA);
+    if (ult24.length >= 6) {
+      alertas.push({ nivel: 'alto', titulo: 'Muitos resgates em 24h', detalhe: `${nome}: ${ult24.length} cupons nas últimas 24 horas`, wpp });
+    }
+
+    const usados = arr.filter(l => l.status === 'usado');
+    const porCupom = {};
+    usados.forEach(l => { (porCupom[l.cupomId] = porCupom[l.cupomId] || []).push(l); });
+    Object.entries(porCupom).forEach(([cid, ls]) => {
+      const lim = ((window.cacheCuponsPorId || {})[cid] || {}).limite;
+      if (lim === 'once' && ls.length > 1) {
+        alertas.push({ nivel: 'alto', titulo: 'Cupom de uso único usado mais de uma vez', detalhe: `${nome} usou "${ls[0].cupomTitulo}" ${ls.length}x`, wpp });
+      }
+      if (lim === 'daily') {
+        const porDia = {};
+        ls.forEach(l => { const d = new Date(l.dataValidacao || l.dataHora).toDateString(); porDia[d] = (porDia[d] || 0) + 1; });
+        const max = Math.max(...Object.values(porDia));
+        if (max > 1) alertas.push({ nivel: 'alto', titulo: 'Cupom diário usado 2x no mesmo dia', detalhe: `${nome} usou "${ls[0].cupomTitulo}" ${max}x no mesmo dia`, wpp });
+      }
+    });
+
+    const porLojaDia = {};
+    usados.forEach(l => {
+      const k = (l.empresaId || l.empresaNome) + '|' + new Date(l.dataValidacao || l.dataHora).toDateString();
+      (porLojaDia[k] = porLojaDia[k] || []).push(l);
+    });
+    Object.values(porLojaDia).forEach(ls => {
+      if (ls.length >= 3) alertas.push({ nivel: 'medio', titulo: 'Mesma loja 3+ vezes no mesmo dia', detalhe: `${nome} em ${ls[0].empresaNome}: ${ls.length} validações`, wpp });
+    });
+  });
+
+  const porWpp = {};
+  ((typeof cacheTodosUsuarios !== 'undefined' && cacheTodosUsuarios) || []).filter(u => u.funcao === 'cliente').forEach(u => {
+    const n = String(u.whatsapp || '').replace(/\D/g, '');
+    if (n.length >= 10) (porWpp[n] = porWpp[n] || []).push(u);
+  });
+  Object.entries(porWpp).forEach(([n, us]) => {
+    if (us.length >= 3) alertas.push({ nivel: 'medio', titulo: 'Mesmo WhatsApp em várias contas', detalhe: `${us.length} contas com ${n}: ${us.map(u => u.nome || u.email).join(', ')}`, wpp: n });
+  });
+
+  alertas.sort((a, b) => (a.nivel === b.nivel ? 0 : a.nivel === 'alto' ? -1 : 1));
+  return alertas;
+}
+
+window.renderizarRankingsAdmin = function() {
+  const elL = document.getElementById('admin-rank-lojas');
+  const elC = document.getElementById('admin-rank-clientes');
+  const elF = document.getElementById('admin-fraud-list');
+  if (!elL || !elC || !elF) return;
+
+  const logs = (typeof cacheLogsAdmin !== 'undefined' && cacheLogsAdmin) || [];
+  const usados = logs.filter(l => l.status === 'usado' && logDentroDoPeriodo(l));
+  const medalhas = ['🥇', '🥈', '🥉'];
+
+  const lojas = {};
+  const clientes = {};
+  usados.forEach(l => {
+    const kL = l.empresaId || l.empresaNome || '?';
+    const o = lojas[kL] || (lojas[kL] = { nome: l.empresaNome || 'Empresa', qtd: 0, total: 0 });
+    o.qtd++; o.total += Number(l.valorFinal) || 0;
+    const kC = l.usuarioUid || l.usuarioEmail || '?';
+    const c = clientes[kC] || (clientes[kC] = { nome: l.usuarioNome || l.usuarioEmail || 'Cliente', qtd: 0, eco: 0 });
+    c.qtd++; c.eco += Number(l.valorDescontado || l.valorEconomia) || 12;
+  });
+
+  const linha = (i, titulo, sub) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--card); border:1px solid var(--card-border); padding:8px 12px; border-radius:12px; margin-bottom:6px; font-size:0.8rem;">
+      <span><strong>${medalhas[i] || (i + 1) + 'º'}</strong> ${escapeHtml(titulo)}</span>
+      <span style="color:var(--muted); font-size:0.72rem; text-align:right;">${sub}</span>
+    </div>`;
+  const vazio = '<p style="font-size:0.8rem; color:var(--muted);">Sem resgates validados nesse período.</p>';
+
+  const topL = Object.values(lojas).sort((a, b) => b.qtd - a.qtd || b.total - a.total).slice(0, 10);
+  elL.innerHTML = topL.length ? topL.map((o, i) => linha(i, o.nome, `${o.qtd} resgate(s) • ${fmtBRL(o.total)}`)).join('') : vazio;
+  const topC = Object.values(clientes).sort((a, b) => b.eco - a.eco).slice(0, 10);
+  elC.innerHTML = topC.length ? topC.map((o, i) => linha(i, o.nome, `${fmtBRL(o.eco)} • ${o.qtd} uso(s)`)).join('') : vazio;
+
+  const alertas = calcularAlertasFraude();
+  window._admAlertasFraude = alertas.length;
+  elF.innerHTML = alertas.length ? alertas.slice(0, 40).map(a => `
+    <div style="background:var(--card); border:1px solid ${a.nivel === 'alto' ? '#ef4444' : '#f59e0b'}88; border-left:4px solid ${a.nivel === 'alto' ? '#ef4444' : '#f59e0b'}; padding:10px 12px; border-radius:12px; margin-bottom:6px;">
+      <div style="font-size:0.8rem; font-weight:900;">${a.nivel === 'alto' ? '🔴' : '🟠'} ${escapeHtml(a.titulo)}</div>
+      <div style="font-size:0.74rem; color:var(--muted); margin-top:2px;">${escapeHtml(a.detalhe)}</div>
+      ${a.wpp ? `<a href="https://wa.me/55${String(a.wpp).replace(/\D/g, '')}" target="_blank" rel="noopener" style="font-size:0.72rem; color:var(--primary); font-weight:800;">💬 Chamar no WhatsApp</a>` : ''}
+    </div>`).join('') : '<p style="font-size:0.8rem; color:#10b981; font-weight:700;">✅ Nenhum comportamento suspeito encontrado.</p>';
+  atualizarBannerAdmin();
+};
+
+function atualizarBannerAdmin() {
+  const n = window._admAlertasFraude || 0;
+  const p = window._admPendentes || 0;
+  const tabR = document.getElementById('adm-tab-rank');
+  const tabC = document.getElementById('adm-tab-cupons');
+  if (tabR) tabR.textContent = '🏆 Rank' + (n ? ` 🚨${n}` : '');
+  if (tabC) tabC.textContent = '🎟️ Cupons' + (p ? ` ⏳${p}` : '');
+  const el = document.getElementById('admin-alert-banner');
+  if (!el) return;
+  const partes = [];
+  if (n) partes.push(`<span style="cursor:pointer; text-decoration:underline;" onclick="switchAdminTab('rank')">🚨 ${n} alerta(s) de fraude</span>`);
+  if (p) partes.push(`<span style="cursor:pointer; text-decoration:underline;" onclick="switchAdminTab('cupons')">⏳ ${p} oferta(s) aguardando aprovação</span>`);
+  el.innerHTML = partes.join(' &nbsp;•&nbsp; ');
+  el.style.display = partes.length ? 'block' : 'none';
+}
+
+// ---------- Admin: exportação CSV ----------
+function csvCelula(v) {
+  let t = (v === null || v === undefined) ? '' : String(v);
+  if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; // evita fórmula maliciosa no Excel
+  return '"' + t.replace(/"/g, '""') + '"';
+}
+
+function baixarCsv(nomeBase, linhas) {
+  const csv = '\ufeff' + linhas.map(l => l.map(csvCelula).join(';')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${nomeBase}-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+const dataBR = (iso) => { if (!iso) return ''; const d = new Date(iso); return isNaN(d.getTime()) ? '' : d.toLocaleString('pt-BR'); };
+const numBR = (n) => Number(n || 0).toFixed(2).replace('.', ',');
+
+window.exportarFinanceiroCsv = function() {
+  const pags = (cachePagamentosPix || []).slice().sort((a, b) => new Date(b.dataHora) - new Date(a.dataHora));
+  if (!pags.length) return mostrarAviso("Sem dados", "Não há pagamentos para exportar.", "ℹ️");
+  const linhas = [['ID do pagamento', 'Data/hora', 'Nome', 'E-mail', 'WhatsApp', 'Valor (R$)']];
+  pags.forEach(p => linhas.push([p.paymentId || p.id, dataBR(p.dataHora), p.nome, p.email, p.whatsapp, numBR(p.valor)]));
+  linhas.push(['', '', '', '', 'TOTAL', numBR(pags.reduce((t, p) => t + (Number(p.valor) || 0), 0))]);
+  baixarCsv('financeiro-clube-prime', linhas);
+  registrarLogAdmin('exportacao', 'Exportou financeiro (CSV)', `${pags.length} pagamentos`);
+};
+
+window.exportarClientesCsv = async function() {
+  if (!(await exigirSenhaAcao('exportar a lista de clientes'))) return;
+  const clientes = (cacheTodosUsuarios || []).filter(u => u.funcao === 'cliente');
+  if (!clientes.length) return mostrarAviso("Sem dados", "Não há clientes para exportar.", "ℹ️");
+  const linhas = [['Nome', 'E-mail', 'WhatsApp', 'Cidade', 'VIP', 'VIP expira em', 'Cadastro']];
+  clientes.forEach(u => linhas.push([u.nome, u.email, u.whatsapp, u.cidadeId || 'pelotas-rs', u.vip ? 'Sim' : 'Não', dataBR(u.vipExpiraEm), dataBR(u.criadoEm)]));
+  baixarCsv('clientes-clube-prime', linhas);
+  registrarLogAdmin('exportacao', 'Exportou clientes (CSV)', `${clientes.length} clientes`);
+};
+
+window.exportarResgatesCsv = function() {
+  const logs = ((typeof cacheLogsAdmin !== 'undefined' && cacheLogsAdmin) || []).slice().sort((a, b) => new Date(b.dataHora) - new Date(a.dataHora));
+  if (!logs.length) return mostrarAviso("Sem dados", "Não há resgates para exportar.", "ℹ️");
+  const linhas = [['Data/hora', 'Status', 'Código', 'Cupom', 'Empresa', 'Cliente', 'Valor original (R$)', 'Desconto (R$)', 'Valor pago (R$)']];
+  logs.forEach(l => linhas.push([dataBR(l.dataHora), l.status, l.codigoGerado, l.cupomTitulo, l.empresaNome, l.usuarioNome, l.valorOriginal ? numBR(l.valorOriginal) : '', l.valorDescontado ? numBR(l.valorDescontado) : '', l.valorFinal ? numBR(l.valorFinal) : '']));
+  baixarCsv('resgates-clube-prime', linhas);
+  registrarLogAdmin('exportacao', 'Exportou resgates (CSV)', `${logs.length} registros`);
+};

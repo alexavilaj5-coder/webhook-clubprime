@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap">
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=10">
   <!-- Blindagem do jogo secreto: vale mesmo se o style.css do aparelho estiver desatualizado -->
   <style>
     .offline-overlay { position: fixed; inset: 0; z-index: 5000; }
@@ -67,7 +67,7 @@
     document.addEventListener('DOMContentLoaded', atualizarBotaoInstalar);
   </script>
 
-  <script type="module" src="app.js?v=10"></script>
+  <script type="module" src="app.js?v=12"></script>
 </head>
 <body>
 
@@ -278,6 +278,50 @@
         </div>
       </div>
 
+      <div class="admin-grid" style="margin-bottom:16px;">
+        <div class="admin-stat-card">
+          <div class="admin-stat-lbl">Clientes atendidos</div>
+          <div id="merchant-stat-clientes" class="admin-stat-val">0</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-lbl">Faturado pelo Clube</div>
+          <div id="merchant-stat-faturado" class="admin-stat-val" style="font-size:1.1rem;">R$ 0,00</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-lbl">Novos (1 uso)</div>
+          <div id="merchant-stat-novos" class="admin-stat-val">0</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-lbl">Recorrentes (2+)</div>
+          <div id="merchant-stat-recorrentes" class="admin-stat-val">0</div>
+        </div>
+      </div>
+
+      <div style="background:var(--card); border:1px solid var(--card-border); border-radius:18px; padding:14px 16px; margin-bottom:16px;">
+        <div style="font-weight:800; font-size:0.95rem; margin-bottom:4px;">📣 Postar no Feed dos clientes</div>
+        <p style="font-size:0.72rem; color:var(--muted); margin-bottom:8px;">Seu post aparece na aba Feed do app. Cada novo post substitui o anterior. Limite: 1 post a cada 6 horas.</p>
+        <textarea id="merchant-post-text" class="form-control" rows="3" maxlength="400" placeholder="Ex: Hoje tem chopp em dobro até 22h! Mostre o cupom no caixa."></textarea>
+        <input type="hidden" id="merchant-post-img" value="">
+        <input type="file" id="merchant-post-file" accept="image/*" style="display:none;" onchange="processarFotoPost(this)">
+        <img id="merchant-post-preview" alt="Prévia" style="display:none; width:100%; max-height:200px; object-fit:cover; border-radius:12px; margin-top:8px;">
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button type="button" class="btn btn-outline btn-small" style="flex:1;" onclick="document.getElementById('merchant-post-file').click()">📷 Adicionar foto</button>
+          <button type="button" id="merchant-post-img-remover" class="btn btn-outline btn-small" style="display:none; color:var(--danger); border-color:#ef444455;" onclick="removerFotoPost()">Tirar foto</button>
+        </div>
+        <div id="merchant-post-img-status" style="font-size:0.68rem; color:var(--muted); margin-top:4px;"></div>
+        <input type="url" id="merchant-post-link" class="form-control" style="margin-top:8px;" placeholder="Link de vídeo (YouTube, Instagram...) — opcional">
+        <select id="merchant-post-dias" class="form-control" style="margin-top:8px;">
+          <option value="1">Fica no ar por 1 dia</option>
+          <option value="2" selected>Fica no ar por 2 dias</option>
+          <option value="3">Fica no ar por 3 dias</option>
+        </select>
+        <div id="merchant-post-atual" style="font-size:0.72rem; color:var(--muted); margin-top:8px;"></div>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn btn-cyan btn-small" style="flex:1;" onclick="publicarPostFeed()">📣 Publicar</button>
+          <button class="btn btn-outline btn-small" onclick="removerPostFeed()">Remover post</button>
+        </div>
+      </div>
+
       <details style="background:var(--card); border:1px solid var(--card-border); border-radius:18px; margin-bottom:16px; overflow:hidden;">
         <summary style="padding:14px 16px; font-weight:800; font-size:0.95rem; cursor:pointer; background:var(--card); list-style:none; display:flex; justify-content:space-between; align-items:center;">
           <span>📋 Logs de Resgate Recentes (Sua Empresa)</span>
@@ -395,16 +439,18 @@
       </button>
 
       <!-- MENU DE ABAS LIMPAS NO ADM -->
-      <div class="auth-tabs" style="margin-bottom:14px; grid-template-columns: repeat(5, 1fr);">
-        <div id="adm-tab-dash" class="auth-tab active" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('dash')">📊 Dash</div>
-        <div id="adm-tab-cupons" class="auth-tab" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('cupons')">🎟️ Cupons</div>
-        <div id="adm-tab-clientes" class="auth-tab" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('clientes')">👥 Clientes</div>
-        <div id="adm-tab-empresas" class="auth-tab" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('empresas')">🏢 Lojas</div>
-        <div id="adm-tab-logs" class="auth-tab" style="font-size:0.75rem; padding:8px 4px;" onclick="switchAdminTab('logs')">📜 Logs</div>
+      <div class="auth-tabs" style="margin-bottom:14px; grid-template-columns: repeat(6, 1fr);">
+        <div id="adm-tab-dash" class="auth-tab active" style="font-size:0.64rem; padding:8px 1px;" onclick="switchAdminTab('dash')">📊 Dash</div>
+        <div id="adm-tab-cupons" class="auth-tab" style="font-size:0.64rem; padding:8px 1px;" onclick="switchAdminTab('cupons')">🎟️ Cupons</div>
+        <div id="adm-tab-clientes" class="auth-tab" style="font-size:0.64rem; padding:8px 1px;" onclick="switchAdminTab('clientes')">👥 Clientes</div>
+        <div id="adm-tab-empresas" class="auth-tab" style="font-size:0.64rem; padding:8px 1px;" onclick="switchAdminTab('empresas')">🏢 Lojas</div>
+        <div id="adm-tab-logs" class="auth-tab" style="font-size:0.64rem; padding:8px 1px;" onclick="switchAdminTab('logs')">📜 Logs</div>
+        <div id="adm-tab-rank" class="auth-tab" style="font-size:0.64rem; padding:8px 1px;" onclick="switchAdminTab('rank')">🏆 Rank</div>
       </div>
 
       <!-- ABA 1: DASHBOARD & RELATÓRIOS FINANCEIROS -->
       <div id="adm-section-dash" class="admin-tab-content">
+        <div id="admin-alert-banner" style="display:none; background:linear-gradient(135deg,#ef4444,#b91c1c); color:#fff; padding:12px 14px; border-radius:16px; margin-bottom:12px; font-size:0.8rem; font-weight:800;"></div>
         
         <!-- SUB-ABAS DASHBOARD / FINANCEIRO -->
         <div style="display:flex; gap:6px; margin-bottom:12px;">
@@ -563,6 +609,9 @@
           </details>
         </div>
 
+        <h3 style="font-size:1rem; font-weight:800; margin-bottom:8px;">⏳ Ofertas aguardando aprovação</h3>
+        <div id="admin-pending-offers" style="margin-bottom:16px;"><p style="font-size:0.8rem; color:var(--muted);">Nenhuma oferta pendente.</p></div>
+
         <h3 style="font-size:1rem; font-weight:800; margin-bottom:10px;">Gestão Global de Cupons</h3>
         <div id="admin-all-coupons-list" style="margin-bottom:16px; max-height:220px; overflow-y:auto; padding-right:4px;">
           <p style="font-size:0.8rem; color:var(--muted);">Carregando...</p>
@@ -578,6 +627,32 @@
 
         <div id="admin-logs-list" style="margin-bottom:16px; max-height:180px; overflow-y:auto; padding-right:4px;">
           <p style="font-size:0.8rem; color:var(--muted);">Aguardando resgates...</p>
+        </div>
+      </div>
+
+      <!-- ABA: RANKING, FRAUDE E EXPORTAÇÃO -->
+      <div id="adm-section-rank" class="admin-tab-content" style="display:none;">
+        <h3 style="font-size:1rem; font-weight:800; margin-bottom:8px;">🚨 Alertas de fraude</h3>
+        <div id="admin-fraud-list" style="margin-bottom:18px; max-height:280px; overflow-y:auto;"><p style="font-size:0.8rem; color:var(--muted);">Carregando...</p></div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <h3 style="font-size:1rem; font-weight:800;">🏆 Rankings</h3>
+          <select id="rank-periodo" class="form-control" style="width:auto; padding:6px 10px; font-size:0.75rem;" onchange="renderizarRankingsAdmin()">
+            <option value="7">7 dias</option>
+            <option value="30" selected>30 dias</option>
+            <option value="all">Tudo</option>
+          </select>
+        </div>
+        <h4 style="font-size:0.85rem; font-weight:800; margin:8px 0;">🏢 Lojas por resgates</h4>
+        <div id="admin-rank-lojas" style="margin-bottom:14px;"></div>
+        <h4 style="font-size:0.85rem; font-weight:800; margin:8px 0;">👤 Clientes por economia</h4>
+        <div id="admin-rank-clientes" style="margin-bottom:18px;"></div>
+
+        <h3 style="font-size:1rem; font-weight:800; margin-bottom:8px;">📤 Exportar (CSV para Excel)</h3>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
+          <button class="btn btn-outline" onclick="exportarFinanceiroCsv()">💰 Financeiro (pagamentos Pix)</button>
+          <button class="btn btn-outline" onclick="exportarClientesCsv()">👥 Clientes (pede a senha de segurança)</button>
+          <button class="btn btn-outline" onclick="exportarResgatesCsv()">🎟️ Resgates de cupons</button>
         </div>
       </div>
 
@@ -619,6 +694,7 @@
 
       <!-- ABA 4: EMPRESAS / LOJISTAS -->
       <div id="adm-section-empresas" class="admin-tab-content" style="display:none;">
+        <div id="adm-sponsor-status" style="background:var(--card); border:1px solid var(--card-border); padding:12px 14px; border-radius:14px; margin-bottom:12px; font-size:0.8rem;">Carregando patrocinado...</div>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <h3 style="font-size:1rem; font-weight:800;">Lojistas Parceiros</h3>
           <button class="btn btn-cyan btn-small" onclick="abrirModalAdminEmpresa()">➕ Nova</button>
@@ -653,24 +729,22 @@
         📢 <span id="client-global-banner-content">-</span>
       </div>
 
-      <!-- LOJA PATROCINADA DA SEMANA -->
-      <div id="client-sponsored-banner" class="company-card patrocinado" style="display:none; background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color:#ffffff; padding:24px 22px; border-radius:24px; margin-bottom:14px; box-shadow:0 14px 32px rgba(124,58,237,0.35); border: 1px solid rgba(255, 255, 255, 0.3);">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-          <div>
-            <span style="font-size:0.72rem; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; color:#e0e7ff; display:block; margin-bottom:4px;">⭐ Oferta da Semana</span>
-            <h3 id="client-sponsored-name" style="font-size:1.9rem; font-weight:900; margin:0; line-height:1.15; text-shadow: 0 2px 5px rgba(0,0,0,0.2);">-</h3>
+      <!-- PATROCINADO (definido manualmente pelo admin) -->
+      <div id="client-sponsored-banner" class="company-card patrocinado" style="display:none; background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); background-size:cover; background-position:center; color:#ffffff; padding:24px 22px; border-radius:24px; margin-bottom:14px; box-shadow:0 14px 32px rgba(124,58,237,0.35); border:1px solid rgba(255,255,255,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:10px;">
+          <div style="min-width:0;">
+            <span style="font-size:0.72rem; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; color:#e0e7ff; display:block; margin-bottom:4px;">⭐ Patrocinado</span>
+            <h3 id="client-sponsored-name" style="font-size:1.9rem; font-weight:900; margin:0; line-height:1.15; text-shadow:0 2px 5px rgba(0,0,0,0.35); word-break:break-word;">-</h3>
           </div>
-          
           <div style="display:flex; gap:8px; align-items:center; flex-shrink:0; margin-top:2px;">
-            <a id="client-sponsored-wpp-btn" href="#" target="_blank" style="display:none; width:44px; height:44px; background:rgba(255,255,255,0.22); backdrop-filter:blur(6px); border-radius:50%; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; color:#fff; font-size:1.3rem; border:1px solid rgba(255,255,255,0.35); transition:all 0.2s;" title="Chamar no WhatsApp">
-              💬
-            </a>
-            <a id="client-sponsored-insta-btn" href="#" target="_blank" style="display:none; width:44px; height:44px; background:rgba(255,255,255,0.22); backdrop-filter:blur(6px); border-radius:50%; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; color:#fff; border:1px solid rgba(255,255,255,0.35); transition:all 0.2s;" title="Ver no Instagram">
+            <a id="client-sponsored-wpp-btn" href="#" target="_blank" rel="noopener" style="display:none; width:44px; height:44px; background:rgba(255,255,255,0.22); backdrop-filter:blur(6px); border-radius:50%; align-items:center; justify-content:center; text-decoration:none; color:#fff; font-size:1.3rem; border:1px solid rgba(255,255,255,0.35);" title="Chamar no WhatsApp">💬</a>
+            <a id="client-sponsored-insta-btn" href="#" target="_blank" rel="noopener" style="display:none; width:44px; height:44px; background:rgba(255,255,255,0.22); backdrop-filter:blur(6px); border-radius:50%; align-items:center; justify-content:center; text-decoration:none; color:#fff; border:1px solid rgba(255,255,255,0.35);" title="Ver no Instagram">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
             </a>
           </div>
         </div>
-        <p id="client-sponsored-legend-text" style="font-size:1rem; color:#ede9fe; margin:0; line-height:1.4; opacity:0.95;">-</p>
+        <p id="client-sponsored-legend-text" style="font-size:1rem; color:#ede9fe; margin:0 0 14px; line-height:1.4; text-shadow:0 1px 3px rgba(0,0,0,0.35);">-</p>
+        <button type="button" class="btn" style="background:#ffffff; color:#4f46e5; font-weight:900; padding:10px 14px; font-size:0.85rem;" onclick="irParaLojaNaVitrine(window._patrocinado && window._patrocinado.vencedorUid)">🎟️ Ver cupons desta loja</button>
       </div>
 
       <!-- PAINEL DO MEMBRO -->
@@ -699,7 +773,7 @@
         <div class="vip-row-text">
           <span style="font-size:0.65rem; font-weight:900; color:var(--accent); letter-spacing:1px; text-transform:uppercase;">Plano Membro PRIME</span>
           <h3 style="font-size:1rem; font-weight:900; margin-top:2px;">Libere todos os cupons</h3>
-          <p style="font-size:0.74rem; color:var(--muted); margin-top:2px;">Pix instantâneo • 30 dias</p>
+          <p id="banner-assinatura-sub" style="font-size:0.74rem; color:var(--muted); margin-top:2px;">Pix instantâneo • 30 dias</p>
         </div>
         <button id="btn-gerar-pix" class="btn btn-cyan vip-row-btn" onclick="gerarPixMercadoPago()">⚡ Ser VIP<br>R$ 19,90</button>
       </div>
@@ -711,6 +785,7 @@
       <!-- CATEGORIAS EXPANDIDAS + BOTÃO DE GPS (PRÓXIMOS DE MIM) -->
       <div class="categories-bar">
         <div class="category-pill active" onclick="filterCat('all', this)">Todos os cupons</div>
+        <div class="category-pill" onclick="filterCat('favoritos', this)">❤️ Favoritos</div>
         <div class="category-pill" style="background:transparent; color:var(--primary); border:1.5px dashed var(--primary);" onclick="ativarBuscaProximidadeGps()">📍 Próximos de Mim (GPS)</div>
         <div class="category-pill" onclick="filterCat('gastronomia', this)">🍔 Gastronomia & Delivery</div>
         <div class="category-pill" onclick="filterCat('compras', this)">🛍️ Lojas & Compras</div>
@@ -734,6 +809,15 @@
       <p style="font-size:0.8rem; color:var(--muted); margin-bottom:16px;">Todas as empresas cadastradas no Clube Prime em Pelotas:</p>
       <div id="partners-list-all">
         <p style="font-size:0.8rem; color:var(--muted); text-align:center;">Carregando parceiros...</p>
+      </div>
+    </div>
+
+    <!-- TELA FEED -->
+    <div id="screen-feed" class="screen">
+      <h2 style="margin-bottom:6px; font-weight:900;">📣 Feed</h2>
+      <p style="font-size:0.8rem; color:var(--muted); margin-bottom:16px;">Novidades e promoções que as lojas parceiras acabaram de postar:</p>
+      <div id="feed-list">
+        <p style="font-size:0.8rem; color:var(--muted); text-align:center;">Carregando...</p>
       </div>
     </div>
 
@@ -846,6 +930,11 @@
         <span class="nav-icon">🏠</span>
         <span>Início</span>
       </div>
+      <div class="nav-item" onclick="navTo('feed', this)">
+        <span class="nav-icon">📣</span>
+        <span>Feed</span>
+        <span id="feed-dot" style="display:none; position:absolute; top:6px; right:calc(50% - 20px); width:9px; height:9px; background:#ef4444; border-radius:50%; border:2px solid var(--card);"></span>
+      </div>
       <div class="nav-item" onclick="navTo('search', this)">
         <span class="nav-icon">🔍</span>
         <span>Parceiros</span>
@@ -884,17 +973,22 @@
   <div id="modal-patrocinar-empresa" class="modal">
     <div class="modal-content" style="text-align:left;">
       <div style="font-size:2.2rem; margin-bottom:4px; text-align:center;">⭐</div>
-      <h3 style="font-size:1.2rem; font-weight:900; margin-bottom:4px; text-align:center;">Definir Patrocinado da Semana</h3>
+      <h3 style="font-size:1.2rem; font-weight:900; margin-bottom:4px; text-align:center;">Definir Patrocinado</h3>
       <div id="patrocinar-empresa-nome-label" style="font-size:0.85rem; color:var(--primary); font-weight:900; margin-bottom:14px; text-align:center;">Empresa</div>
-      
+
       <input type="hidden" id="patrocinar-empresa-uid" value="">
       <input type="hidden" id="patrocinar-empresa-nome" value="">
       <input type="hidden" id="patrocinar-empresa-wpp" value="">
       <input type="hidden" id="patrocinar-empresa-insta" value="">
 
       <div class="form-group">
-        <label>LEGENDA / FRASE DE DESTAQUE DA SEMANA</label>
-        <input type="text" id="patrocinar-empresa-legenda" class="form-control" placeholder="Ex: A melhor revisão e suspensão da cidade!">
+        <label>FRASE DE DESTAQUE</label>
+        <input type="text" id="patrocinar-empresa-legenda" class="form-control" maxlength="120" placeholder="Ex: A melhor revisão e suspensão da cidade!">
+      </div>
+      <div class="form-group">
+        <label>TERMINA EM (OPCIONAL)</label>
+        <input type="datetime-local" id="patrocinar-empresa-fim" class="form-control">
+        <div style="font-size:0.68rem; color:var(--muted); margin-top:4px;">Em branco = fica no topo até você remover. Com data, sai sozinho.</div>
       </div>
 
       <button class="btn btn-cyan" style="margin-top:12px;" onclick="salvarPatrocinadoDaSemana()">💾 Definir como Patrocinado</button>
@@ -1193,6 +1287,17 @@
       <div class="form-group" style="text-align:left;">
         <label>DIAS E HORÁRIOS (OPCIONAL)</label>
         <input type="text" id="offer-rules" class="form-control" placeholder="Ex: Terça a quinta, 14h às 18h" oninput="atualizarPreviaOferta()">
+      </div>
+
+      <div class="form-group" style="text-align:left;">
+        <label>🗓️ COMEÇA EM (OPCIONAL)</label>
+        <input type="datetime-local" id="offer-inicio" class="form-control">
+      </div>
+
+      <div class="form-group" style="text-align:left;">
+        <label>⌛ TERMINA EM (OPCIONAL)</label>
+        <input type="datetime-local" id="offer-fim" class="form-control">
+        <div style="font-size:0.68rem; color:var(--muted); margin-top:4px;">Em branco = fica no ar até você pausar. A oferta entra e sai da vitrine sozinha nas datas escolhidas.</div>
       </div>
 
       <div class="form-group" style="text-align:left;">
