@@ -2579,10 +2579,10 @@ window.salvarOfertaGeral = async function() {
     }
 
     if (editId) {
-      if (!ehAdminOferta) { dadosCupom.moderacao = 'pendente'; dadosCupom.motivoRejeicao = ''; }
+      if (!ehAdminOferta) { dadosCupom.moderacao = 'aprovado'; dadosCupom.motivoRejeicao = ''; }
       await updateDoc(doc(db, "cupons", editId), dadosCupom);
       registrarLogAdmin('cupom', 'Oferta editada', titulo);
-      mostrarAviso("Atualizado! 🚀", ehAdminOferta ? "Oferta modificada com sucesso." : "Oferta enviada para nova aprovação. Assim que for aprovada, volta para a vitrine.", "✅");
+      mostrarAviso("Atualizado! 🚀", "Oferta atualizada com sucesso.", "✅");
     } else {
       dadosCupom.empresaId = user.uid;
       dadosCupom.cidadeId = window.currentUserData?.cidadeId || 'pelotas-rs';
@@ -2600,10 +2600,10 @@ window.salvarOfertaGeral = async function() {
       dadosCupom.cliquesCount = 0;
       dadosCupom.criadoEm = new Date().toISOString();
       dadosCupom.ordem = 0;
-      dadosCupom.moderacao = ehAdminOferta ? 'aprovado' : 'pendente';
+      dadosCupom.moderacao = 'aprovado';
       await addDoc(collection(db, "cupons"), dadosCupom);
-      registrarLogAdmin('cupom', ehAdminOferta ? 'Oferta publicada' : 'Oferta enviada para aprovação', titulo);
-      mostrarAviso(ehAdminOferta ? "Publicado! 🎉" : "Enviada para análise ⏳", ehAdminOferta ? "Promoção ativa na vitrine." : "Sua oferta foi enviada e aparece na vitrine assim que o administrador aprovar.", "✅");
+      registrarLogAdmin('cupom', 'Oferta publicada', titulo);
+      mostrarAviso("Publicado! 🎉", "Sua promoção já está ativa na vitrine.", "✅");
     }
 
     fecharModal('modal-add-offer');
@@ -4004,8 +4004,15 @@ window.removerPatrocinado = async function() {
 };
 
 // ---------- Feed das lojas ----------
-// Cada lojista tem no máximo 1 post no ar, guardado no próprio documento (campo "post").
-let _cacheFeed = { t: 0, posts: [] };
+// Cada post é um documento na coleção "posts" (vários por loja, até 4 fotos cada).
+// O feed escuta o Firestore ao vivo: post novo aparece sem precisar atualizar a tela.
+const MAX_POSTS_DIA = 5, MAX_FOTOS_POST = 4, MAX_POSTS_FEED = 40;
+let _lojasFeed = { t: 0, mapa: {} };   // uid -> dados da loja
+let _postsFeed = null;                 // posts vindos do Firestore (null = ainda carregando)
+let _legadosFeed = [];                 // posts antigos, guardados no documento da loja
+let _feedUnsub = null;
+const _feedVistos = new Set();
+let _fotosPost = [];                   // fotos do formulário do lojista
 
 function tempoAtras(iso) {
   const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
@@ -4016,6 +4023,7 @@ function tempoAtras(iso) {
   const d = Math.floor(h / 24);
   return `há ${d} dia${d > 1 ? 's' : ''}`;
 }
+setInterval(() => document.querySelectorAll('.feed-tempo').forEach(e => { e.textContent = tempoAtras(e.dataset.t); }), 30000);
 
 function linkSeguro(u) {
   try { const x = new URL(String(u).trim()); return x.protocol === 'https:' ? x.href : ''; } catch (e) { return ''; }
@@ -4023,28 +4031,42 @@ function linkSeguro(u) {
 
 function postsAtivosFeed() {
   const agora = Date.now();
-  const lista = window.Cidades.filtrar(_cacheFeed.posts.filter(p => new Date(p.expiraEm).getTime() > agora));
+  const todos = [...(_postsFeed || []), ..._legadosFeed]
+    .filter(p => new Date(p.expiraEm).getTime() > agora && _lojasFeed.mapa[p.uid])
+    .map(p => ({ ...p, ..._lojasFeed.mapa[p.uid] }));
+  const lista = window.Cidades.filtrar(todos);
   lista.sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm));
   return lista;
 }
 
+function iniciarFeedAoVivo() {
+  if (_feedUnsub) return;
+  _feedUnsub = onSnapshot(
+    query(collection(db, "posts"), orderBy("criadoEm", "desc"), limit(MAX_POSTS_FEED)),
+    snap => {
+      _postsFeed = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      atualizarPontinhoFeed();
+      if (document.getElementById('screen-feed')?.classList.contains('active')) { renderizarFeed(); marcarFeedVisto(); }
+    },
+    err => { console.error(err); _feedUnsub = null; if (_postsFeed === null) { _postsFeed = []; renderizarFeed(); } }
+  );
+}
+
 async function carregarFeed(forcar) {
   try {
-    if (forcar || Date.now() - _cacheFeed.t > 2 * 60000) {
+    if (forcar || Date.now() - _lojasFeed.t > 2 * 60000) {
       const snap = await getDocs(query(collection(db, "usuarios"), where("funcao", "==", "lojista")));
-      const posts = [];
+      const mapa = {}, legados = [];
       snap.forEach(d => {
         const u = d.data();
+        if (u.ativo === false) return;
+        mapa[d.id] = { nome: u.empresaNome || 'Loja', categoria: u.empresaCategoria || '', foto: u.fotoUrl || '', whatsapp: u.empresaTelefone || '', cidadeId: u.cidadeId };
         const p = u.post;
-        if (u.ativo === false || !p || !p.criadoEm || !p.expiraEm) return;
-        posts.push({
-          uid: d.id, nome: u.empresaNome || 'Loja', categoria: u.empresaCategoria || '',
-          foto: u.fotoUrl || '', whatsapp: u.empresaTelefone || '', cidadeId: u.cidadeId,
-          texto: p.texto || '', imagem: p.imagem || '', criadoEm: p.criadoEm, expiraEm: p.expiraEm
-        });
+        if (p && p.criadoEm && p.expiraEm) legados.push({ id: 'old-' + d.id, uid: d.id, texto: p.texto || '', imagens: p.imagem ? [p.imagem] : [], criadoEm: p.criadoEm, expiraEm: p.expiraEm });
       });
-      _cacheFeed = { t: Date.now(), posts };
+      _lojasFeed = { t: Date.now(), mapa }; _legadosFeed = legados;
     }
+    iniciarFeedAoVivo();
     atualizarPontinhoFeed();
   } catch (e) {
     console.error(e);
@@ -4067,140 +4089,219 @@ function marcarFeedVisto() {
   if (dot) dot.style.display = 'none';
 }
 
+function imagemOk(i) { return typeof i === 'string' && (i.startsWith('data:image/') || i.startsWith('https://')); }
+
+const _arPost = {};   // proporção (largura/altura) da 1ª foto de cada post, para o cartão não "pular" ao atualizar
+window.feedAjustar = function(img, id) {
+  const r = Math.min(1.91, Math.max(0.8, img.naturalWidth / Math.max(1, img.naturalHeight)));
+  _arPost[id] = r.toFixed(3);
+  const car = img.closest('.feed-carrossel');
+  if (car) car.style.setProperty('--ar', _arPost[id]);
+};
+
+function carrosselHtml(imgs, id) {
+  const ok = (imgs || []).filter(imagemOk).slice(0, MAX_FOTOS_POST);
+  if (!ok.length) return '';
+  const slides = ok.map((i, k) => `<img class="feed-slide" src="${escapeHtml(i)}" alt="Foto do post" ${k === 0 ? `onload="feedAjustar(this, '${escapeHtml(String(id))}')"` : 'loading="lazy"'}>`).join('');
+  const estilo = `style="--ar:${_arPost[id] || 1}"`;
+  if (ok.length === 1) return `<div class="feed-carrossel-wrap"><div class="feed-carrossel" ${estilo}>${slides}</div></div>`;
+  return `<div class="feed-carrossel-wrap"><div class="feed-carrossel" ${estilo} onscroll="feedScroll(this)">${slides}</div>
+    <span class="feed-contador">1/${ok.length}</span>
+    <div class="feed-dots">${ok.map((_, i) => `<i class="${i === 0 ? 'on' : ''}"></i>`).join('')}</div></div>`;
+}
+
+window.feedScroll = function(el) {
+  const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+  const wrap = el.parentElement;
+  wrap.querySelectorAll('.feed-dots i').forEach((d, k) => d.classList.toggle('on', k === i));
+  const c = wrap.querySelector('.feed-contador');
+  if (c) c.textContent = `${i + 1}/${el.children.length}`;
+};
+
 function renderizarFeed() {
   const el = document.getElementById('feed-list');
   if (!el) return;
+  if (_postsFeed === null) { el.innerHTML = '<p style="font-size:0.8rem; color:var(--muted); text-align:center; padding:30px 10px;">Carregando...</p>'; return; }
   const posts = postsAtivosFeed();
   if (!posts.length) {
     el.innerHTML = '<p style="font-size:0.85rem; color:var(--muted); text-align:center; padding:30px 10px;">Nenhuma novidade por enquanto. Quando as lojas postarem, aparece aqui. 📣</p>';
     return;
   }
+  const primeira = _feedVistos.size === 0;
   const ehAdmin = window.currentUserData?.funcao === 'admin';
   el.innerHTML = posts.map(p => {
-    const fav = window.favoritosSet && window.favoritosSet.has(p.uid);
-    const avatar = p.foto && (p.foto.startsWith('data:image/') || p.foto.startsWith('https://'))
-      ? `<img class="feed-avatar" src="${escapeHtml(p.foto)}" alt="">` : `<div class="feed-avatar">🏢</div>`;
-    const imagem = p.imagem && (p.imagem.startsWith('data:image/') || p.imagem.startsWith('https://'))
-      ? `<img class="feed-img" src="${escapeHtml(p.imagem)}" alt="Foto do post" loading="lazy">` : '';
+    const novo = !primeira && !_feedVistos.has(p.id);
+    const avatar = imagemOk(p.foto) ? `<img class="feed-avatar" src="${escapeHtml(p.foto)}" alt="">` : `<div class="feed-avatar">🏢</div>`;
     const fone = String(p.whatsapp || '').replace(/\D/g, '');
     return `
-      <div class="feed-card">
+      <div class="feed-card ${novo ? 'feed-novo' : ''}">
         <div class="feed-head">
           ${avatar}
-          <div style="min-width:0;">
-            <div class="feed-nome">${fav ? '❤️ ' : ''}${escapeHtml(p.nome)}</div>
-            <div class="feed-meta">${escapeHtml(p.categoria)}${p.categoria ? ' • ' : ''}${tempoAtras(p.criadoEm)}</div>
+          <div style="min-width:0; flex:1;">
+            <div class="feed-nome">${escapeHtml(p.nome)}</div>
+            <div class="feed-meta">${escapeHtml(p.categoria)}</div>
           </div>
+          ${novo ? '<span class="feed-badge-novo">Novo</span>' : ''}
+          <span class="feed-tempo" data-t="${escapeHtml(p.criadoEm)}">${tempoAtras(p.criadoEm)}</span>
         </div>
+        ${carrosselHtml(p.imagens, p.id)}
         ${p.texto ? `<div class="feed-texto">${escapeHtml(p.texto)}</div>` : ''}
-        ${imagem}
         <div class="feed-acoes">
           <button class="btn btn-cyan btn-small" onclick="irParaLojaNaVitrine('${escapeHtml(p.uid)}')">🎟️ Ver cupons</button>
           ${fone ? `<a class="btn btn-outline btn-small" style="text-decoration:none;" href="https://wa.me/55${fone}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
-          ${ehAdmin ? `<button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="removerPostAdmin('${escapeHtml(p.uid)}')">🗑️ Remover</button>` : ''}
+          ${ehAdmin ? `<button class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="removerPostAdmin('${escapeHtml(p.id)}')">🗑️ Remover</button>` : ''}
         </div>
       </div>`;
   }).join('');
+  posts.forEach(p => _feedVistos.add(p.id));
 }
 
-window.removerPostAdmin = async function(uid) {
+window.removerPostAdmin = async function(id) {
   if (window.currentUserData?.funcao !== 'admin') return;
   if (!window.confirm('Remover este post do feed?')) return;
   try {
-    await updateDoc(doc(db, "usuarios", uid), { post: null });
-    _cacheFeed.posts = _cacheFeed.posts.filter(p => p.uid !== uid);
-    registrarLogAdmin('feed', 'Post removido pelo admin', uid);
+    if (String(id).startsWith('old-')) await updateDoc(doc(db, "usuarios", String(id).slice(4)), { post: null });
+    else await deleteDoc(doc(db, "posts", id));
+    _legadosFeed = _legadosFeed.filter(p => p.id !== id);
+    if (_postsFeed) _postsFeed = _postsFeed.filter(p => p.id !== id);
+    registrarLogAdmin('feed', 'Post removido pelo admin', id);
     renderizarFeed();
   } catch (e) { mostrarAviso("Erro", e.message, "❌"); }
 };
 
 // ---------- Lojista: publicar no feed ----------
-function atualizarCaixaPost() {
+async function carregarMeusPosts() {
+  const user = auth.currentUser;
+  if (!user) return [];
+  const snap = await getDocs(query(collection(db, "posts"), where("uid", "==", user.uid)));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm));
+}
+
+function inicioDoDia() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+
+async function atualizarCaixaPost() {
   const el = document.getElementById('merchant-post-atual');
-  const p = window.currentUserData?.post;
+  const cont = document.getElementById('merchant-post-contador');
   if (!el) return;
-  if (p && p.expiraEm && new Date(p.expiraEm).getTime() > Date.now()) {
-    el.innerText = `Post no ar até ${new Date(p.expiraEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}: "${String(p.texto || '').slice(0, 60)}${(p.texto || '').length > 60 ? '…' : ''}"`;
-  } else {
-    el.innerText = 'Nenhum post no ar.';
+  try {
+    const meus = await carregarMeusPosts();
+    const agora = Date.now();
+    const ativos = meus.filter(p => new Date(p.expiraEm).getTime() > agora);
+    meus.filter(p => !ativos.includes(p)).forEach(p => deleteDoc(doc(db, "posts", p.id)).catch(() => {}));
+    const hoje = meus.filter(p => new Date(p.criadoEm) >= inicioDoDia()).length;
+    if (cont) cont.textContent = `Hoje: ${hoje} de ${MAX_POSTS_DIA} posts.`;
+    el.innerHTML = ativos.length ? ativos.map(p => `
+      <div class="meu-post">
+        <div style="min-width:0;"><b>${escapeHtml(String(p.texto || '(só fotos)').slice(0, 50))}</b><br>
+          <span>${(p.imagens || []).length} foto(s) · no ar até ${new Date(p.expiraEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span></div>
+        <button type="button" class="btn btn-outline btn-small" style="color:var(--danger); border-color:#ef444455;" onclick="removerPostFeed('${escapeHtml(p.id)}')">Excluir</button>
+      </div>`).join('') : 'Nenhum post no ar.';
+  } catch (e) { el.innerText = 'Não consegui carregar seus posts agora.'; }
+}
+
+function comprimirCanvas(cv) {
+  let q = 0.7, dados = cv.toDataURL('image/jpeg', q);
+  while (dados.length > 100000 && q > 0.35) { q -= 0.07; dados = cv.toDataURL('image/jpeg', q); }
+  if (dados.length > 140000) throw new Error('Foto muito pesada. Escolha outra.');
+  return dados;
+}
+
+function desenharNoCanvas(fonte, larg, alt) {
+  const escala = Math.min(1, 800 / Math.max(larg, alt));
+  const cv = document.createElement('canvas');
+  cv.width = Math.max(1, Math.round(larg * escala));
+  cv.height = Math.max(1, Math.round(alt * escala));
+  const g = cv.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, cv.width, cv.height);
+  g.drawImage(fonte, 0, 0, cv.width, cv.height);
+  return cv;
+}
+
+async function lerImagemComprimida(file) {
+  // 1º jeito: decodifica já reduzida (leve, ideal para fotos grandes de celular)
+  if (window.createImageBitmap) {
+    try {
+      const bmp = await createImageBitmap(file, { resizeWidth: 800, resizeQuality: 'medium' });
+      const cv = desenharNoCanvas(bmp, bmp.width, bmp.height);
+      if (bmp.close) bmp.close();
+      return comprimirCanvas(cv);
+    } catch (e) { /* tenta o 2º jeito */ }
+  }
+  // 2º jeito: elemento <img>
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não consegui abrir essa foto. Tente outra, de preferência JPG ou PNG.')); };
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      try { resolve(comprimirCanvas(desenharNoCanvas(img, img.naturalWidth, img.naturalHeight))); }
+      catch (e) { reject(e); }
+    };
+    img.src = url;
+  });
+}
+
+function desenharFotosPost() {
+  const box = document.getElementById('merchant-post-previews');
+  const add = document.getElementById('merchant-post-add');
+  if (box) box.innerHTML = _fotosPost.map((f, i) => `
+    <div class="post-prev"><img src="${f}" alt="Foto ${i + 1}"><button type="button" aria-label="Tirar foto ${i + 1}" onclick="tirarFotoPost(${i})">✕</button></div>`).join('');
+  if (add) {
+    add.style.display = _fotosPost.length >= MAX_FOTOS_POST ? 'none' : 'block';
+    add.textContent = _fotosPost.length ? `📷 Adicionar mais (${_fotosPost.length}/${MAX_FOTOS_POST})` : `📷 Adicionar fotos (até ${MAX_FOTOS_POST})`;
   }
 }
 
-window.processarFotoPost = function(input) {
-  const file = input.files && input.files[0];
+window.processarFotosPost = async function(input) {
   const status = document.getElementById('merchant-post-img-status');
-  if (!file) return;
-  if (!file.type.startsWith('image/')) { status.innerText = '❌ Escolha um arquivo de imagem.'; input.value = ''; return; }
-  status.innerText = '⏳ Preparando a foto...';
-  const reader = new FileReader();
-  reader.onerror = () => { status.innerText = '❌ Não foi possível ler a foto.'; };
-  reader.onload = () => {
-    const img = new Image();
-    img.onerror = () => { status.innerText = '❌ Imagem inválida. Tente outra.'; };
-    img.onload = () => {
-      const escala = Math.min(1, 800 / Math.max(img.width, img.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(img.width * escala));
-      canvas.height = Math.max(1, Math.round(img.height * escala));
-      const ctx2d = canvas.getContext('2d');
-      ctx2d.fillStyle = '#ffffff';
-      ctx2d.fillRect(0, 0, canvas.width, canvas.height);
-      ctx2d.drawImage(img, 0, 0, canvas.width, canvas.height);
-      let q = 0.72;
-      let dataUrl = canvas.toDataURL('image/jpeg', q);
-      while (dataUrl.length > 150000 && q > 0.35) { q -= 0.08; dataUrl = canvas.toDataURL('image/jpeg', q); }
-      if (dataUrl.length > 200000) { status.innerText = '❌ Foto muito pesada. Escolha outra.'; return; }
-      document.getElementById('merchant-post-img').value = dataUrl;
-      const prev = document.getElementById('merchant-post-preview');
-      prev.src = dataUrl; prev.style.display = 'block';
-      document.getElementById('merchant-post-img-remover').style.display = 'inline-flex';
-      status.innerText = `✅ Foto pronta (${Math.round(dataUrl.length / 1024)} KB).`;
-    };
-    img.src = reader.result;
-  };
-  reader.readAsDataURL(file);
-  input.value = '';
+  try {
+    const files = Array.from(input.files || []);
+    if (!files.length) { status.innerText = 'Nenhuma foto escolhida.'; return; }
+    const livres = MAX_FOTOS_POST - _fotosPost.length;
+    status.innerText = `⏳ Recebi ${files.length} foto(s). Preparando...`;
+    let erro = files.length > livres ? `Só cabem mais ${livres} foto(s); as demais foram ignoradas.` : '';
+    for (const f of files.slice(0, Math.max(0, livres))) {
+      try { _fotosPost.push(await lerImagemComprimida(f)); } catch (e) { erro = e.message; }
+    }
+    input.value = '';
+    desenharFotosPost();
+    status.innerText = erro ? '⚠️ ' + erro : `✅ ${_fotosPost.length} foto(s) pronta(s). Toque em Publicar.`;
+  } catch (e) { status.innerText = '⚠️ Erro ao preparar as fotos: ' + e.message; }
 };
+document.getElementById('merchant-post-file')?.addEventListener('change', e => window.processarFotosPost(e.target));
 
-window.removerFotoPost = function() {
-  document.getElementById('merchant-post-img').value = '';
-  const prev = document.getElementById('merchant-post-preview');
-  prev.removeAttribute('src'); prev.style.display = 'none';
-  document.getElementById('merchant-post-img-remover').style.display = 'none';
-  document.getElementById('merchant-post-img-status').innerText = '';
-};
+window.tirarFotoPost = function(i) { _fotosPost.splice(i, 1); desenharFotosPost(); };
+function limparFotosPost() { _fotosPost = []; desenharFotosPost(); const s = document.getElementById('merchant-post-img-status'); if (s) s.innerText = ''; }
 
 window.publicarPostFeed = async function() {
   const user = auth.currentUser;
   if (!user || window.currentUserData?.funcao !== 'lojista') return;
   const texto = (document.getElementById('merchant-post-text').value || '').trim().slice(0, 400);
-  const imagem = document.getElementById('merchant-post-img').value || '';
-  if (texto.length < 5 && !imagem) return mostrarAviso("Atenção", "Escreva o texto do post (mínimo 5 letras) ou adicione uma foto.", "⚠️");
-  const ultimo = window.currentUserData.post?.criadoEm ? new Date(window.currentUserData.post.criadoEm).getTime() : 0;
-  if (Date.now() - ultimo < 6 * 3600000) return mostrarAviso("Aguarde ⏳", "Você pode publicar um novo post a cada 6 horas.", "⏳");
-
-  const dias = Math.min(3, Math.max(1, Number(document.getElementById('merchant-post-dias').value) || 2));
-  const agora = Date.now();
-  const post = { texto, imagem, criadoEm: new Date(agora).toISOString(), expiraEm: new Date(agora + dias * 86400000).toISOString() };
+  if (texto.length < 5 && !_fotosPost.length) return mostrarAviso("Atenção", "Escreva o texto do post (mínimo 5 letras) ou adicione uma foto.", "⚠️");
   try {
-    await updateDoc(doc(db, "usuarios", user.uid), { post });
-    window.currentUserData.post = post;
+    const meus = await carregarMeusPosts();
+    const hoje = meus.filter(p => new Date(p.criadoEm) >= inicioDoDia()).length;
+    if (hoje >= MAX_POSTS_DIA) return mostrarAviso("Limite do dia ⏳", `Você já publicou ${MAX_POSTS_DIA} posts hoje. Amanhã você pode publicar de novo.`, "⏳");
+    const dias = Math.min(3, Math.max(1, Number(document.getElementById('merchant-post-dias').value) || 2));
+    const agora = Date.now();
+    const post = { uid: user.uid, texto, imagens: _fotosPost.slice(0, MAX_FOTOS_POST), criadoEm: new Date(agora).toISOString(), expiraEm: new Date(agora + dias * 86400000).toISOString() };
+    await addDoc(collection(db, "posts"), post);
     registrarLogAdmin('feed', 'Post publicado no feed', texto.slice(0, 120));
     document.getElementById('merchant-post-text').value = '';
-    removerFotoPost();
+    limparFotosPost();
     atualizarCaixaPost();
-    mostrarAviso("Publicado! 📣", `Seu post aparece na aba Feed por ${dias} dia(s).`, "✅");
+    mostrarAviso("Publicado! 📣", `Seu post já está no Feed por ${dias} dia(s).`, "✅");
   } catch (e) { mostrarAviso("Erro", e.message, "❌"); }
 };
 
-window.removerPostFeed = async function() {
+window.removerPostFeed = async function(id) {
   const user = auth.currentUser;
-  if (!user || window.currentUserData?.funcao !== 'lojista') return;
+  if (!user || window.currentUserData?.funcao !== 'lojista' || !id) return;
+  if (!window.confirm('Excluir este post do feed?')) return;
   try {
-    await updateDoc(doc(db, "usuarios", user.uid), { post: null });
-    window.currentUserData.post = null;
+    await deleteDoc(doc(db, "posts", id));
     atualizarCaixaPost();
-    mostrarAviso("Removido", "Seu post saiu do feed.", "✅");
+    mostrarAviso("Removido", "O post saiu do feed.", "✅");
   } catch (e) { mostrarAviso("Erro", e.message, "❌"); }
 };
 

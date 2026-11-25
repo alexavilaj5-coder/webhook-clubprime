@@ -1,4 +1,4 @@
-const CACHE = 'clube-prime-v7';
+const CACHE = 'clube-prime-v11';
 const BASICO = ['/', '/index.html', '/style.css', '/app.js', '/cidades.js', '/manifest.json'];
 
 self.addEventListener('install', (event) => {

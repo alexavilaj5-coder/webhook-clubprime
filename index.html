@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap">
-  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="style.css?v=14">
   <!-- Blindagem do jogo secreto: vale mesmo se o style.css do aparelho estiver desatualizado -->
   <style>
     .offline-overlay { position: fixed; inset: 0; z-index: 5000; }
@@ -67,7 +67,7 @@
     document.addEventListener('DOMContentLoaded', atualizarBotaoInstalar);
   </script>
 
-  <script type="module" src="app.js?v=13"></script>
+  <script type="module" src="app.js?v=17"></script>
 </head>
 <body>
 
@@ -311,26 +311,20 @@
       <details class="sec-box">
         <summary class="sec-sum"><span>📣 Postar no Feed dos clientes</span><span class="sec-seta">▼</span></summary>
         <div class="sec-corpo">
-        <p style="font-size:0.72rem; color:var(--muted); margin-bottom:8px;">Seu post aparece na aba Feed do app. Cada novo post substitui o anterior. Limite: 1 post a cada 6 horas.</p>
+        <p style="font-size:0.72rem; color:var(--muted); margin-bottom:8px;">Seus posts aparecem na aba Feed na hora. Até 5 posts por dia, com até 4 fotos cada. <b id="merchant-post-contador"></b></p>
         <textarea id="merchant-post-text" class="form-control" rows="3" maxlength="400" placeholder="Ex: Hoje tem chopp em dobro até 22h! Mostre o cupom no caixa."></textarea>
-        <input type="hidden" id="merchant-post-img" value="">
-        <input type="file" id="merchant-post-file" accept="image/*" style="display:none;" onchange="processarFotoPost(this)">
-        <img id="merchant-post-preview" alt="Prévia" style="display:none; width:100%; max-height:200px; object-fit:cover; border-radius:12px; margin-top:8px;">
-        <div style="display:flex; gap:8px; margin-top:8px;">
-          <button type="button" class="btn btn-outline btn-small" style="flex:1;" onclick="document.getElementById('merchant-post-file').click()">📷 Adicionar foto</button>
-          <button type="button" id="merchant-post-img-remover" class="btn btn-outline btn-small" style="display:none; color:var(--danger); border-color:#ef444455;" onclick="removerFotoPost()">Tirar foto</button>
-        </div>
-        <div id="merchant-post-img-status" style="font-size:0.68rem; color:var(--muted); margin-top:4px;"></div>
+        <input type="file" id="merchant-post-file" class="arquivo-oculto" accept="image/*" multiple>
+        <div id="merchant-post-previews" class="post-previews"></div>
+        <label id="merchant-post-add" for="merchant-post-file" class="btn btn-outline btn-small" style="display:block; width:100%; margin-top:8px; text-align:center; cursor:pointer;">📷 Adicionar fotos (até 4)</label>
+        <div id="merchant-post-img-status" style="font-size:0.8rem; font-weight:700; color:var(--text); margin-top:6px;"></div>
         <select id="merchant-post-dias" class="form-control" style="margin-top:8px;">
           <option value="1">Fica no ar por 1 dia</option>
           <option value="2" selected>Fica no ar por 2 dias</option>
           <option value="3">Fica no ar por 3 dias</option>
         </select>
-        <div id="merchant-post-atual" style="font-size:0.72rem; color:var(--muted); margin-top:8px;"></div>
-        <div style="display:flex; gap:8px; margin-top:8px;">
-          <button class="btn btn-cyan btn-small" style="flex:1;" onclick="publicarPostFeed()">📣 Publicar</button>
-          <button class="btn btn-outline btn-small" onclick="removerPostFeed()">Remover post</button>
-        </div>
+        <button class="btn btn-cyan btn-small" style="width:100%; margin-top:8px;" onclick="publicarPostFeed()">📣 Publicar</button>
+        <div style="font-size:0.72rem; font-weight:800; margin-top:14px;">Seus posts no ar</div>
+        <div id="merchant-post-atual" style="font-size:0.72rem; color:var(--muted); margin-top:6px;"></div>
         </div>
       </details>
 
@@ -825,7 +819,7 @@
 
     <!-- TELA FEED -->
     <div id="screen-feed" class="screen">
-      <h2 style="margin-bottom:6px; font-weight:900;">📣 Feed</h2>
+      <h2 style="margin-bottom:6px; font-weight:900; display:flex; align-items:center; gap:10px;">📣 Feed <span class="feed-live"><i></i>ao vivo</span></h2>
       <p style="font-size:0.8rem; color:var(--muted); margin-bottom:16px;">Novidades e promoções que as lojas parceiras acabaram de postar:</p>
       <div id="feed-list">
         <p style="font-size:0.8rem; color:var(--muted); text-align:center;">Carregando...</p>

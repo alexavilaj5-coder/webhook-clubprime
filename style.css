@@ -1420,3 +1420,40 @@ body {
 .sec-seta { font-size:0.8rem; color:var(--muted); transition:transform .2s; }
 .sec-box[open] .sec-seta { transform:rotate(180deg); }
 .sec-corpo { padding:14px 16px; border-top:1px solid var(--card-border); }
+
+
+/* ===== Feed: cartões, carrossel de fotos e "ao vivo" ===== */
+.feed-card { padding:0; overflow:hidden; box-shadow:0 6px 18px rgba(15,23,42,.07); }
+.feed-head { padding:12px 14px 10px; margin:0; }
+.feed-avatar { box-shadow:0 0 0 2px var(--card), 0 0 0 4px var(--primary); }
+.feed-tempo { font-size:0.68rem; color:var(--muted); white-space:nowrap; }
+.feed-badge-novo { background:#ef4444; color:#fff; font-size:0.62rem; font-weight:900; padding:2px 8px; border-radius:999px; }
+.feed-texto { padding:0 14px; }
+.feed-acoes { padding:2px 14px 14px; }
+.feed-carrossel-wrap { position:relative; margin-bottom:10px; }
+.feed-carrossel { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.feed-carrossel::-webkit-scrollbar { display:none; }
+.feed-slide { flex:0 0 100%; width:100%; aspect-ratio:4/3; object-fit:cover; scroll-snap-align:center; background:var(--secondary); }
+.feed-contador { position:absolute; top:10px; right:10px; background:rgba(0,0,0,.55); color:#fff; font-size:0.7rem; font-weight:800; padding:3px 9px; border-radius:999px; }
+.feed-dots { position:absolute; bottom:10px; left:0; right:0; display:flex; justify-content:center; gap:5px; pointer-events:none; }
+.feed-dots i { width:6px; height:6px; border-radius:6px; background:rgba(255,255,255,.55); transition:width .2s, background .2s; }
+.feed-dots i.on { width:16px; background:#fff; }
+.feed-live { display:inline-flex; align-items:center; gap:6px; font-size:0.68rem; font-weight:800; color:#ef4444; background:rgba(239,68,68,.1); padding:3px 10px; border-radius:999px; }
+.feed-live i { width:8px; height:8px; border-radius:50%; background:#ef4444; animation:feedPulse 1.6s infinite; }
+@keyframes feedPulse { 0% { box-shadow:0 0 0 0 rgba(239,68,68,.55); } 100% { box-shadow:0 0 0 8px rgba(239,68,68,0); } }
+@keyframes feedEntra { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:none; } }
+.feed-novo { animation:feedEntra .5s ease; }
+@media (prefers-reduced-motion: reduce) { .feed-live i, .feed-novo { animation:none; } }
+
+/* Formulário do lojista: fotos e posts no ar */
+.post-previews { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:8px; }
+.post-prev { position:relative; aspect-ratio:1; }
+.post-prev img { width:100%; height:100%; object-fit:cover; border-radius:10px; }
+.post-prev button { position:absolute; top:3px; right:3px; width:22px; height:22px; border:0; border-radius:50%; background:rgba(0,0,0,.65); color:#fff; font-size:0.7rem; cursor:pointer; }
+.meu-post { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 0; border-top:1px solid var(--card-border); }
+
+.arquivo-oculto { position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; pointer-events:none; }
+
+/* Fotos do feed sem corte: o cartão segue a proporção da 1ª foto e as outras cabem inteiras */
+.feed-carrossel { aspect-ratio:var(--ar, 1); }
+.feed-slide { height:100%; aspect-ratio:auto; object-fit:contain; background:#0f172a; }
