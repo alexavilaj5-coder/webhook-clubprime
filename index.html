@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap">
-  <link rel="stylesheet" href="style.css?v=14">
+  <link rel="stylesheet" href="style.css?v=15">
   <!-- Blindagem do jogo secreto: vale mesmo se o style.css do aparelho estiver desatualizado -->
   <style>
     .offline-overlay { position: fixed; inset: 0; z-index: 5000; }
@@ -94,10 +94,17 @@
 
     <!-- TELA LOGIN/CADASTRO -->
     <div id="screen-auth" class="screen">
-      <div style="text-align:center; margin-bottom:24px; margin-top:10px;">
-        <h2 style="font-size:1.9rem; font-weight:900; color:var(--text);">Acesse o Clube</h2>
-        <p style="font-size:0.82rem; color:var(--muted); margin-top:4px;">Economize diariamente com cupons exclusivos em Pelotas.</p>
+      <div class="auth-hero">
+        <div class="auth-ticket" aria-hidden="true">
+          <span class="t-pct">15<small>% OFF</small></span>
+          <span class="t-txt">Cupom<br>exclusivo</span>
+        </div>
+        <h2>CLUBE PRIME</h2>
+        <p>Economize diariamente com cupons exclusivos em Pelotas.</p>
+        <div class="auth-chips"><span>🎟️ Cupons</span><span>🏪 Lojas parceiras</span><span>📍 Perto de você</span></div>
       </div>
+
+      <div class="auth-card">
 
       <div class="auth-tabs">
         <div id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">Entrar</div>
@@ -132,7 +139,7 @@
 
       <div class="form-group">
         <label>SENHA</label>
-        <input type="password" id="reg-pass" class="form-control" placeholder="******">
+        <div class="campo-senha"><input type="password" id="reg-pass" class="form-control" placeholder="******"><button type="button" class="olho" aria-label="Mostrar ou esconder a senha" onclick="const i=document.getElementById('reg-pass');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁️':'🙈'">👁️</button></div>
       </div>
 
       <div id="box-privacy-terms" style="display:none; margin:10px 0;">
@@ -201,6 +208,7 @@
         </svg>
         Entrar com o Google
       </button>
+      </div><!-- /auth-card -->
 
       <div class="dev-credits">
         🚀 Powered by: <strong>Prime Labs</strong> • Pelotas / RS<br><a href="/privacidade.html" target="_blank" rel="noopener" style="color:var(--muted); font-size:0.72rem;">Política de Privacidade</a> • <a href="/excluir-conta.html" target="_blank" rel="noopener" style="color:var(--muted); font-size:0.72rem;">Excluir conta</a><br>
